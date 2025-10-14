@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 # 02110-1301  USA
 ######################### END LICENSE BLOCK #########################
-from typing import List, Union
+from typing import Union
 
 from .charsetprober import CharSetProber
 from .enums import ProbingState
@@ -130,7 +130,7 @@ class UTF1632Prober(CharSetProber):
             and not self.invalid_utf16le
         )
 
-    def validate_utf32_characters(self, quad: List[int]) -> None:
+    def validate_utf32_characters(self, quad: list[int]) -> None:
         """
         Validate if the quad of bytes is valid UTF-32.
 
@@ -152,7 +152,7 @@ class UTF1632Prober(CharSetProber):
         ):
             self.invalid_utf32le = True
 
-    def validate_utf16_characters(self, pair: List[int]) -> None:
+    def validate_utf16_characters(self, pair: list[int]) -> None:
         """
         Validate if the pair of bytes is  valid UTF-16.
 
