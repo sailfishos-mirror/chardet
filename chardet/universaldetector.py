@@ -41,6 +41,7 @@ from typing import Optional, Union
 
 from .charsetgroupprober import CharSetGroupProber
 from .charsetprober import CharSetProber
+from .encoding_eras import get_encoding_era, is_unicode_encoding
 from .enums import EncodingEra, InputState, LanguageFilter, ProbingState
 from .escprober import EscCharSetProber
 from .mbcsgroupprober import MBCSGroupProber
@@ -87,64 +88,7 @@ class UniversalDetector:
         "iso-8859-9": "Windows-1254",
         "iso-8859-13": "Windows-1257",
     }
-    # Encoding preference tiers for tie-breaking when confidence scores are very close
-    # Lower tier number = more preferred encoding
-    # Used when encodings are within VERY_CLOSE_THRESHOLD (0.5%) of each other
-    ENCODING_PREFERENCE_TIERS = {
-        # Tier 1: Modern universal encodings
-        "utf-8": 1,
-        "utf-16": 1,
-        "utf-32": 1,
-        # Tier 2: Modern Windows encodings (widely used, superset of ISO)
-        "windows-1252": 2,
-        "windows-1250": 2,
-        "windows-1251": 2,
-        "windows-1253": 2,
-        "windows-1254": 2,
-        "windows-1255": 2,
-        "windows-1256": 2,
-        "windows-1257": 2,
-        "windows-1258": 2,
-        # Tier 3: ISO-8859 encodings (legacy but common)
-        "iso-8859-1": 3,
-        "iso-8859-2": 3,
-        "iso-8859-3": 3,
-        "iso-8859-4": 3,
-        "iso-8859-5": 3,
-        "iso-8859-6": 3,
-        "iso-8859-7": 3,
-        "iso-8859-8": 3,
-        "iso-8859-9": 3,
-        "iso-8859-10": 3,
-        "iso-8859-11": 3,
-        "iso-8859-13": 3,
-        "iso-8859-14": 3,
-        "iso-8859-15": 3,
-        "iso-8859-16": 3,
-        # Tier 4: Mac encodings (less common)
-        "macroman": 4,
-        "maclatin2": 4,
-        "maccyrillic": 4,
-        "macgreek": 4,
-        "macturkish": 4,
-        "maciceland": 4,
-        # Tier 5: DOS encodings (very legacy)
-        "cp437": 5,
-        "cp850": 5,
-        "cp852": 5,
-        "cp858": 5,
-        "cp860": 5,
-        "cp861": 5,
-        "cp862": 5,
-        "cp863": 5,
-        "cp865": 5,
-        # Tier 6: EBCDIC (mainframe only)
-        "cp037": 6,
-        "cp500": 6,
-        "cp875": 6,
-        "cp1026": 6,
-    }
-    # Threshold for "very close" confidence scores where tier preference applies
+    # Threshold for "very close" confidence scores where era preference applies
     VERY_CLOSE_THRESHOLD = 0.005  # 0.5%
 
     # Based on https://encoding.spec.whatwg.org/#names-and-labels
@@ -488,32 +432,46 @@ class UniversalDetector:
                 lower_charset_name = charset_name.lower()
                 confidence = max_prober.get_confidence()
 
-                # Encoding preference tier tie-breaking:
-                # If there's a better-tiered encoding within VERY_CLOSE_THRESHOLD (0.5%),
+                # Encoding era tie-breaking:
+                # If there's a better era encoding within VERY_CLOSE_THRESHOLD (0.5%),
                 # prefer the more modern/common encoding
-                current_tier = self.ENCODING_PREFERENCE_TIERS.get(
-                    lower_charset_name, 999
-                )
+                current_era = get_encoding_era(lower_charset_name).value
+                current_is_unicode = is_unicode_encoding(lower_charset_name)
                 for prober in self._charset_probers:
                     if not prober or prober == max_prober:
                         continue
                     alt_charset = (prober.charset_name or "").lower()
                     alt_confidence = prober.get_confidence()
-                    alt_tier = self.ENCODING_PREFERENCE_TIERS.get(alt_charset, 999)
+                    alt_era = get_encoding_era(alt_charset).value
+                    alt_is_unicode = is_unicode_encoding(alt_charset)
 
-                    # If alternative has better tier and is very close in confidence
-                    if alt_tier < current_tier and alt_confidence >= confidence * (
+                    # Within same era, prefer Unicode over non-Unicode encodings
+                    should_prefer_alt = False
+                    if alt_era < current_era:
+                        # Alternative has better (lower numbered) era
+                        should_prefer_alt = True
+                    elif (
+                        alt_era == current_era
+                        and alt_is_unicode
+                        and not current_is_unicode
+                    ):
+                        # Both are same era (likely MODERN_WEB), but alt is Unicode
+                        should_prefer_alt = True
+
+                    # If alternative should be preferred and is very close in confidence
+                    if should_prefer_alt and alt_confidence >= confidence * (
                         1 - self.VERY_CLOSE_THRESHOLD
                     ):
                         # Switch to the preferred encoding
                         charset_name = prober.charset_name
                         lower_charset_name = alt_charset
                         confidence = alt_confidence
-                        current_tier = alt_tier
+                        current_era = alt_era
+                        current_is_unicode = alt_is_unicode
                         max_prober = prober
                         self.logger.debug(
-                            f"Tier preference: {alt_charset} (tier {alt_tier}) "
-                            f"preferred over {lower_charset_name} (tier {current_tier})"
+                            f"Era preference: {alt_charset} (era {alt_era}, unicode={alt_is_unicode}) "
+                            f"preferred over {charset_name} (era {current_era}, unicode={current_is_unicode})"
                         )
 
                 # Tie-breaking: If MacRoman wins but there are close ISO/Windows alternatives

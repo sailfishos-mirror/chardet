@@ -35,7 +35,7 @@ CHARSETS = {
         name="CP500", is_multi_byte=False, encoding_era=EncodingEra.MAINFRAME
     ),
     "CP720": Charset(
-        name="CP720", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="CP720", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_MAC
     ),
     "CP737": Charset(name="CP737", is_multi_byte=False, encoding_era=EncodingEra.DOS),
     "CP775": Charset(name="CP775", is_multi_byte=False, encoding_era=EncodingEra.DOS),
@@ -60,19 +60,19 @@ CHARSETS = {
         name="CP875", is_multi_byte=False, encoding_era=EncodingEra.MAINFRAME
     ),
     "CP932": Charset(
-        name="CP932", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="CP932", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
     ),
     "CP949": Charset(
         name="CP949", is_multi_byte=True, encoding_era=EncodingEra.MODERN_WEB
     ),
     "CP1006": Charset(
-        name="CP1006", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="CP1006", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_MAC
     ),
     "CP1026": Charset(
         name="CP1026", is_multi_byte=False, encoding_era=EncodingEra.MAINFRAME
     ),
     "CP1125": Charset(
-        name="CP1125", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="CP1125", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_MAC
     ),
     "EUC-JP": Charset(
         name="EUC-JP", is_multi_byte=True, encoding_era=EncodingEra.MODERN_WEB
@@ -93,51 +93,53 @@ CHARSETS = {
         name="ISO-2022-KR", is_multi_byte=True, encoding_era=EncodingEra.MODERN_WEB
     ),
     "ISO-8859-1": Charset(
-        name="ISO-8859-1", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="ISO-8859-1", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
     ),
     "ISO-8859-2": Charset(
-        name="ISO-8859-2", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="ISO-8859-2", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
     ),
     "ISO-8859-3": Charset(
-        name="ISO-8859-3", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="ISO-8859-3", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
     ),
     "ISO-8859-4": Charset(
-        name="ISO-8859-4", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="ISO-8859-4", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
     ),
     "ISO-8859-5": Charset(
-        name="ISO-8859-5", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="ISO-8859-5", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
     ),
     "ISO-8859-6": Charset(
-        name="ISO-8859-6", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="ISO-8859-6", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
     ),
     "ISO-8859-7": Charset(
-        name="ISO-8859-7", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="ISO-8859-7", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
     ),
     "ISO-8859-8": Charset(
-        name="ISO-8859-8", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="ISO-8859-8", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
     ),
     "ISO-8859-9": Charset(
-        name="ISO-8859-9", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="ISO-8859-9", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
     ),
     "ISO-8859-10": Charset(
-        name="ISO-8859-10", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="ISO-8859-10", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
     ),
     "ISO-8859-11": Charset(
-        name="ISO-8859-11", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="ISO-8859-11", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
     ),
     "ISO-8859-13": Charset(
-        name="ISO-8859-13", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="ISO-8859-13", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
     ),
     "ISO-8859-14": Charset(
-        name="ISO-8859-14", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="ISO-8859-14", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
     ),
     "ISO-8859-15": Charset(
-        name="ISO-8859-15", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="ISO-8859-15", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
     ),
     "ISO-8859-16": Charset(
-        name="ISO-8859-16", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="ISO-8859-16", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
     ),
-    "JOHAB": Charset(name="Johab", is_multi_byte=True, encoding_era=EncodingEra.LEGACY),
+    "JOHAB": Charset(
+        name="Johab", is_multi_byte=True, encoding_era=EncodingEra.LEGACY_ISO
+    ),
     "KOI8-R": Charset(
         name="KOI8-R", is_multi_byte=False, encoding_era=EncodingEra.MODERN_WEB
     ),
@@ -145,31 +147,31 @@ CHARSETS = {
         name="KOI8-U", is_multi_byte=False, encoding_era=EncodingEra.MODERN_WEB
     ),
     "KOI8-T": Charset(
-        name="KOI8-T", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="KOI8-T", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_MAC
     ),
     "KZ1048": Charset(
-        name="KZ1048", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="KZ1048", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_MAC
     ),
     "MACCYRILLIC": Charset(
-        name="MacCyrillic", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="MacCyrillic", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_MAC
     ),
     "MACGREEK": Charset(
-        name="MacGreek", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="MacGreek", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_MAC
     ),
     "MACICELAND": Charset(
-        name="MacIceland", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="MacIceland", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_MAC
     ),
     "MACLATIN2": Charset(
-        name="MacLatin2", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="MacLatin2", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_MAC
     ),
     "MACROMAN": Charset(
-        name="MacRoman", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="MacRoman", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_MAC
     ),
     "MACTURKISH": Charset(
-        name="MacTurkish", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="MacTurkish", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_MAC
     ),
     "PTCP154": Charset(
-        name="PTCP154", is_multi_byte=False, encoding_era=EncodingEra.LEGACY
+        name="PTCP154", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_MAC
     ),
     "SHIFT-JIS": Charset(
         name="Shift-JIS", is_multi_byte=True, encoding_era=EncodingEra.MODERN_WEB

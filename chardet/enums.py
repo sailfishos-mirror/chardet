@@ -84,11 +84,15 @@ class EncodingEra(Flag):
     """
     This enum represents different eras of character encodings, used to filter
     which encodings are considered during detection.
+
+    The numeric values also serve as preference tiers for tie-breaking when
+    confidence scores are very close. Lower values = more preferred/modern.
     """
 
     NONE = 0x00
-    MODERN_WEB = 0x01  # UTF-8, Windows-125x, modern ISO
-    LEGACY = 0x02  # Mac encodings, older ISO standards
-    DOS = 0x04  # CP437, CP850, CP852, etc.
-    MAINFRAME = 0x08  # EBCDIC variants (CP037, CP500, etc.)
-    ALL = 0x0F
+    MODERN_WEB = 0x01  # UTF-8/16/32, Windows-125x, modern multibyte (widely used)
+    LEGACY_ISO = 0x02  # ISO-8859-x (legacy but common)
+    LEGACY_MAC = 0x04  # Mac encodings (less common)
+    DOS = 0x08  # CP437, CP850, CP852, etc. (very legacy)
+    MAINFRAME = 0x10  # EBCDIC variants (CP037, CP500, etc.)
+    ALL = 0x1F

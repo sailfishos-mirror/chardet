@@ -19,7 +19,7 @@ from .enums import EncodingEra
 
 # Mapping of encoding names to their eras
 ENCODING_ERA_MAP = {
-    # Modern web encodings - commonly used on the web today
+    # Unicode encodings - part of modern web but most preferred
     "UTF-8": EncodingEra.MODERN_WEB,
     "UTF-16": EncodingEra.MODERN_WEB,
     "UTF-16BE": EncodingEra.MODERN_WEB,
@@ -27,6 +27,7 @@ ENCODING_ERA_MAP = {
     "UTF-32": EncodingEra.MODERN_WEB,
     "UTF-32BE": EncodingEra.MODERN_WEB,
     "UTF-32LE": EncodingEra.MODERN_WEB,
+    # Modern web encodings - Windows and widely used encodings
     "WINDOWS-1250": EncodingEra.MODERN_WEB,
     "WINDOWS-1251": EncodingEra.MODERN_WEB,
     "WINDOWS-1252": EncodingEra.MODERN_WEB,
@@ -49,38 +50,38 @@ ENCODING_ERA_MAP = {
     "CP949": EncodingEra.MODERN_WEB,  # Korean (Windows)
     "ISO-2022-JP": EncodingEra.MODERN_WEB,  # Japanese (email)
     "ISO-2022-KR": EncodingEra.MODERN_WEB,  # Korean (email)
-    # Legacy encodings - older ISO standards and Mac encodings
-    # Per WHATWG spec, these should be mapped to their modern equivalents
-    "ISO-8859-1": EncodingEra.LEGACY,
-    "ISO-8859-2": EncodingEra.LEGACY,
-    "ISO-8859-3": EncodingEra.LEGACY,
-    "ISO-8859-4": EncodingEra.LEGACY,
-    "ISO-8859-5": EncodingEra.LEGACY,
-    "ISO-8859-6": EncodingEra.LEGACY,
-    "ISO-8859-7": EncodingEra.LEGACY,
-    "ISO-8859-8": EncodingEra.LEGACY,
-    "ISO-8859-9": EncodingEra.LEGACY,
-    "ISO-8859-10": EncodingEra.LEGACY,
-    "ISO-8859-11": EncodingEra.LEGACY,
-    "ISO-8859-13": EncodingEra.LEGACY,
-    "ISO-8859-14": EncodingEra.LEGACY,
-    "ISO-8859-15": EncodingEra.LEGACY,
-    "ISO-8859-16": EncodingEra.LEGACY,
-    "MACCYRILLIC": EncodingEra.LEGACY,
-    "MACGREEK": EncodingEra.LEGACY,
-    "MACICELAND": EncodingEra.LEGACY,
-    "MACLATIN2": EncodingEra.LEGACY,
-    "MACROMAN": EncodingEra.LEGACY,
-    "MACTURKISH": EncodingEra.LEGACY,
-    "KOI8-T": EncodingEra.LEGACY,  # Tajik
-    "KZ1048": EncodingEra.LEGACY,  # Kazakh
-    "PTCP154": EncodingEra.LEGACY,  # Cyrillic Asian
-    "CP1125": EncodingEra.LEGACY,  # Ukrainian
-    "CP720": EncodingEra.LEGACY,  # Arabic
+    # Legacy ISO encodings
+    "ISO-8859-1": EncodingEra.LEGACY_ISO,
+    "ISO-8859-2": EncodingEra.LEGACY_ISO,
+    "ISO-8859-3": EncodingEra.LEGACY_ISO,
+    "ISO-8859-4": EncodingEra.LEGACY_ISO,
+    "ISO-8859-5": EncodingEra.LEGACY_ISO,
+    "ISO-8859-6": EncodingEra.LEGACY_ISO,
+    "ISO-8859-7": EncodingEra.LEGACY_ISO,
+    "ISO-8859-8": EncodingEra.LEGACY_ISO,
+    "ISO-8859-9": EncodingEra.LEGACY_ISO,
+    "ISO-8859-10": EncodingEra.LEGACY_ISO,
+    "ISO-8859-11": EncodingEra.LEGACY_ISO,
+    "ISO-8859-13": EncodingEra.LEGACY_ISO,
+    "ISO-8859-14": EncodingEra.LEGACY_ISO,
+    "ISO-8859-15": EncodingEra.LEGACY_ISO,
+    "ISO-8859-16": EncodingEra.LEGACY_ISO,
+    # Legacy Mac encodings
+    "MACCYRILLIC": EncodingEra.LEGACY_MAC,
+    "MACGREEK": EncodingEra.LEGACY_MAC,
+    "MACICELAND": EncodingEra.LEGACY_MAC,
+    "MACLATIN2": EncodingEra.LEGACY_MAC,
+    "MACROMAN": EncodingEra.LEGACY_MAC,
+    "MACTURKISH": EncodingEra.LEGACY_MAC,
+    "KOI8-T": EncodingEra.LEGACY_MAC,  # Tajik
+    "KZ1048": EncodingEra.LEGACY_MAC,  # Kazakh
+    "PTCP154": EncodingEra.LEGACY_MAC,  # Cyrillic Asian
+    "CP1125": EncodingEra.LEGACY_MAC,  # Ukrainian
+    "CP720": EncodingEra.LEGACY_MAC,  # Arabic
     # Legacy multibyte encodings
-    "GB2312": EncodingEra.LEGACY,  # Chinese (subset of GB18030)
-    "JOHAB": EncodingEra.LEGACY,  # Korean
-    "CP932": EncodingEra.LEGACY,  # Japanese (Windows)
+    "GB2312": EncodingEra.LEGACY_ISO,  # Chinese (subset of GB18030)
+    "JOHAB": EncodingEra.LEGACY_ISO,  # Korean
+    "CP932": EncodingEra.LEGACY_ISO,  # Japanese (Windows)
     # DOS-era codepages
     "CP437": EncodingEra.DOS,  # US
     "CP737": EncodingEra.DOS,  # Greek
@@ -117,3 +118,14 @@ def get_encoding_era(encoding_name: str) -> EncodingEra:
     """
     normalized_name = encoding_name.upper().replace("_", "-")
     return ENCODING_ERA_MAP.get(normalized_name, EncodingEra.MODERN_WEB)
+
+
+def is_unicode_encoding(encoding_name: str) -> bool:
+    """
+    Check if an encoding is a Unicode encoding (UTF-8, UTF-16, UTF-32).
+
+    :param encoding_name: The encoding name to check
+    :return: True if the encoding is Unicode, False otherwise
+    """
+    normalized_name = encoding_name.upper().replace("_", "-")
+    return normalized_name.startswith("UTF-")
