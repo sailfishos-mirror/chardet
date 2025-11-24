@@ -32,6 +32,11 @@ from typing import Optional, Union
 from .enums import LanguageFilter, ProbingState
 
 INTERNATIONAL_WORDS_PATTERN = re.compile(
+    # Pattern rationale (see paper section 4.7 Two-Char Sequence Distribution):
+    # We drop words composed solely of ASCII letters for scripts without Latin letters,
+    # retaining any word containing at least one high-byte (>=0x80) character.
+    # Structure: optional ASCII prefix + one or more high-byte chars + optional ASCII
+    # suffix + optional single trailing marker.
     b"[a-zA-Z]*[\x80-\xff]+[a-zA-Z]*[^a-zA-Z\x80-\xff]?"
 )
 
@@ -73,16 +78,36 @@ class CharSetProber:
 
     @staticmethod
     def filter_international_words(buf: Union[bytes, bytearray]) -> bytearray:
-        """
-        We define three types of bytes:
-        alphabet: english alphabets [a-zA-Z]
-        international: international characters [\x80-\xff]
-        marker: everything else [^a-zA-Z\x80-\xff]
-        The input buffer can be thought to contain a series of words delimited
-        by markers. This function works to filter all words that contain at
-        least one international character. All contiguous sequences of markers
-        are replaced by a single space ascii character.
-        This filter applies to all scripts which do not use English characters.
+        """Filter out ASCII-only words for non-Latin scripts.
+
+        Byte classes:
+        - alphabet: ASCII letters [a-zA-Z]
+        - international: bytes with high bit set [\x80-\xff]
+        - marker: everything else [^a-zA-Z\x80-\xff]
+
+        The buffer is treated as a sequence of "words" separated by marker bytes.
+        We KEEP only those words that contain at least one high-byte character,
+        i.e. match the pattern: optional ASCII prefix + >=1 high-byte + optional
+        ASCII suffix, plus at most one trailing marker. Pure ASCII words are
+        discarded as noise when the target language model excludes ASCII letters
+        ("English words in other-language pages" — paper §4.7 summary).
+
+        Why we retain surrounding ASCII letters instead of stripping them:
+        - Preserves real adjacency for bigram modeling around high-byte letters.
+        - Avoids creating artificial bigrams between non-adjacent high-byte chars.
+
+        Trailing marker normalization: a single marker at word end is converted
+        to a space if it is an ASCII punctuation/control, collapsing runs of
+        markers into one delimiter (reduces noise like repeated punctuation or
+        HTML artifacts).
+
+        Usage is conditional: callers apply this ONLY when the language model's
+        ``keep_ascii_letters`` is False (see ``SingleByteCharSetProber.feed``).
+        Latin-script languages skip this and instead use ``remove_xml_tags``.
+
+        This behavior mirrors the original universalchardet / uchardet approach
+        and aligns with the training pipeline which excludes ASCII letters for
+        non-Latin alphabets.
         """
         filtered = bytearray()
 
