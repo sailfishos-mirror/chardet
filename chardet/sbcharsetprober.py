@@ -93,10 +93,10 @@ class SingleByteCharSetProber(CharSetProber):
         return self._model.language
 
     def feed(self, byte_str: Union[bytes, bytearray]) -> ProbingState:
-        if not self._model.keep_ascii_letters:
-            byte_str = self.filter_international_words(byte_str)
-        else:
+        if self._model.keep_ascii_letters:
             byte_str = self.remove_xml_tags(byte_str)
+        else:
+            byte_str = self.filter_international_words(byte_str)
         if not byte_str:
             return self.state
         char_to_order_map = self._model.char_to_order_map
