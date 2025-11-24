@@ -6,6 +6,7 @@ Run chardet on a bunch of documents and see that we get the correct encodings.
 """
 
 import codecs
+import itertools
 import sys
 import textwrap
 from difflib import ndiff
@@ -27,9 +28,10 @@ import pytest  # type: ignore[reportMissingImports]
 import chardet
 from chardet import escsm, mbcssm
 from chardet.codingstatemachine import CodingStateMachine
-from chardet.encoding_eras import get_encoding_era
-from chardet.enums import MachineState
+from chardet.enums import EncodingEra, LanguageFilter, MachineState
+from chardet.metadata.charsets import CHARSETS, get_charset
 from chardet.metadata.languages import LANGUAGES
+from chardet.sbcsgroupprober import SBCSGroupProber
 from chardet.universaldetector import UniversalDetector
 
 MISSING_ENCODINGS = set()
@@ -37,9 +39,7 @@ EXPECTED_FAILURES = {
     # EBCDIC encodings are archaic mainframe formats that are inherently
     # ambiguous and confuse each other. These failures are expected.
     # CP037 (US EBCDIC) vs CP500 (International EBCDIC) vs other EBCDIC variants
-    "tests/cp037-english/culturax_mC4_84513.txt",
     "tests/cp500-english/culturax_mC4_84512.txt",
-    "tests/cp500-english/culturax_mC4_84513.txt",
     # CP1026 (Turkish EBCDIC) confusion
     "tests/cp1026-turkish/culturax_mC4_107848.txt",
     # CP424 (Hebrew EBCDIC) confused with other encodings
@@ -169,7 +169,8 @@ def gen_test_params():
 @pytest.mark.parametrize("file_name, encoding", gen_test_params())
 def test_encoding_detection(file_name, encoding):
     # Determine which era is needed for this encoding
-    era = get_encoding_era(encoding)
+    charset = get_charset(encoding)
+    era = charset.encoding_era
 
     with open(file_name, "rb") as f:
         input_bytes = f.read()
@@ -220,7 +221,8 @@ def test_encoding_detection(file_name, encoding):
 @pytest.mark.parametrize("file_name, encoding", gen_test_params())
 def test_encoding_detection_rename_legacy(file_name, encoding):
     # Determine which era is needed for this encoding
-    era = get_encoding_era(encoding)
+    charset = get_charset(encoding)
+    era = charset.encoding_era
 
     with open(file_name, "rb") as f:
         input_bytes = f.read()
@@ -446,8 +448,6 @@ def test_coding_state_machine_rejects_all_invalid_sequences(
     - Limits to 100,000 test cases for encodings with large search spaces
     - Skips stateful encodings (ISO-2022, HZ) that require escape sequences
     """
-    import itertools
-
     state_machine = CodingStateMachine(state_machine_model)
     encoding_name = state_machine_model["name"]
 
@@ -672,10 +672,6 @@ def test_all_single_byte_encodings_have_probers():
 
     This ensures we don't forget to register models after generating them.
     """
-    from chardet.enums import EncodingEra
-    from chardet.metadata.charsets import CHARSETS
-    from chardet.metadata.languages import LANGUAGES
-    from chardet.sbcsgroupprober import SBCSGroupProber
 
     # Collect all single-byte encodings from metadata
     expected_encodings = set()
@@ -685,15 +681,10 @@ def test_all_single_byte_encodings_have_probers():
         if not charset.is_multi_byte:
             expected_encodings.add(charset_name.upper())
 
-    # From LANGUAGES
-    for language in LANGUAGES.values():
-        for charset in language.charsets:
-            charset_upper = charset.upper()
-            if charset_upper in CHARSETS and not CHARSETS[charset_upper].is_multi_byte:
-                expected_encodings.add(charset_upper)
-
     # Create SBCSGroupProber with ALL encoding era to get all probers
-    prober = SBCSGroupProber(encoding_era=EncodingEra.ALL)
+    prober = SBCSGroupProber(
+        encoding_era=EncodingEra.ALL, lang_filter=LanguageFilter.ALL
+    )
 
     # Collect all charsets that have probers
     registered_encodings = set()

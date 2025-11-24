@@ -5,7 +5,7 @@ generationcode. Could be used for other things in the future.
 
 from dataclasses import dataclass
 
-from chardet.enums import EncodingEra
+from chardet.enums import EncodingEra, LanguageFilter
 
 
 @dataclass(frozen=True)
@@ -15,6 +15,7 @@ class Charset:
     name: str
     is_multi_byte: bool
     encoding_era: EncodingEra
+    language_filter: LanguageFilter = LanguageFilter.NON_CJK
 
 
 CHARSETS = {
@@ -22,7 +23,10 @@ CHARSETS = {
         name="ASCII", is_multi_byte=False, encoding_era=EncodingEra.MODERN_WEB
     ),
     "BIG5": Charset(
-        name="Big5", is_multi_byte=True, encoding_era=EncodingEra.MODERN_WEB
+        name="Big5",
+        is_multi_byte=True,
+        encoding_era=EncodingEra.MODERN_WEB,
+        language_filter=LanguageFilter.CHINESE_TRADITIONAL,
     ),
     "CP037": Charset(
         name="CP037", is_multi_byte=False, encoding_era=EncodingEra.MAINFRAME
@@ -60,10 +64,16 @@ CHARSETS = {
         name="CP875", is_multi_byte=False, encoding_era=EncodingEra.MAINFRAME
     ),
     "CP932": Charset(
-        name="CP932", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
+        name="CP932",
+        is_multi_byte=False,
+        encoding_era=EncodingEra.MODERN_WEB,
+        language_filter=LanguageFilter.JAPANESE,
     ),
     "CP949": Charset(
-        name="CP949", is_multi_byte=True, encoding_era=EncodingEra.MODERN_WEB
+        name="CP949",
+        is_multi_byte=True,
+        encoding_era=EncodingEra.MODERN_WEB,
+        language_filter=LanguageFilter.KOREAN,
     ),
     "CP1006": Charset(
         name="CP1006", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_MAC
@@ -75,22 +85,40 @@ CHARSETS = {
         name="CP1125", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_MAC
     ),
     "EUC-JP": Charset(
-        name="EUC-JP", is_multi_byte=True, encoding_era=EncodingEra.MODERN_WEB
+        name="EUC-JP",
+        is_multi_byte=True,
+        encoding_era=EncodingEra.MODERN_WEB,
+        language_filter=LanguageFilter.JAPANESE,
     ),
     "EUC-KR": Charset(
-        name="EUC-KR", is_multi_byte=True, encoding_era=EncodingEra.MODERN_WEB
+        name="EUC-KR",
+        is_multi_byte=True,
+        encoding_era=EncodingEra.MODERN_WEB,
+        language_filter=LanguageFilter.KOREAN,
     ),
     "GB18030": Charset(
-        name="GB18030", is_multi_byte=True, encoding_era=EncodingEra.MODERN_WEB
+        name="GB18030",
+        is_multi_byte=True,
+        encoding_era=EncodingEra.MODERN_WEB,
+        language_filter=LanguageFilter.CHINESE_SIMPLIFIED,
     ),
     "HZ-GB-2312": Charset(
-        name="HZ-GB-2312", is_multi_byte=True, encoding_era=EncodingEra.MODERN_WEB
+        name="HZ-GB-2312",
+        is_multi_byte=True,
+        encoding_era=EncodingEra.MODERN_WEB,
+        language_filter=LanguageFilter.CHINESE_SIMPLIFIED,
     ),
     "ISO-2022-JP": Charset(
-        name="ISO-2022-JP", is_multi_byte=True, encoding_era=EncodingEra.MODERN_WEB
+        name="ISO-2022-JP",
+        is_multi_byte=True,
+        encoding_era=EncodingEra.MODERN_WEB,
+        language_filter=LanguageFilter.JAPANESE,
     ),
     "ISO-2022-KR": Charset(
-        name="ISO-2022-KR", is_multi_byte=True, encoding_era=EncodingEra.MODERN_WEB
+        name="ISO-2022-KR",
+        is_multi_byte=True,
+        encoding_era=EncodingEra.MODERN_WEB,
+        language_filter=LanguageFilter.KOREAN,
     ),
     "ISO-8859-1": Charset(
         name="ISO-8859-1", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
@@ -138,7 +166,10 @@ CHARSETS = {
         name="ISO-8859-16", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_ISO
     ),
     "JOHAB": Charset(
-        name="Johab", is_multi_byte=True, encoding_era=EncodingEra.LEGACY_ISO
+        name="Johab",
+        is_multi_byte=True,
+        encoding_era=EncodingEra.LEGACY_ISO,
+        language_filter=LanguageFilter.KOREAN,
     ),
     "KOI8-R": Charset(
         name="KOI8-R", is_multi_byte=False, encoding_era=EncodingEra.MODERN_WEB
@@ -174,7 +205,10 @@ CHARSETS = {
         name="PTCP154", is_multi_byte=False, encoding_era=EncodingEra.LEGACY_MAC
     ),
     "SHIFT-JIS": Charset(
-        name="Shift-JIS", is_multi_byte=True, encoding_era=EncodingEra.MODERN_WEB
+        name="Shift-JIS",
+        is_multi_byte=True,
+        encoding_era=EncodingEra.MODERN_WEB,
+        language_filter=LanguageFilter.JAPANESE,
     ),
     "TIS-620": Charset(
         name="TIS-620", is_multi_byte=False, encoding_era=EncodingEra.MODERN_WEB
@@ -228,3 +262,30 @@ CHARSETS = {
         name="Windows-1258", is_multi_byte=False, encoding_era=EncodingEra.MODERN_WEB
     ),
 }
+
+
+def get_charset(encoding_name: str) -> Charset:
+    """
+    Get the Charset metadata for a given encoding name.
+
+    :param encoding_name: The encoding name to look up
+    :return: The Charset for this encoding, defaults to a MODERN_WEB charset if unknown
+    """
+    normalized_name = encoding_name.upper().replace("_", "-")
+    return CHARSETS.get(
+        normalized_name,
+        Charset(
+            name=encoding_name, is_multi_byte=False, encoding_era=EncodingEra.MODERN_WEB
+        ),
+    )
+
+
+def is_unicode_encoding(encoding_name: str) -> bool:
+    """
+    Check if an encoding is a Unicode encoding (UTF-8, UTF-16, UTF-32).
+
+    :param encoding_name: The encoding name to check
+    :return: True if the encoding is Unicode, False otherwise
+    """
+    normalized_name = encoding_name.upper().replace("_", "-")
+    return normalized_name.startswith("UTF-")

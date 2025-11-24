@@ -31,7 +31,7 @@ from typing import Optional, Union
 from .chardistribution import CharDistributionAnalysis
 from .charsetprober import CharSetProber
 from .codingstatemachine import CodingStateMachine
-from .enums import LanguageFilter, MachineState, ProbingState
+from .enums import EncodingEra, LanguageFilter, MachineState, ProbingState
 
 
 class MultiByteCharSetProber(CharSetProber):
@@ -39,8 +39,12 @@ class MultiByteCharSetProber(CharSetProber):
     MultiByteCharSetProber
     """
 
-    def __init__(self, lang_filter: LanguageFilter = LanguageFilter.NONE) -> None:
-        super().__init__(lang_filter=lang_filter)
+    def __init__(
+        self,
+        lang_filter: LanguageFilter = LanguageFilter.ALL,
+        encoding_era: EncodingEra = EncodingEra.ALL,
+    ) -> None:
+        super().__init__(lang_filter=lang_filter, encoding_era=encoding_era)
         self.distribution_analyzer: Optional[CharDistributionAnalysis] = None
         self.coding_sm: Optional[CodingStateMachine] = None
         self._last_char = bytearray(b"\0\0")

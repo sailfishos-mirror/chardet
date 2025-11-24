@@ -4,7 +4,7 @@ All of the Enums that are used throughout the chardet package.
 :author: Dan Blanchard (dan.blanchard@gmail.com)
 """
 
-from enum import Flag, IntEnum
+from enum import Flag, IntEnum, auto
 
 
 class InputState(IntEnum):
@@ -23,15 +23,14 @@ class LanguageFilter(Flag):
     ``UniversalDetector``.
     """
 
-    NONE = 0x00
-    CHINESE_SIMPLIFIED = 0x01
-    CHINESE_TRADITIONAL = 0x02
-    JAPANESE = 0x04
-    KOREAN = 0x08
-    NON_CJK = 0x10
-    ALL = 0x1F
+    CHINESE_SIMPLIFIED = auto()
+    CHINESE_TRADITIONAL = auto()
+    JAPANESE = auto()
+    KOREAN = auto()
+    NON_CJK = auto()
     CHINESE = CHINESE_SIMPLIFIED | CHINESE_TRADITIONAL
     CJK = CHINESE | JAPANESE | KOREAN
+    ALL = NON_CJK | CJK
 
 
 class ProbingState(IntEnum):
@@ -89,10 +88,9 @@ class EncodingEra(Flag):
     confidence scores are very close. Lower values = more preferred/modern.
     """
 
-    NONE = 0x00
-    MODERN_WEB = 0x01  # UTF-8/16/32, Windows-125x, modern multibyte (widely used)
-    LEGACY_ISO = 0x02  # ISO-8859-x (legacy but common)
-    LEGACY_MAC = 0x04  # Mac encodings (less common)
-    DOS = 0x08  # CP437, CP850, CP852, etc. (very legacy)
-    MAINFRAME = 0x10  # EBCDIC variants (CP037, CP500, etc.)
-    ALL = 0x1F
+    MODERN_WEB = auto()  # UTF-8/16/32, Windows-125x, modern multibyte (widely used)
+    LEGACY_ISO = auto()  # ISO-8859-x (legacy but common)
+    LEGACY_MAC = auto()  # Mac encodings (less common)
+    DOS = auto()  # CP437, CP850, CP852, etc. (very legacy)
+    MAINFRAME = auto()  # EBCDIC variants (CP037, CP500, etc.)
+    ALL = MODERN_WEB | LEGACY_ISO | LEGACY_MAC | DOS | MAINFRAME

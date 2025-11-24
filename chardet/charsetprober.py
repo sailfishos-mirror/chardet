@@ -29,7 +29,8 @@ import logging
 import re
 from typing import Optional, Union
 
-from .enums import LanguageFilter, ProbingState
+from .enums import EncodingEra, LanguageFilter, ProbingState
+from .metadata.charsets import Charset, get_charset
 
 INTERNATIONAL_WORDS_PATTERN = re.compile(
     # Pattern rationale (see paper section 4.7 Two-Char Sequence Distribution):
@@ -44,10 +45,16 @@ INTERNATIONAL_WORDS_PATTERN = re.compile(
 class CharSetProber:
     SHORTCUT_THRESHOLD = 0.95
 
-    def __init__(self, lang_filter: LanguageFilter = LanguageFilter.NONE) -> None:
+    def __init__(
+        self,
+        *,
+        lang_filter: LanguageFilter = LanguageFilter.ALL,
+        encoding_era: EncodingEra = EncodingEra.ALL,
+    ) -> None:
         self._state = ProbingState.DETECTING
         self.active = True
         self.lang_filter = lang_filter
+        self.encoding_era = encoding_era
         self.logger = logging.getLogger(__name__)
 
     def reset(self) -> None:
@@ -56,6 +63,14 @@ class CharSetProber:
     @property
     def charset_name(self) -> Optional[str]:
         return None
+
+    @property
+    def charset(self) -> Optional[Charset]:
+        """Return the Charset metadata for this prober's encoding."""
+        name = self.charset_name
+        if name is None:
+            return None
+        return get_charset(name)
 
     @property
     def language(self) -> Optional[str]:

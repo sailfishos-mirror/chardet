@@ -41,10 +41,10 @@ from typing import Optional, Union
 
 from .charsetgroupprober import CharSetGroupProber
 from .charsetprober import CharSetProber
-from .encoding_eras import get_encoding_era, is_unicode_encoding
 from .enums import EncodingEra, InputState, LanguageFilter, ProbingState
 from .escprober import EscCharSetProber
 from .mbcsgroupprober import MBCSGroupProber
+from .metadata.charsets import get_charset, is_unicode_encoding
 from .resultdict import ResultDict
 from .sbcsgroupprober import SBCSGroupProber
 from .utf1632prober import UTF1632Prober
@@ -351,10 +351,18 @@ class UniversalDetector:
         # bigram distributions.
         elif self._input_state == InputState.HIGH_BYTE:
             if not self._charset_probers:
-                self._charset_probers = [MBCSGroupProber(self.lang_filter)]
+                self._charset_probers = [
+                    MBCSGroupProber(
+                        lang_filter=self.lang_filter, encoding_era=self.encoding_era
+                    )
+                ]
                 # If we're checking non-CJK encodings, use single-byte prober
                 if self.lang_filter & LanguageFilter.NON_CJK:
-                    self._charset_probers.append(SBCSGroupProber(self.encoding_era))
+                    self._charset_probers.append(
+                        SBCSGroupProber(
+                            encoding_era=self.encoding_era, lang_filter=self.lang_filter
+                        )
+                    )
             for prober in self._charset_probers:
                 if prober.feed(byte_str) == ProbingState.FOUND_IT:
                     charset_name = prober.charset_name
@@ -435,15 +443,17 @@ class UniversalDetector:
                 # Encoding era tie-breaking:
                 # If there's a better era encoding within VERY_CLOSE_THRESHOLD (0.5%),
                 # prefer the more modern/common encoding
-                current_era = get_encoding_era(lower_charset_name).value
+                current_charset = get_charset(lower_charset_name)
+                current_era = current_charset.encoding_era.value
                 current_is_unicode = is_unicode_encoding(lower_charset_name)
                 for prober in self._charset_probers:
                     if not prober or prober == max_prober:
                         continue
-                    alt_charset = (prober.charset_name or "").lower()
+                    alt_charset_name = (prober.charset_name or "").lower()
                     alt_confidence = prober.get_confidence()
-                    alt_era = get_encoding_era(alt_charset).value
-                    alt_is_unicode = is_unicode_encoding(alt_charset)
+                    alt_charset = get_charset(alt_charset_name)
+                    alt_era = alt_charset.encoding_era.value
+                    alt_is_unicode = is_unicode_encoding(alt_charset_name)
 
                     # Within same era, prefer Unicode over non-Unicode encodings
                     should_prefer_alt = False
@@ -463,8 +473,8 @@ class UniversalDetector:
                         1 - self.VERY_CLOSE_THRESHOLD
                     ):
                         # Switch to the preferred encoding
-                        charset_name = prober.charset_name
-                        lower_charset_name = alt_charset
+                        charset_name = alt_charset_name
+                        lower_charset_name = charset_name.lower()
                         confidence = alt_confidence
                         current_era = alt_era
                         current_is_unicode = alt_is_unicode
