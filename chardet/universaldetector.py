@@ -163,6 +163,11 @@ class UniversalDetector:
                 nested.append(prober)
         return nested
 
+    @property
+    def active_probers(self) -> list[CharSetProber]:
+        """Get a flat list of all active (not falsey and not in NOT_ME state) nested charset probers."""
+        return [prober for prober in self.nested_probers if prober and prober.active]
+
     def _get_utf8_prober(self) -> Optional[CharSetProber]:
         """
         Get the UTF-8 prober from the charset probers.
@@ -457,8 +462,8 @@ class UniversalDetector:
                 current_charset = get_charset(lower_charset_name)
                 current_era = current_charset.encoding_era.value
                 current_is_unicode = is_unicode_encoding(lower_charset_name)
-                for prober in self.nested_probers:
-                    if not prober or prober == max_prober:
+                for prober in self.active_probers:
+                    if prober == max_prober:
                         continue
                     alt_charset_name = (prober.charset_name or "").lower()
                     alt_confidence = prober.get_confidence()
@@ -507,9 +512,7 @@ class UniversalDetector:
                     and not self._has_win_bytes
                 ):
                     # Look for very close ISO-8859-1 or Windows-1252 alternatives
-                    for prober in self.nested_probers:
-                        if not prober:
-                            continue
+                    for prober in self.active_probers:
                         sub_charset = (prober.charset_name or "").lower()
                         if sub_charset in (
                             "iso-8859-1",
@@ -531,9 +534,7 @@ class UniversalDetector:
                         should_switch_to_windows = True
                         if self._has_mac_letter_pattern:
                             # If we have Mac letter patterns, check MacRoman confidence
-                            for prober in self.nested_probers:
-                                if not prober:
-                                    continue
+                            for prober in self.active_probers:
                                 sub_charset = (prober.charset_name or "").lower()
                                 if sub_charset == "macroman":
                                     sub_confidence = prober.get_confidence()
@@ -554,9 +555,7 @@ class UniversalDetector:
                     and self._has_mac_letter_pattern
                 ):
                     # Check if MacRoman has similar confidence
-                    for prober in self.nested_probers:
-                        if not prober:
-                            continue
+                    for prober in self.active_probers:
                         sub_charset = (prober.charset_name or "").lower()
                         if sub_charset == "macroman":
                             sub_confidence = prober.get_confidence()
