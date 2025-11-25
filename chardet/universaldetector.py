@@ -96,6 +96,7 @@ class UniversalDetector:
     # Uses Python's canonical codec names (case-insensitive).
     LEGACY_MAP = {
         "ascii": "Windows-1252",  # ASCII is subset of Windows-1252
+        "euc-kr": "CP949",  # EUC-KR extended by CP949 (aka Windows-949)
         "iso-8859-1": "Windows-1252",  # Latin-1 extended by Windows-1252
         "iso-8859-2": "Windows-1250",  # Central European
         "iso-8859-5": "Windows-1251",  # Cyrillic
@@ -103,17 +104,15 @@ class UniversalDetector:
         "iso-8859-7": "Windows-1253",  # Greek
         "iso-8859-8": "Windows-1255",  # Hebrew
         "iso-8859-9": "Windows-1254",  # Turkish
-        "iso-8859-11": "cp874",  # Thai, extended by CP874 (aka Windows-874)
+        "iso-8859-11": "CP874",  # Thai, extended by CP874 (aka Windows-874)
         "iso-8859-13": "Windows-1257",  # Baltic
-        "tis-620": "cp874",  # Thai, equivalent to Windows-874
-        "euc-kr": "CP949",  # EUC-KR extended by CP949 (aka Windows-949)
-        "utf-16le": "UTF-16",  # UTF-16LE without BOM -> UTF-16 with BOM handling
+        "tis-620": "CP874",  # Thai, equivalent to Windows-874
     }
 
     def __init__(
         self,
         lang_filter: LanguageFilter = LanguageFilter.ALL,
-        should_rename_legacy: bool = False,
+        should_rename_legacy: bool | None = None,
         encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
         max_bytes: int = 200_000,
     ) -> None:
@@ -133,6 +132,8 @@ class UniversalDetector:
         self.logger = logging.getLogger(__name__)
         self._has_win_bytes = False
         self._has_mac_letter_pattern = False
+        if should_rename_legacy is None:
+            should_rename_legacy = encoding_era == EncodingEra.MODERN_WEB
         self.should_rename_legacy = should_rename_legacy
         self.encoding_era = encoding_era
         self._total_bytes_fed = 0
@@ -151,15 +152,25 @@ class UniversalDetector:
     def charset_probers(self) -> list[CharSetProber]:
         return self._charset_probers
 
+    @property
+    def nested_probers(self) -> list[CharSetProber]:
+        """Get a flat list of all nested charset probers."""
+        nested = []
+        for prober in self._charset_probers:
+            if isinstance(prober, CharSetGroupProber):
+                nested.extend(getattr(prober, "probers", []))
+            else:
+                nested.append(prober)
+        return nested
+
     def _get_utf8_prober(self) -> Optional[CharSetProber]:
         """
         Get the UTF-8 prober from the charset probers.
         Returns None if not found.
         """
-        for group_prober in self._charset_probers:
-            for prober in getattr(group_prober, "probers", []):
-                if prober.charset_name and "utf-8" in prober.charset_name.lower():
-                    return prober
+        for prober in self.nested_probers:
+            if prober.charset_name and "utf-8" in prober.charset_name.lower():
+                return prober
         return None
 
     def reset(self) -> None:
@@ -446,7 +457,7 @@ class UniversalDetector:
                 current_charset = get_charset(lower_charset_name)
                 current_era = current_charset.encoding_era.value
                 current_is_unicode = is_unicode_encoding(lower_charset_name)
-                for prober in self._charset_probers:
+                for prober in self.nested_probers:
                     if not prober or prober == max_prober:
                         continue
                     alt_charset_name = (prober.charset_name or "").lower()
@@ -496,23 +507,21 @@ class UniversalDetector:
                     and not self._has_win_bytes
                 ):
                     # Look for very close ISO-8859-1 or Windows-1252 alternatives
-                    for prober in self._charset_probers:
+                    for prober in self.nested_probers:
                         if not prober:
                             continue
-                        if isinstance(prober, CharSetGroupProber):
-                            for sub_prober in getattr(prober, "probers", []):
-                                sub_charset = (sub_prober.charset_name or "").lower()
-                                if sub_charset in (
-                                    "iso-8859-1",
-                                    "windows-1252",
-                                    "iso-8859-15",
-                                ):
-                                    sub_confidence = sub_prober.get_confidence()
-                                    # Only prefer ISO/Windows if confidence is within 0.5% (99.5%+)
-                                    if sub_confidence >= confidence * 0.995:
-                                        charset_name = sub_prober.charset_name
-                                        confidence = sub_confidence
-                                        break
+                        sub_charset = (prober.charset_name or "").lower()
+                        if sub_charset in (
+                            "iso-8859-1",
+                            "windows-1252",
+                            "iso-8859-15",
+                        ):
+                            sub_confidence = prober.get_confidence()
+                            # Only prefer ISO/Windows if confidence is within 0.5% (99.5%+)
+                            if sub_confidence >= confidence * 0.995:
+                                charset_name = prober.charset_name
+                                confidence = sub_confidence
+                                break
 
                 # Use Windows encoding name instead of ISO-8859 if we saw any
                 # extra Windows-specific bytes AND MacRoman is not a close contender
@@ -522,21 +531,17 @@ class UniversalDetector:
                         should_switch_to_windows = True
                         if self._has_mac_letter_pattern:
                             # If we have Mac letter patterns, check MacRoman confidence
-                            for prober in self._charset_probers:
+                            for prober in self.nested_probers:
                                 if not prober:
                                     continue
-                                if isinstance(prober, CharSetGroupProber):
-                                    for sub_prober in getattr(prober, "probers", []):
-                                        sub_charset = (
-                                            sub_prober.charset_name or ""
-                                        ).lower()
-                                        if sub_charset == "macroman":
-                                            sub_confidence = sub_prober.get_confidence()
-                                            # If MacRoman has at least 99.5% of ISO confidence,
-                                            # don't switch to Windows - let MacRoman compete
-                                            if sub_confidence >= confidence * 0.995:
-                                                should_switch_to_windows = False
-                                                break
+                                sub_charset = (prober.charset_name or "").lower()
+                                if sub_charset == "macroman":
+                                    sub_confidence = prober.get_confidence()
+                                    # If MacRoman has at least 99.5% of ISO confidence,
+                                    # don't switch to Windows - let MacRoman compete
+                                    if sub_confidence >= confidence * 0.995:
+                                        should_switch_to_windows = False
+                                        break
                         if should_switch_to_windows:
                             charset_name = self.ISO_WIN_MAP.get(
                                 lower_charset_name, charset_name
@@ -549,20 +554,18 @@ class UniversalDetector:
                     and self._has_mac_letter_pattern
                 ):
                     # Check if MacRoman has similar confidence
-                    for prober in self._charset_probers:
+                    for prober in self.nested_probers:
                         if not prober:
                             continue
-                        if isinstance(prober, CharSetGroupProber):
-                            for sub_prober in getattr(prober, "probers", []):
-                                sub_charset = (sub_prober.charset_name or "").lower()
-                                if sub_charset == "macroman":
-                                    sub_confidence = sub_prober.get_confidence()
-                                    # If MacRoman prober has at least 90% of Windows-1252 confidence,
-                                    # and we have letter patterns, prefer MacRoman
-                                    if sub_confidence >= confidence * 0.90:
-                                        charset_name = sub_prober.charset_name
-                                        confidence = sub_confidence
-                                        break
+                        sub_charset = (prober.charset_name or "").lower()
+                        if sub_charset == "macroman":
+                            sub_confidence = prober.get_confidence()
+                            # If MacRoman prober has at least 90% of Windows-1252 confidence,
+                            # and we have letter patterns, prefer MacRoman
+                            if sub_confidence >= confidence * 0.90:
+                                charset_name = prober.charset_name
+                                confidence = sub_confidence
+                                break
                 # Rename legacy encodings with superset encodings if asked
                 if self.should_rename_legacy:
                     charset_name = self.LEGACY_MAP.get(
@@ -597,22 +600,13 @@ class UniversalDetector:
         if self.logger.getEffectiveLevel() <= logging.DEBUG:
             if self.result["encoding"] is None:
                 self.logger.debug("no probers hit minimum threshold")
-                for group_prober in self._charset_probers:
-                    if not group_prober:
+                for prober in self.nested_probers:
+                    if not prober:
                         continue
-                    if isinstance(group_prober, CharSetGroupProber):
-                        for prober in group_prober.probers:
-                            self.logger.debug(
-                                "%s %s confidence = %s",
-                                prober.charset_name,
-                                prober.language,
-                                prober.get_confidence(),
-                            )
-                    else:
-                        self.logger.debug(
-                            "%s %s confidence = %s",
-                            group_prober.charset_name,
-                            group_prober.language,
-                            group_prober.get_confidence(),
-                        )
+                    self.logger.debug(
+                        "%s %s confidence = %s",
+                        prober.charset_name,
+                        prober.language,
+                        prober.get_confidence(),
+                    )
         return self.result
