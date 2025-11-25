@@ -25,8 +25,11 @@
 # <https://www.gnu.org/licenses/>.
 ######################### END LICENSE BLOCK #########################
 
+import re
+from typing import Union
+
 from .charsetgroupprober import CharSetGroupProber
-from .enums import EncodingEra, LanguageFilter
+from .enums import EncodingEra, LanguageFilter, ProbingState
 from .hebrewprober import HebrewProber
 from .langarabicmodel import (
     CP720_ARABIC_MODEL,
@@ -336,6 +339,74 @@ from .langwelshmodel import (
 )
 from .sbcharsetprober import SingleByteCharSetProber
 
+# Byte pattern detectors for single-byte encoding disambiguation
+# Bytes in 0x80-0x9F range have different meanings in different encoding families:
+# - Windows encodings: Smart quotes, dashes, currency symbols (printable punctuation)
+# - Mac encodings: Accented letters and diacriticals (printable letters)
+# - ISO-8859-x: Control characters (C1 control codes, mostly unprintable)
+
+# Detect any byte in the Windows/Mac range
+WIN_BYTE_DETECTOR = re.compile(b"[\x80-\x9f]")
+
+# Detect Mac-only letter bytes for Latin encodings (letters in Mac, control/punct in Win/ISO)
+MAC_LATIN_ONLY_LETTER_DETECTOR = re.compile(b"[\x81\x8d\x8f\x90\x92\x9d]")
+
+# Detect MacCyrillic-only letter bytes (Cyrillic letters in Mac, punctuation in Windows-1251)
+MAC_CYRILLIC_ONLY_LETTER_DETECTOR = re.compile(
+    b"[\x82\x84\x85\x86\x87\x88\x89\x8b\x91\x92\x93\x94\x95\x96\x97\x99\x9b]"
+)
+
+# Detect Mac letter bytes appearing between word characters (suggests Mac encoding)
+MAC_LETTER_IN_WORD_DETECTOR = re.compile(b"[a-zA-Z][\x80-\x9f][a-zA-Z]")
+
+# Detect Euro sign (0xA4 in ISO-8859-15, but generic currency ¤ in ISO-8859-1)
+EURO_SIGN_DETECTOR = re.compile(b"\xa4")
+
+# Latin encodings where Mac=letters and Windows=punctuation in 0x80-0x9F
+CONFUSED_LATIN_ENCODINGS = frozenset({
+    "macroman",
+    "windows-1252",
+    "iso-8859-1",
+    "iso-8859-15",
+    "macgreek",
+    "windows-1253",
+    "iso-8859-7",
+    "macturkish",
+    "windows-1254",
+    "iso-8859-9",
+    "iso-8859-3",  # Turkish/Maltese/Esperanto (also works with MacTurkish/Win-1254)
+    "maciceland",
+    "iso-8859-10",
+    "iso-8859-14",
+})
+
+# Central European encodings where Mac=letters and Windows=punctuation in 0x80-0x9F
+CONFUSED_CENTRAL_EUROPEAN_ENCODINGS = frozenset({
+    "maclatin2",
+    "windows-1250",
+    "iso-8859-2",
+    "iso-8859-16",  # Southeast European/Romanian (close to Latin-2)
+})
+
+# Cyrillic encodings where Mac=letters and Windows=punctuation in 0x80-0x9F
+CONFUSED_CYRILLIC_ENCODINGS = frozenset({
+    "maccyrillic",
+    "windows-1251",
+    "iso-8859-5",
+})
+
+# Map ISO encodings to their Windows equivalents
+ISO_WIN_MAP = {
+    "iso-8859-1": "Windows-1252",
+    "iso-8859-2": "Windows-1250",
+    "iso-8859-5": "Windows-1251",
+    "iso-8859-6": "Windows-1256",
+    "iso-8859-7": "Windows-1253",
+    "iso-8859-8": "Windows-1255",
+    "iso-8859-9": "Windows-1254",
+    "iso-8859-13": "Windows-1257",
+}
+
 
 class SBCSGroupProber(CharSetGroupProber):
     def __init__(
@@ -344,6 +415,13 @@ class SBCSGroupProber(CharSetGroupProber):
         encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
     ) -> None:
         super().__init__(lang_filter=lang_filter, encoding_era=encoding_era)
+
+        # Initialize byte pattern tracking for disambiguation heuristics
+        self._has_win_bytes = False
+        self._has_mac_latin_letter_pattern = False
+        self._has_mac_cyrillic_letter_pattern = False
+        self._has_euro_sign = False
+        self._input_bytes = bytearray()
 
         hebrew_prober = HebrewProber()
         logical_hebrew_prober = SingleByteCharSetProber(
@@ -589,3 +667,245 @@ class SBCSGroupProber(CharSetGroupProber):
         # Filter probers based on encoding era and language
         self.probers = self._filter_probers(self.probers)
         self.reset()
+
+    def reset(self) -> None:
+        super().reset()
+        self._has_win_bytes = False
+        self._has_mac_latin_letter_pattern = False
+        self._has_mac_cyrillic_letter_pattern = False
+        self._has_euro_sign = False
+        self._input_bytes = bytearray()
+
+    def feed(self, byte_str: Union[bytes, bytearray]) -> "ProbingState":
+        # Track byte patterns for heuristics
+        self._input_bytes.extend(byte_str)
+
+        # Detect byte patterns (only check new bytes for efficiency)
+        if WIN_BYTE_DETECTOR.search(byte_str):
+            self._has_win_bytes = True
+        if MAC_LETTER_IN_WORD_DETECTOR.search(
+            byte_str
+        ) or MAC_LATIN_ONLY_LETTER_DETECTOR.search(byte_str):
+            self._has_mac_latin_letter_pattern = True
+        if MAC_CYRILLIC_ONLY_LETTER_DETECTOR.search(byte_str):
+            self._has_mac_cyrillic_letter_pattern = True
+        if EURO_SIGN_DETECTOR.search(byte_str):
+            self._has_euro_sign = True
+
+        # Call parent feed method
+        return super().feed(byte_str)
+
+    def get_confidence(self) -> float:
+        # Get base confidence from parent
+        base_confidence = super().get_confidence()
+
+        # If no best prober yet, return base confidence
+        if not self._best_guess_prober:
+            return base_confidence
+
+        # Apply heuristics to disambiguate confused encodings
+        charset_name = self._best_guess_prober.charset_name
+        if not charset_name:
+            return base_confidence
+
+        confidence = base_confidence
+        lower_charset_name = charset_name.lower()
+
+        # Build alternatives dict: best prober for each charset (excluding winner)
+        alternatives = {}
+        for prober in self.probers:
+            if not prober.active or prober == self._best_guess_prober:
+                continue
+            alt_name = (prober.charset_name or "").lower()
+            alt_conf = prober.get_confidence()
+            if alt_name not in alternatives or alt_conf > alternatives[alt_name][1]:
+                alternatives[alt_name] = (prober, alt_conf)
+
+        # Heuristic 1: Mac/Windows/ISO disambiguation for LATIN encodings
+        is_latin_family = lower_charset_name in CONFUSED_LATIN_ENCODINGS
+
+        if is_latin_family and lower_charset_name == "macroman":
+            # MacRoman wins but no Mac patterns → prefer ISO/Windows
+            # If we have Win bytes, prefer Windows encodings specifically
+            if not self._has_mac_latin_letter_pattern:
+                alt_names = (
+                    ("windows-1252", "iso-8859-1", "iso-8859-15")
+                    if self._has_win_bytes
+                    else ("iso-8859-1", "windows-1252", "iso-8859-15")
+                )
+                for alt_name in alt_names:
+                    if alt_name in alternatives:
+                        prober, alt_conf = alternatives[alt_name]
+                        if alt_conf >= confidence * 0.995:  # Within 0.5%
+                            self._best_guess_prober = prober
+                            return alt_conf
+
+        # Cross-family Mac vs Windows disambiguation
+        # If ANY Mac encoding wins but we have Windows bytes and no Mac patterns,
+        # prefer any close Windows alternative (even from different language family)
+        # This handles cases where MacRoman/MacLatin2/etc wins against text in a different family
+        if (
+            lower_charset_name.startswith("mac")
+            and self._has_win_bytes
+            and not self._has_mac_latin_letter_pattern
+        ):
+            # Look for Windows alternatives
+            win_alternatives = [
+                (name, prober, conf)
+                for name, (prober, conf) in alternatives.items()
+                if name.startswith("windows-")
+            ]
+            if win_alternatives:
+                # Sort by confidence and take the best Windows alternative
+                win_alternatives.sort(key=lambda x: -x[2])
+                best_win_name, best_win_prober, best_win_conf = win_alternatives[0]
+                if best_win_conf >= confidence * 0.995:  # Within 0.5%
+                    self._best_guess_prober = best_win_prober
+                    return best_win_conf
+
+        elif lower_charset_name.startswith("iso-8859"):
+            is_latin_iso = lower_charset_name in CONFUSED_LATIN_ENCODINGS
+
+            # ISO wins and has Windows bytes → switch to Windows
+            if self._has_win_bytes:
+                should_switch = True
+                # But check if Mac is close with Mac patterns (Latin only)
+                if is_latin_iso and self._has_mac_latin_letter_pattern:
+                    for mac_name in alternatives:
+                        if (
+                            mac_name.startswith("mac")
+                            and mac_name in CONFUSED_LATIN_ENCODINGS
+                        ):
+                            _, mac_conf = alternatives[mac_name]
+                            if mac_conf >= confidence * 0.995:
+                                should_switch = False
+                                break
+
+                if should_switch:
+                    win_name = ISO_WIN_MAP.get(lower_charset_name)
+                    if win_name and win_name.lower() in alternatives:
+                        prober, alt_conf = alternatives[win_name.lower()]
+                        self._best_guess_prober = prober
+                        return alt_conf
+
+            # ISO-8859-1 with Euro sign → prefer ISO-8859-15
+            if lower_charset_name == "iso-8859-1" and self._has_euro_sign:
+                if "iso-8859-15" in alternatives:
+                    prober, alt_conf = alternatives["iso-8859-15"]
+                    if alt_conf >= confidence * 0.99:
+                        self._best_guess_prober = prober
+                        return alt_conf
+
+        # Heuristic 2: Euro sign detection for Latin encodings
+        if self._has_euro_sign and "iso-8859-15" in alternatives:
+            is_latin_encoding = lower_charset_name in CONFUSED_LATIN_ENCODINGS
+            if is_latin_encoding:
+                prober, alt_conf = alternatives["iso-8859-15"]
+                if alt_conf >= confidence * 0.99:
+                    self._best_guess_prober = prober
+                    return alt_conf
+
+        # Heuristic 3: Prefer Mac over Windows/ISO when Mac Latin letter patterns present
+        if self._has_mac_latin_letter_pattern:
+            mac_alternatives = [
+                name
+                for name in alternatives
+                if name.startswith("mac") and name in CONFUSED_LATIN_ENCODINGS
+            ]
+            for mac_name in mac_alternatives:
+                prober, mac_conf = alternatives[mac_name]
+                is_latin_win_or_iso = (
+                    lower_charset_name in CONFUSED_LATIN_ENCODINGS
+                    and not lower_charset_name.startswith("mac")
+                )
+                if is_latin_win_or_iso and mac_conf >= confidence * 0.90:
+                    self._best_guess_prober = prober
+                    return mac_conf
+
+        # Heuristic 4: Mac/Windows/ISO disambiguation for CYRILLIC encodings
+        is_cyrillic_family = lower_charset_name in CONFUSED_CYRILLIC_ENCODINGS
+
+        if is_cyrillic_family and lower_charset_name == "maccyrillic":
+            # MacCyrillic wins but no Mac Cyrillic patterns → prefer Windows/ISO
+            if not self._has_mac_cyrillic_letter_pattern and not self._has_win_bytes:
+                for alt_name in ("windows-1251", "iso-8859-5"):
+                    if alt_name in alternatives:
+                        prober, alt_conf = alternatives[alt_name]
+                        if alt_conf >= confidence * 0.995:
+                            self._best_guess_prober = prober
+                            return alt_conf
+
+        elif is_cyrillic_family and lower_charset_name == "iso-8859-5":
+            # ISO-8859-5 wins and has Windows bytes → switch to Windows-1251
+            if self._has_win_bytes:
+                should_switch = True
+                if (
+                    self._has_mac_cyrillic_letter_pattern
+                    and "maccyrillic" in alternatives
+                ):
+                    _, mac_conf = alternatives["maccyrillic"]
+                    if mac_conf >= confidence * 0.995:
+                        should_switch = False
+
+                if should_switch and "windows-1251" in alternatives:
+                    prober, alt_conf = alternatives["windows-1251"]
+                    self._best_guess_prober = prober
+                    return alt_conf
+
+        # Heuristic 5: Prefer MacCyrillic when Mac Cyrillic letter patterns present
+        if self._has_mac_cyrillic_letter_pattern and "maccyrillic" in alternatives:
+            prober, mac_conf = alternatives["maccyrillic"]
+            is_cyrillic_win_or_iso = (
+                lower_charset_name in CONFUSED_CYRILLIC_ENCODINGS
+                and lower_charset_name != "maccyrillic"
+            )
+            if is_cyrillic_win_or_iso and mac_conf >= confidence * 0.90:
+                self._best_guess_prober = prober
+                return mac_conf
+
+        # Heuristic 6: Mac/Windows/ISO disambiguation for CENTRAL EUROPEAN encodings
+        is_central_european_family = (
+            lower_charset_name in CONFUSED_CENTRAL_EUROPEAN_ENCODINGS
+        )
+
+        if is_central_european_family and lower_charset_name == "maclatin2":
+            # MacLatin2 wins but no Mac patterns → prefer Windows/ISO
+            if not self._has_mac_latin_letter_pattern:
+                alt_names = (
+                    ("windows-1250", "iso-8859-2")
+                    if self._has_win_bytes
+                    else ("iso-8859-2", "windows-1250")
+                )
+                for alt_name in alt_names:
+                    if alt_name in alternatives:
+                        prober, alt_conf = alternatives[alt_name]
+                        if alt_conf >= confidence * 0.995:
+                            self._best_guess_prober = prober
+                            return alt_conf
+
+        elif is_central_european_family and lower_charset_name == "iso-8859-2":
+            # ISO-8859-2 wins and has Windows bytes → switch to Windows-1250
+            if self._has_win_bytes:
+                should_switch = True
+                if self._has_mac_latin_letter_pattern and "maclatin2" in alternatives:
+                    _, mac_conf = alternatives["maclatin2"]
+                    if mac_conf >= confidence * 0.995:
+                        should_switch = False
+
+                if should_switch and "windows-1250" in alternatives:
+                    prober, alt_conf = alternatives["windows-1250"]
+                    self._best_guess_prober = prober
+                    return alt_conf
+
+        # Heuristic 7: Prefer MacLatin2 when Mac Latin letter patterns present
+        if self._has_mac_latin_letter_pattern and "maclatin2" in alternatives:
+            prober, mac_conf = alternatives["maclatin2"]
+            is_central_european_win_or_iso = (
+                lower_charset_name in CONFUSED_CENTRAL_EUROPEAN_ENCODINGS
+                and lower_charset_name != "maclatin2"
+            )
+            if is_central_european_win_or_iso and mac_conf >= confidence * 0.90:
+                self._best_guess_prober = prober
+                return mac_conf
+
+        return confidence

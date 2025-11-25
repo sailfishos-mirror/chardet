@@ -46,7 +46,7 @@ from .escprober import EscCharSetProber
 from .mbcsgroupprober import MBCSGroupProber
 from .metadata.charsets import get_charset, is_unicode_encoding
 from .resultdict import ResultDict
-from .sbcsgroupprober import SBCSGroupProber
+from .sbcsgroupprober import ISO_WIN_MAP, SBCSGroupProber
 from .utf1632prober import UTF1632Prober
 
 
@@ -70,26 +70,11 @@ class UniversalDetector:
     MINIMUM_THRESHOLD = 0.20
     HIGH_BYTE_DETECTOR = re.compile(b"[\x80-\xff]")
     ESC_DETECTOR = re.compile(b"(\033|~{)")
-    # Bytes in the 0x80-0x9F range are different in Windows vs Mac/ISO encodings:
-    # - Windows-125x: Uses for punctuation (smart quotes, dashes, ellipsis, etc.)
-    # - Mac encodings: Uses for letters (accented characters)
-    # - ISO-8859-x: Mostly undefined control codes
-    WIN_BYTE_DETECTOR = re.compile(b"[\x80-\x9f]")
-    # Check if Win bytes appear between word characters (suggesting Mac encoding)
-    # e.g., "cre\x91rd" (ë in MacRoman) vs " \x91quote\x92 " (smart quotes in Windows)
-    MAC_LETTER_IN_WORD_DETECTOR = re.compile(b"[a-zA-Z][\x80-\x9f][a-zA-Z]")
-    ISO_WIN_MAP = {
-        "iso-8859-1": "Windows-1252",
-        "iso-8859-2": "Windows-1250",
-        "iso-8859-5": "Windows-1251",
-        "iso-8859-6": "Windows-1256",
-        "iso-8859-7": "Windows-1253",
-        "iso-8859-8": "Windows-1255",
-        "iso-8859-9": "Windows-1254",
-        "iso-8859-13": "Windows-1257",
-    }
     # Threshold for "very close" confidence scores where era preference applies
     VERY_CLOSE_THRESHOLD = 0.005  # 0.5%
+
+    # Map ISO encodings to their Windows equivalents (imported from sbcsgroupprober)
+    ISO_WIN_MAP = ISO_WIN_MAP
 
     # Based on https://encoding.spec.whatwg.org/#names-and-labels
     # Maps legacy encoding names to their modern/superset equivalents.
@@ -130,8 +115,6 @@ class UniversalDetector:
         self._last_char = b""
         self.lang_filter = lang_filter
         self.logger = logging.getLogger(__name__)
-        self._has_win_bytes = False
-        self._has_mac_letter_pattern = False
         if should_rename_legacy is None:
             should_rename_legacy = encoding_era == EncodingEra.MODERN_WEB
         self.should_rename_legacy = should_rename_legacy
@@ -146,7 +129,11 @@ class UniversalDetector:
 
     @property
     def has_win_bytes(self) -> bool:
-        return self._has_win_bytes
+        """Check if Windows-specific bytes were detected by the SBCS prober."""
+        for prober in self._charset_probers:
+            if isinstance(prober, SBCSGroupProber):
+                return prober._has_win_bytes
+        return False
 
     @property
     def charset_probers(self) -> list[CharSetProber]:
@@ -168,6 +155,65 @@ class UniversalDetector:
         """Get a flat list of all active (not falsey and not in NOT_ME state) nested charset probers."""
         return [prober for prober in self.nested_probers if prober and prober.active]
 
+    def _apply_encoding_heuristics(
+        self, charset_name: str, confidence: float, winning_prober: CharSetProber
+    ) -> tuple[str, float]:
+        """
+        Apply heuristic adjustments to the winning encoding based on:
+        1. Encoding era preferences (prefer newer/Unicode encodings)
+        2. Mac/Windows/ISO byte pattern disambiguation
+
+        Returns: (adjusted_charset_name, adjusted_confidence)
+        """
+        lower_charset_name = charset_name.lower()
+
+        # Build a cache of all alternative probers in a single pass
+        # Only consider top-level probers (group probers like SBCS, MBCS, UTF-8, etc.)
+        # Do NOT look inside group probers - they handle their own disambiguation
+        current_charset = get_charset(lower_charset_name)
+        current_era = current_charset.encoding_era.value
+        current_is_unicode = is_unicode_encoding(lower_charset_name)
+
+        for prober in self._charset_probers:
+            if not prober or not prober.active or prober == winning_prober:
+                continue
+
+            alt_charset_name = (prober.charset_name or "").lower()
+            if not alt_charset_name:  # Skip probers without a charset name
+                continue
+
+            alt_confidence = prober.get_confidence()
+            alt_charset = get_charset(alt_charset_name)
+            alt_era = alt_charset.encoding_era.value
+            alt_is_unicode = is_unicode_encoding(alt_charset_name)
+
+            should_prefer_alt = False
+            if alt_era < current_era:
+                # Alternative has better (lower numbered) era
+                should_prefer_alt = True
+            elif alt_era == current_era and alt_is_unicode and not current_is_unicode:
+                # Both same era, but alt is Unicode
+                should_prefer_alt = True
+
+            # If alternative should be preferred and is very close in confidence
+            if should_prefer_alt and alt_confidence >= confidence * (
+                1 - self.VERY_CLOSE_THRESHOLD
+            ):
+                charset_name = alt_charset_name
+                lower_charset_name = charset_name
+                confidence = alt_confidence
+                current_era = alt_era
+                current_is_unicode = alt_is_unicode
+                self.logger.debug(
+                    f"Era preference: {alt_charset} (era {alt_era}, unicode={alt_is_unicode}) "
+                    f"preferred over prior winner"
+                )
+
+        # Single-byte encoding heuristics are now handled in SBCSGroupProber
+        # No additional heuristics needed here at the UniversalDetector level
+
+        return charset_name, confidence
+
     def _get_utf8_prober(self) -> Optional[CharSetProber]:
         """
         Get the UTF-8 prober from the charset probers.
@@ -187,8 +233,6 @@ class UniversalDetector:
         self.result = {"encoding": None, "confidence": 0.0, "language": None}
         self.done = False
         self._got_data = False
-        self._has_win_bytes = False
-        self._has_mac_letter_pattern = False
         self._input_state = InputState.PURE_ASCII
         self._last_char = b""
         self._total_bytes_fed = 0
@@ -394,10 +438,6 @@ class UniversalDetector:
                     }
                     self.done = True
                     break
-            if self.WIN_BYTE_DETECTOR.search(byte_str):
-                self._has_win_bytes = True
-            if self.MAC_LETTER_IN_WORD_DETECTOR.search(byte_str):
-                self._has_mac_letter_pattern = True
 
     def close(self) -> ResultDict:
         """
@@ -456,115 +496,23 @@ class UniversalDetector:
                 lower_charset_name = charset_name.lower()
                 confidence = max_prober.get_confidence()
 
-                # Encoding era tie-breaking:
-                # If there's a better era encoding within VERY_CLOSE_THRESHOLD (0.5%),
-                # prefer the more modern/common encoding
-                current_charset = get_charset(lower_charset_name)
-                current_era = current_charset.encoding_era.value
-                current_is_unicode = is_unicode_encoding(lower_charset_name)
-                for prober in self.active_probers:
-                    if prober == max_prober:
-                        continue
-                    alt_charset_name = (prober.charset_name or "").lower()
-                    alt_confidence = prober.get_confidence()
-                    alt_charset = get_charset(alt_charset_name)
-                    alt_era = alt_charset.encoding_era.value
-                    alt_is_unicode = is_unicode_encoding(alt_charset_name)
-
-                    # Within same era, prefer Unicode over non-Unicode encodings
-                    should_prefer_alt = False
-                    if alt_era < current_era:
-                        # Alternative has better (lower numbered) era
-                        should_prefer_alt = True
-                    elif (
-                        alt_era == current_era
-                        and alt_is_unicode
-                        and not current_is_unicode
+                # Find the actual winning nested prober (max_prober might be a group prober)
+                winning_nested_prober = None
+                for prober in self.nested_probers:
+                    if (
+                        prober
+                        and prober.active
+                        and prober.charset_name
+                        and prober.charset_name.lower() == lower_charset_name
+                        and abs(prober.get_confidence() - confidence) < 0.0001
                     ):
-                        # Both are same era (likely MODERN_WEB), but alt is Unicode
-                        should_prefer_alt = True
+                        winning_nested_prober = prober
+                        break
 
-                    # If alternative should be preferred and is very close in confidence
-                    if should_prefer_alt and alt_confidence >= confidence * (
-                        1 - self.VERY_CLOSE_THRESHOLD
-                    ):
-                        # Switch to the preferred encoding
-                        charset_name = alt_charset_name
-                        lower_charset_name = charset_name.lower()
-                        confidence = alt_confidence
-                        current_era = alt_era
-                        current_is_unicode = alt_is_unicode
-                        max_prober = prober
-                        self.logger.debug(
-                            f"Era preference: {alt_charset} (era {alt_era}, unicode={alt_is_unicode}) "
-                            f"preferred over {charset_name} (era {current_era}, unicode={current_is_unicode})"
-                        )
-
-                # Tie-breaking: If MacRoman wins but there are close ISO/Windows alternatives
-                # and no Mac-specific letter patterns, prefer the ISO/Windows encoding
-                # This handles cases where text only uses common characters (>0x9F) that are
-                # identical across MacRoman, ISO-8859-1, and Windows-1252
-                # Only apply when confidences are VERY close (>99.5%) to avoid changing
-                # correct MacRoman detections
-                if (
-                    lower_charset_name == "macroman"
-                    and not self._has_mac_letter_pattern
-                    and not self._has_win_bytes
-                ):
-                    # Look for very close ISO-8859-1 or Windows-1252 alternatives
-                    for prober in self.active_probers:
-                        sub_charset = (prober.charset_name or "").lower()
-                        if sub_charset in (
-                            "iso-8859-1",
-                            "windows-1252",
-                            "iso-8859-15",
-                        ):
-                            sub_confidence = prober.get_confidence()
-                            # Only prefer ISO/Windows if confidence is within 0.5% (99.5%+)
-                            if sub_confidence >= confidence * 0.995:
-                                charset_name = prober.charset_name
-                                confidence = sub_confidence
-                                break
-
-                # Use Windows encoding name instead of ISO-8859 if we saw any
-                # extra Windows-specific bytes AND MacRoman is not a close contender
-                if lower_charset_name.startswith("iso-8859"):
-                    if self._has_win_bytes:
-                        # Check if MacRoman is a close contender before switching to Windows
-                        should_switch_to_windows = True
-                        if self._has_mac_letter_pattern:
-                            # If we have Mac letter patterns, check MacRoman confidence
-                            for prober in self.active_probers:
-                                sub_charset = (prober.charset_name or "").lower()
-                                if sub_charset == "macroman":
-                                    sub_confidence = prober.get_confidence()
-                                    # If MacRoman has at least 99.5% of ISO confidence,
-                                    # don't switch to Windows - let MacRoman compete
-                                    if sub_confidence >= confidence * 0.995:
-                                        should_switch_to_windows = False
-                                        break
-                        if should_switch_to_windows:
-                            charset_name = self.ISO_WIN_MAP.get(
-                                lower_charset_name, charset_name
-                            )
-                # Distinguish between MacRoman and Windows-1252 ONLY
-                # These are the only pair where 0x80-0x9F is punctuation (Win) vs letters (Mac)
-                # Other Windows/Mac pairs (1250/MacLatin2, 1251/MacCyrillic, etc.) both have letters
-                elif (
-                    lower_charset_name == "windows-1252"
-                    and self._has_mac_letter_pattern
-                ):
-                    # Check if MacRoman has similar confidence
-                    for prober in self.active_probers:
-                        sub_charset = (prober.charset_name or "").lower()
-                        if sub_charset == "macroman":
-                            sub_confidence = prober.get_confidence()
-                            # If MacRoman prober has at least 90% of Windows-1252 confidence,
-                            # and we have letter patterns, prefer MacRoman
-                            if sub_confidence >= confidence * 0.90:
-                                charset_name = prober.charset_name
-                                confidence = sub_confidence
-                                break
+                # Apply heuristic adjustments in a single pass over active probers
+                charset_name, confidence = self._apply_encoding_heuristics(
+                    charset_name, confidence, winning_nested_prober or max_prober
+                )
                 # Rename legacy encodings with superset encodings if asked
                 if self.should_rename_legacy:
                     charset_name = self.LEGACY_MAP.get(
