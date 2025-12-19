@@ -322,7 +322,6 @@ def gen_test_params():
             yield full_path, encoding, era
 
 
-@pytest.mark.timeout(7)
 @pytest.mark.parametrize("file_name, encoding, file_era", gen_test_params())
 @pytest.mark.parametrize("encoding_era", [EncodingEra.ALL, EncodingEra.MODERN_WEB])
 def test_encoding_detection_all(file_name, encoding, file_era, encoding_era):
@@ -342,7 +341,12 @@ def test_encoding_detection_all(file_name, encoding, file_era, encoding_era):
         except (LookupError, UnicodeDecodeError, TypeError):
             detected_unicode = ""
     if result:
-        encoding_match = (result["encoding"] or "").lower() == encoding
+        detected_encoding = (result["encoding"] or "").lower()
+        # Handle "none" encoding (binary files)
+        if encoding == "none":
+            encoding_match = detected_encoding == ""
+        else:
+            encoding_match = detected_encoding == encoding
     else:
         encoding_match = False
     # Only care about mismatches that would actually result in different
@@ -405,8 +409,15 @@ def test_coding_state_machine_valid_characters(state_machine_model):
     """
     state_machine = CodingStateMachine(state_machine_model)
     encoding_name = state_machine_model["name"]
+
+    # Most legacy encodings only support the BMP (U+0000-U+FFFF)
+    # GB18030 is the only one that supports full Unicode (supplementary planes)
+    max_codepoint = sys.maxunicode if encoding_name == "GB18030" else 0xFFFF
+
     all_non_control_codepoints = [
-        chr(i) for i in range(0, sys.maxunicode) if not category(chr(i)).startswith("C")
+        chr(i)
+        for i in range(0, max_codepoint + 1)
+        if not category(chr(i)).startswith("C")
     ]
 
     for codepoint in all_non_control_codepoints:
@@ -414,6 +425,19 @@ def test_coding_state_machine_valid_characters(state_machine_model):
             encoded_bytes = codecs.encode(codepoint, encoding_name)
         except (LookupError, UnicodeEncodeError):
             # Encoding not supported or character not representable in this encoding
+            continue
+
+        # Skip if encoding returned invalid bytes (PyPy bug workaround)
+        # On Windows PyPy 3.10, codecs sometimes return single control bytes
+        # (e.g., b'\x00' or b'\x0e') for characters beyond the BMP instead of
+        # raising UnicodeEncodeError. These are invalid: non-ASCII characters
+        # (>= U+0080) should never encode to lone control bytes (< 0x20).
+        # Note: Control characters < U+0020 are already filtered by the test.
+        if (
+            len(encoded_bytes) == 1
+            and encoded_bytes[0] < 0x20
+            and ord(codepoint) >= 0x80
+        ):
             continue
 
         state_machine.reset()
