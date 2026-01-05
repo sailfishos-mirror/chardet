@@ -6,5 +6,6 @@ PKG-INFO
 /build
 .hypothesis
 .cache
+.claude
 .eggs
 wiki_*.txt
