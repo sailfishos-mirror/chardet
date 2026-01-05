@@ -1,0 +1,14 @@
+{
+	"name": "chardet",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"postCreateCommand": "uv sync; uv pip install .",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python"
+			]
+		}
+	}
+}
