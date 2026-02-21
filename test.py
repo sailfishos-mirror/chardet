@@ -27,11 +27,15 @@ import pytest  # type: ignore[reportMissingImports]
 
 import chardet
 from chardet import escsm, mbcssm
+from chardet.big5prober import Big5Prober
 from chardet.codingstatemachine import CodingStateMachine
 from chardet.enums import EncodingEra, LanguageFilter, MachineState
+from chardet.eucjpprober import EUCJPProber
+from chardet.euckrprober import EUCKRProber
 from chardet.metadata.charsets import CHARSETS, get_charset
 from chardet.metadata.languages import LANGUAGES
 from chardet.sbcsgroupprober import SBCSGroupProber
+from chardet.sjisprober import SJISProber
 
 MISSING_ENCODINGS = set()
 EXPECTED_FAILURES = {
@@ -698,6 +702,102 @@ def test_coding_state_machine_transitions(state_machine_model):
         state_machine.reset()
         assert state_machine._curr_state == MachineState.START, (
             f"{encoding_name} state machine did not reset to START state"
+        )
+
+
+DISTRIBUTION_ANALYSIS_PROBERS = [
+    # (prober_class, python_codec, first_byte_ranges)
+    # first_byte_ranges: the ranges that get_order() claims to handle.
+    # Characters with first bytes outside these ranges legitimately return -1.
+    # JOHAB excluded: uses a sparse lookup table, not a formula.
+    (Big5Prober, "big5", [(0xA4, 0xFE)]),
+    (EUCJPProber, "euc-jp", [(0xA0, 0xFE)]),
+    (EUCKRProber, "euc-kr", [(0xB0, 0xFE)]),
+    (SJISProber, "shift-jis", [(0x81, 0x9F), (0xE0, 0xEF)]),
+]
+
+
+@pytest.mark.parametrize(
+    "prober_class,python_codec,first_byte_ranges",
+    DISTRIBUTION_ANALYSIS_PROBERS,
+    ids=[cls.__name__ for cls, _, _ in DISTRIBUTION_ANALYSIS_PROBERS],
+)
+def test_distribution_analysis_get_order_accepts_valid_characters(
+    prober_class, python_codec, first_byte_ranges
+):
+    """
+    Test that get_order() returns a non-negative index for every valid 2-byte
+    character whose first byte is within the analyzer's documented range.
+
+    Each multi-byte prober pairs a CodingStateMachine (which validates byte
+    sequences) with a CharDistributionAnalysis (which maps valid byte pairs to
+    frequency table indices via get_order()). If get_order() returns -1 for a
+    character within its range, that character is silently excluded from
+    frequency analysis, degrading detection confidence.
+
+    This catches bugs like SJISDistributionAnalysis discarding all characters
+    with second byte > 0x7F, which threw away ~half of valid SJIS characters.
+    """
+    prober = prober_class()
+    sm = prober.coding_sm
+    analyzer = prober.distribution_analyzer
+
+    def in_first_byte_range(byte_val: int) -> bool:
+        return any(lo <= byte_val <= hi for lo, hi in first_byte_ranges)
+
+    rejected = []
+    tested_count = 0
+
+    for codepoint in range(0x80, 0x10000):
+        char = chr(codepoint)
+        if category(char).startswith("C"):
+            continue
+
+        try:
+            encoded = codecs.encode(char, python_codec)
+        except (UnicodeEncodeError, LookupError):
+            continue
+
+        if len(encoded) != 2:
+            continue
+
+        # Only test characters whose first byte is in the analyzer's range
+        if not in_first_byte_range(encoded[0]):
+            continue
+
+        # Verify state machine accepts this sequence
+        sm.reset()
+        for byte_val in encoded:
+            state = sm.next_state(byte_val)
+        if state == MachineState.ERROR:
+            continue
+
+        tested_count += 1
+        order = analyzer.get_order(encoded)
+
+        if order < 0:
+            rejected.append((char, codepoint, encoded))
+
+    # Sanity check: we should have tested a meaningful number of characters
+    assert tested_count >= 100, (
+        f"Only tested {tested_count} characters for {prober_class.__name__}. "
+        f"Expected at least 100 valid 2-byte characters."
+    )
+
+    if rejected:
+        samples = rejected[:20]
+        sample_str = "\n".join(
+            f"  U+{cp:04X} {char!r} bytes={enc.hex()} "
+            f"(1st=0x{enc[0]:02X} 2nd=0x{enc[1]:02X})"
+            for char, cp, enc in samples
+        )
+        if len(rejected) > 20:
+            sample_str += f"\n  ... and {len(rejected) - 20} more"
+        pytest.fail(
+            f"{prober_class.__name__} get_order() returned -1 for "
+            f"{len(rejected)}/{tested_count} valid characters whose first byte "
+            f"is within the analyzer's range. These characters are silently "
+            f"excluded from frequency analysis:\n{sample_str}"
         )
 
 
