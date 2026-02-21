@@ -10,7 +10,7 @@ This document helps AI agents understand the chardet codebase and work effective
 - **Python Porter**: Mark Pilgrim
 - **Primary Maintainer**: Dan Blanchard (@dan-blanchard)
 - **License**: LGPL v2.1+
-- **Python Support**: 3.9+ (maintain compatibility with Python 3.9)
+- **Python Support**: 3.10+ (maintain compatibility with Python 3.10)
 - **Package Manager**: This project uses [uv](https://docs.astral.sh/uv/) for dependency management
 
 **Important**: Prefix all Python commands with `uv run` (e.g., `uv run pytest test.py` instead of `pytest test.py`)
@@ -18,12 +18,10 @@ This document helps AI agents understand the chardet codebase and work effective
 ### Key Design Principles
 
 1. **Legacy Support Focus**: chardet is slower than modern alternatives (charset-normalizer, cChardet) but exists for:
-
    - Legacy projects that cannot migrate to charset-normalizer
    - Python implementations not supported by cChardet (PyPy, IronPython)
 
 2. **Detection Algorithm**: Uses a composite approach with three complementary methods:
-
    - **Coding Scheme Method**: Parallel state machines detect invalid byte sequences
    - **Character Distribution Method**: Analyzes frequency of characters (unigrams) for multi-byte encodings
    - **2-Char Sequence Distribution Method**: Analyzes bigram frequencies for single-byte encodings
@@ -254,10 +252,10 @@ uv sync
 
 ### Python Compatibility
 
-- **Minimum version**: Python 3.9
+- **Minimum version**: Python 3.10
 - **Do not use**:
-  - Syntax or features introduced after Python 3.9
-  - Standard library methods not available in 3.9
+  - Syntax or features introduced after Python 3.10
+  - Standard library methods not available in 3.10
   - Type hints that require `from __future__ import annotations` unless already present
 
 ### Performance Philosophy
@@ -330,11 +328,9 @@ for r in all_results:
 ### Common Issues
 
 1. **False positives**: Prober confidence too high for wrong encoding
-
    - Solution: Adjust confidence thresholds or improve state machines
 
 2. **False negatives**: Correct encoding not detected
-
    - Solution: Add more training data or adjust minimum thresholds
 
 3. **Slow detection**: Processing large files takes too long
@@ -397,7 +393,7 @@ Before committing changes:
 - [ ] Run `uv run ruff format .` - code is formatted
 - [ ] Update README.rst if adding new encodings or changing API
 - [ ] Update NOTES.rst if changing architecture
-- [ ] Verify Python 3.9+ compatibility
+- [ ] Verify Python 3.10+ compatibility
 - [ ] Test with real-world files if fixing detection accuracy
 - [ ] Consider performance impact if changing hot paths
 
