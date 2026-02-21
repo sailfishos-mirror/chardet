@@ -58,7 +58,7 @@ CHARSETS = {
     "CP720": Charset(
         name="CP720",
         is_multi_byte=False,
-        encoding_era=EncodingEra.LEGACY_MAC,
+        encoding_era=EncodingEra.LEGACY_REGIONAL,
         language_filter=LanguageFilter.NON_CJK,
     ),
     "CP737": Charset(
@@ -184,7 +184,7 @@ CHARSETS = {
     "CP1006": Charset(
         name="CP1006",
         is_multi_byte=False,
-        encoding_era=EncodingEra.LEGACY_MAC,
+        encoding_era=EncodingEra.LEGACY_REGIONAL,
         language_filter=LanguageFilter.NON_CJK,
     ),
     "CP1026": Charset(
@@ -196,7 +196,7 @@ CHARSETS = {
     "CP1125": Charset(
         name="CP1125",
         is_multi_byte=False,
-        encoding_era=EncodingEra.LEGACY_MAC,
+        encoding_era=EncodingEra.LEGACY_REGIONAL,
         language_filter=LanguageFilter.NON_CJK,
     ),
     "EUC-JP": Charset(
@@ -346,13 +346,13 @@ CHARSETS = {
     "KOI8-T": Charset(
         name="KOI8-T",
         is_multi_byte=False,
-        encoding_era=EncodingEra.LEGACY_MAC,
+        encoding_era=EncodingEra.LEGACY_REGIONAL,
         language_filter=LanguageFilter.NON_CJK,
     ),
     "KZ1048": Charset(
         name="KZ1048",
         is_multi_byte=False,
-        encoding_era=EncodingEra.LEGACY_MAC,
+        encoding_era=EncodingEra.LEGACY_REGIONAL,
         language_filter=LanguageFilter.NON_CJK,
     ),
     "MACCYRILLIC": Charset(
@@ -394,7 +394,7 @@ CHARSETS = {
     "PTCP154": Charset(
         name="PTCP154",
         is_multi_byte=False,
-        encoding_era=EncodingEra.LEGACY_MAC,
+        encoding_era=EncodingEra.LEGACY_REGIONAL,
         language_filter=LanguageFilter.NON_CJK,
     ),
     "SHIFT-JIS": Charset(

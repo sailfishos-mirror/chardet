@@ -86,11 +86,19 @@ class EncodingEra(Flag):
 
     The numeric values also serve as preference tiers for tie-breaking when
     confidence scores are very close. Lower values = more preferred/modern.
+
+    MODERN_WEB: UTF-8/16/32, Windows-125x, CP874, KOI8-R/U, CJK multi-byte (widely used on the web)
+    LEGACY_ISO: ISO-8859-x (legacy but well-known standards)
+    LEGACY_MAC: Mac-specific encodings (MacRoman, MacCyrillic, etc.)
+    LEGACY_REGIONAL: Uncommon regional/national encodings (KOI8-T, KZ1048, CP1006, etc.)
+    DOS: DOS/OEM code pages (CP437, CP850, CP866, etc.)
+    MAINFRAME: EBCDIC variants (CP037, CP500, etc.)
     """
 
-    MODERN_WEB = auto()  # UTF-8/16/32, Windows-125x, modern multibyte (widely used)
-    LEGACY_ISO = auto()  # ISO-8859-x (legacy but common)
-    LEGACY_MAC = auto()  # Mac encodings (less common)
-    DOS = auto()  # CP437, CP850, CP852, etc. (very legacy)
-    MAINFRAME = auto()  # EBCDIC variants (CP037, CP500, etc.)
-    ALL = MODERN_WEB | LEGACY_ISO | LEGACY_MAC | DOS | MAINFRAME
+    MODERN_WEB = auto()
+    LEGACY_ISO = auto()
+    LEGACY_MAC = auto()
+    LEGACY_REGIONAL = auto()
+    DOS = auto()
+    MAINFRAME = auto()
+    ALL = MODERN_WEB | LEGACY_ISO | LEGACY_MAC | LEGACY_REGIONAL | DOS | MAINFRAME
