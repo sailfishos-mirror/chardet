@@ -163,54 +163,62 @@ class UniversalDetector:
         1. Encoding era preferences (prefer newer/Unicode encodings)
         2. Mac/Windows/ISO byte pattern disambiguation
 
+        Collects all close-confidence alternatives in a single pass and picks
+        the best one by era preference and Unicode preference.
+
         Returns: (adjusted_charset_name, adjusted_confidence)
         """
         lower_charset_name = charset_name.lower()
+        winner_charset = get_charset(lower_charset_name)
+        winner_era = winner_charset.encoding_era.value
+        winner_is_unicode = is_unicode_encoding(lower_charset_name)
+        min_confidence = confidence * (1 - self.VERY_CLOSE_THRESHOLD)
 
-        # Build a cache of all alternative probers in a single pass
-        # Only consider top-level probers (group probers like SBCS, MBCS, UTF-8, etc.)
-        # Do NOT look inside group probers - they handle their own disambiguation
-        current_charset = get_charset(lower_charset_name)
-        current_era = current_charset.encoding_era.value
-        current_is_unicode = is_unicode_encoding(lower_charset_name)
+        # Collect all close-confidence alternatives that would be preferred
+        best_alt_name = None
+        best_alt_confidence = confidence
+        best_alt_era = winner_era
+        best_alt_is_unicode = winner_is_unicode
 
         for prober in self._charset_probers:
             if not prober or not prober.active or prober == winning_prober:
                 continue
 
             alt_charset_name = (prober.charset_name or "").lower()
-            if not alt_charset_name:  # Skip probers without a charset name
+            if not alt_charset_name:
                 continue
 
             alt_confidence = prober.get_confidence()
+            if alt_confidence < min_confidence:
+                continue
+
             alt_charset = get_charset(alt_charset_name)
             alt_era = alt_charset.encoding_era.value
             alt_is_unicode = is_unicode_encoding(alt_charset_name)
 
-            should_prefer_alt = False
-            if alt_era < current_era:
-                # Alternative has better (lower numbered) era
-                should_prefer_alt = True
-            elif alt_era == current_era and alt_is_unicode and not current_is_unicode:
-                # Both same era, but alt is Unicode
-                should_prefer_alt = True
+            # Check if this alternative is preferred over the current best
+            prefer_over_best = False
+            if alt_era < best_alt_era:
+                prefer_over_best = True
+            elif alt_era == best_alt_era and alt_is_unicode and not best_alt_is_unicode:
+                prefer_over_best = True
 
-            # If alternative should be preferred and is very close in confidence
-            if should_prefer_alt and alt_confidence >= confidence * (
-                1 - self.VERY_CLOSE_THRESHOLD
-            ):
-                charset_name = alt_charset_name
-                lower_charset_name = charset_name
-                confidence = alt_confidence
-                current_era = alt_era
-                current_is_unicode = alt_is_unicode
-                self.logger.debug(
-                    f"Era preference: {alt_charset} (era {alt_era}, unicode={alt_is_unicode}) "
-                    f"preferred over prior winner"
-                )
+            if prefer_over_best:
+                best_alt_name = alt_charset_name
+                best_alt_confidence = alt_confidence
+                best_alt_era = alt_era
+                best_alt_is_unicode = alt_is_unicode
 
-        # Single-byte encoding heuristics are now handled in SBCSGroupProber
-        # No additional heuristics needed here at the UniversalDetector level
+        if best_alt_name is not None:
+            self.logger.debug(
+                "Era preference: %s (era %s, unicode=%s) preferred over %s",
+                best_alt_name,
+                best_alt_era,
+                best_alt_is_unicode,
+                charset_name,
+            )
+            charset_name = best_alt_name
+            confidence = best_alt_confidence
 
         return charset_name, confidence
 
