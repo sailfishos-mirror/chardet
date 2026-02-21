@@ -23,7 +23,14 @@ from .resultdict import ResultDict
 from .universaldetector import UniversalDetector
 from .version import VERSION, __version__
 
-__all__ = ["UniversalDetector", "detect", "detect_all", "__version__", "VERSION"]
+__all__ = [
+    "EncodingEra",
+    "UniversalDetector",
+    "detect",
+    "detect_all",
+    "__version__",
+    "VERSION",
+]
 
 
 def detect(
@@ -47,8 +54,8 @@ def detect(
     :type encoding_era:   ``EncodingEra``
     :param chunk_size:    Size of chunks to process at a time
     :type chunk_size:     ``int``
-    :param max_bytes:    Maximum number of bytes to examine
-    :type chunk_size:     ``int``
+    :param max_bytes:    Maximum number of bytes to examine.
+    :type max_bytes:     ``int``
     """
     if not isinstance(byte_str, bytearray):
         if not isinstance(byte_str, bytes):
@@ -103,7 +110,7 @@ def detect_all(
     :type encoding_era:   ``EncodingEra``
     :param chunk_size:    Size of chunks to process at a time.
     :type chunk_size:     ``int``
-    :param max_bytes:    Size of chunks to process at a time.
+    :param max_bytes:    Maximum number of bytes to examine.
     :type max_bytes:     ``int``
     """
     if not isinstance(byte_str, bytearray):

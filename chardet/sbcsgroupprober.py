@@ -421,7 +421,6 @@ class SBCSGroupProber(CharSetGroupProber):
         self._has_mac_latin_letter_pattern = False
         self._has_mac_cyrillic_letter_pattern = False
         self._has_euro_sign = False
-        self._input_bytes = bytearray()
 
         hebrew_prober = HebrewProber()
         logical_hebrew_prober = SingleByteCharSetProber(
@@ -674,12 +673,8 @@ class SBCSGroupProber(CharSetGroupProber):
         self._has_mac_latin_letter_pattern = False
         self._has_mac_cyrillic_letter_pattern = False
         self._has_euro_sign = False
-        self._input_bytes = bytearray()
 
     def feed(self, byte_str: Union[bytes, bytearray]) -> "ProbingState":
-        # Track byte patterns for heuristics
-        self._input_bytes.extend(byte_str)
-
         # Detect byte patterns (only check new bytes for efficiency)
         if WIN_BYTE_DETECTOR.search(byte_str):
             self._has_win_bytes = True

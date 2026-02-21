@@ -514,6 +514,14 @@ CHARSETS = {
 }
 
 
+_DEFAULT_CHARSET = Charset(
+    name="Unknown",
+    is_multi_byte=False,
+    encoding_era=EncodingEra.MODERN_WEB,
+    language_filter=LanguageFilter.ALL,
+)
+
+
 def get_charset(encoding_name: str) -> Charset:
     """
     Get the Charset metadata for a given encoding name.
@@ -522,7 +530,7 @@ def get_charset(encoding_name: str) -> Charset:
     :return: The Charset for this encoding, defaults to a MODERN_WEB charset if unknown
     """
     normalized_name = encoding_name.upper().replace("_", "-")
-    return CHARSETS[normalized_name]
+    return CHARSETS.get(normalized_name, _DEFAULT_CHARSET)
 
 
 def is_unicode_encoding(encoding_name: str) -> bool:
