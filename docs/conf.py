@@ -41,7 +41,7 @@ root_doc = "index"
 
 # General information about the project.
 project = "chardet"
-copyright = "2015, Mark Pilgrim, Dan Blanchard, Ian Cordasco"  #  pylint: disable=redefined-builtin
+copyright = "2015-2026, chardet contributors"  #  pylint: disable=redefined-builtin
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
