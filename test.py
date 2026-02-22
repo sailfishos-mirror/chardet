@@ -767,6 +767,7 @@ def test_distribution_analysis_get_order_accepts_valid_characters(
 
         # Verify state machine accepts this sequence
         sm.reset()
+        state = MachineState.START
         for byte_val in encoded:
             state = sm.next_state(byte_val)
         if state == MachineState.ERROR:

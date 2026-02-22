@@ -93,7 +93,7 @@ def main(argv: Optional[list[str]] = None) -> None:
         help="Rename legacy encodings to more modern ones.",
         action="store_true",
     )
-    era_names = [e.name for e in EncodingEra if e.name != "ALL"]
+    era_names = [e.name for e in EncodingEra if e.name is not None and e.name != "ALL"]
     parser.add_argument(
         "-e",
         "--encoding-era",
