@@ -5,5 +5,5 @@ from within setuptools and from chardet subpackages.
 :author: Dan Blanchard (dan.blanchard@gmail.com)
 """
 
-__version__ = "6.0.0.post1"
+__version__ = "6.0.1.dev0"
 VERSION = __version__.split(".")
