@@ -52,14 +52,15 @@ Who wrote this detection algorithm?
 
 This library is a port of `the auto-detection code in
 Mozilla <https://www-archive.mozilla.org/projects/intl/chardet.html>`__.
-I have attempted to maintain as much of the original structure as
-possible (mostly for selfish reasons, to make it easier to maintain the
-port as the original code evolves). I have also retained the original
-authors’ comments, which are quite extensive and informative.
+The original structure has been largely maintained, though chardet 6.0
+significantly expanded the detection capabilities by adding unified
+bigram language models (trained on the
+`CulturaX <https://huggingface.co/datasets/uonlp/CulturaX>`__ multilingual
+corpus) for all single-byte encodings across 45+ languages.
 
 You may also be interested in the research paper which led to the
 Mozilla implementation, `A composite approach to language/encoding
-detection <http://www-archive.mozilla.org/projects/intl/UniversalCharsetDetection.html>`__.
+detection <https://www-archive.mozilla.org/projects/intl/UniversalCharsetDetection.html>`__.
 
 Yippie! Screw the standards, I’ll just auto-detect everything!
 --------------------------------------------------------------

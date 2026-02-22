@@ -1,188 +1,144 @@
 How it works
 ============
 
-This is a brief guide to navigating the code itself.
+This is a guide to how chardet's detection algorithm works internally.
 
-First, you should read `A composite approach to language/encoding
-detection <https://www-archive.mozilla.org/projects/intl/UniversalCharsetDetection.html>`__,
-which explains the detection algorithm and how it was derived. This will
-help you later when you stumble across the huge character frequency
-distribution tables like ``big5freq.py`` and language models like
-``langcyrillicmodel.py``.
+You may also be interested in the research paper which originally inspired
+the Mozilla implementation that chardet is based on: `A composite approach
+to language/encoding
+detection <https://www-archive.mozilla.org/projects/intl/UniversalCharsetDetection.html>`__.
 
-The main entry point for the detection algorithm is
-``universaldetector.py``, which has one class, ``UniversalDetector``.
-(You might think the main entry point is the ``detect`` function in
-``chardet/__init__.py``, but that’s really just a convenience function
-that creates a ``UniversalDetector`` object, calls it, and returns its
-result.)
+Overview
+--------
 
-There are 5 categories of encodings that ``UniversalDetector`` handles:
+The main entry point is ``universaldetector.py``, which contains the
+``UniversalDetector`` class. (The ``detect`` function in
+``chardet/__init__.py`` is a convenience wrapper that creates a
+``UniversalDetector``, feeds it data, and returns the result.)
 
-#. ``UTF-n`` with a BOM. This includes ``UTF-8``, both BE and LE
-   variants of ``UTF-16``, and all 4 byte-order variants of ``UTF-32``.
-#. Escaped encodings, which are entirely 7-bit ASCII compatible, where
-   non-ASCII characters start with an escape sequence. Examples:
-   ``ISO-2022-JP`` (Japanese) and ``HZ-GB-2312`` (Chinese).
-#. Multi-byte encodings, where each character is represented by a
-   variable number of bytes. Examples: ``Big5`` (Chinese), ``SHIFT_JIS``
-   (Japanese), ``EUC-KR`` (Korean), and ``UTF-8`` without a BOM.
-#. Single-byte encodings, where each character is represented by one
-   byte. Examples: ``KOI8-R`` (Russian), ``windows-1255`` (Hebrew), and
-   ``TIS-620`` (Thai).
-#. ``windows-1252``, which is used primarily on Microsoft Windows; its
-   subset, ``ISO-8859-1`` is widely used for legacy 8-bit-encoded text.
-   chardet, like many encoding detectors, defaults to guessing this
-   encoding when no other can be reliably established.
+``UniversalDetector`` processes input through a pipeline of probers,
+each specialized for a category of encodings. Detection proceeds
+through these stages in order:
 
-``UTF-n`` with a BOM
---------------------
+#. **BOM detection** — immediate identification of UTF-8-SIG, UTF-16,
+   or UTF-32 via byte order marks.
+#. **UTF-16/32 without BOM** — ``UTF1632Prober`` detects UTF-16/32 by
+   analyzing null-byte patterns and byte distributions.
+#. **Escaped encodings** — ``EscCharSetProber`` detects 7-bit encodings
+   that use escape sequences (``ISO-2022-JP``, ``ISO-2022-KR``,
+   ``HZ-GB-2312``).
+#. **Multi-byte encodings** — ``MBCSGroupProber`` runs probers for
+   ``UTF-8``, ``GB18030``, ``Big5``, ``EUC-JP``, ``EUC-KR``,
+   ``Shift-JIS``, ``CP949``, and ``Johab``.
+#. **Single-byte encodings** — ``SBCSGroupProber`` runs hundreds of
+   encoding+language-specific probers using bigram frequency models.
+#. **Encoding era filtering** — results are filtered by the requested
+   ``EncodingEra`` tier, and close confidence scores are broken by
+   preferring more modern encodings.
 
-If the text starts with a BOM, we can reasonably assume that the text is
-encoded in ``UTF-8``, ``UTF-16``, or ``UTF-32``. (The BOM will tell us
-exactly which one; that’s what it’s for.) This is handled inline in
-``UniversalDetector``, which returns the result immediately without any
-further processing.
+BOM detection
+-------------
+
+If the text starts with a byte order mark (BOM), ``UniversalDetector``
+immediately identifies the encoding as ``UTF-8-SIG``, ``UTF-16 BE/LE``,
+or ``UTF-32 BE/LE`` and returns the result without further processing.
+
+UTF-16/32 without BOM
+----------------------
+
+``UTF1632Prober`` (defined in ``utf1632prober.py``) detects UTF-16 and
+UTF-32 encoded text that lacks a BOM. It analyzes the distribution of
+null bytes: UTF-32 produces characteristic patterns of 3 null bytes per
+character for ASCII-range text, while UTF-16 produces alternating null
+and non-null bytes.
 
 Escaped encodings
 -----------------
 
-If the text contains a recognizable escape sequence that might indicate
-an escaped encoding, ``UniversalDetector`` creates an
-``EscCharSetProber`` (defined in ``escprober.py``) and feeds it the
-text.
-
-``EscCharSetProber`` creates a series of state machines, based on models
-of ``HZ-GB-2312``, ``ISO-2022-JP``, and ``ISO-2022-KR``
-(defined in ``escsm.py``). ``EscCharSetProber`` feeds the text to each
-of these state machines, one byte at a time. If any state machine ends
-up uniquely identifying the encoding, ``EscCharSetProber`` immediately
-returns the positive result to ``UniversalDetector``, which returns it
-to the caller. If any state machine hits an illegal sequence, it is
-dropped and processing continues with the other state machines.
+If the text contains escape sequences, ``UniversalDetector`` creates an
+``EscCharSetProber`` (defined in ``escprober.py``) which runs state
+machines for ``HZ-GB-2312``, ``ISO-2022-JP``, and ``ISO-2022-KR``
+(defined in ``escsm.py``). Each state machine processes the text one
+byte at a time. If any state machine uniquely identifies the encoding,
+the result is returned immediately. State machines that encounter
+illegal sequences are dropped.
 
 Multi-byte encodings
 --------------------
 
-Assuming no BOM, ``UniversalDetector`` checks whether the text contains
-any high-bit characters. If so, it creates a series of “probers” for
-detecting multi-byte encodings, single-byte encodings, and as a last
-resort, ``windows-1252``.
+When high-bit characters are detected, ``UniversalDetector`` creates a
+``MBCSGroupProber`` (defined in ``mbcsgroupprober.py``) which manages
+probers for each multi-byte encoding:
 
-The multi-byte encoding prober, ``MBCSGroupProber`` (defined in
-``mbcsgroupprober.py``), is really just a shell that manages a group of
-other probers, one for each multi-byte encoding: ``Big5``, ``GB2312``,
-``EUC-KR``, ``EUC-JP``, ``SHIFT_JIS``, and ``UTF-8``.
-``MBCSGroupProber`` feeds the text to each of these encoding-specific
-probers and checks the results. If a prober reports that it has found an
-illegal byte sequence, it is dropped from further processing (so that,
-for instance, any subsequent calls to ``UniversalDetector``.\ ``feed``
-will skip that prober). If a prober reports that it is reasonably
-confident that it has detected the encoding, ``MBCSGroupProber`` reports
-this positive result to ``UniversalDetector``, which reports the result
-to the caller.
+- ``UTF8Prober`` — UTF-8
+- ``GB18030Prober`` — GB18030 / GB2312 (Simplified Chinese)
+- ``Big5Prober`` — Big5 (Traditional Chinese)
+- ``EUCJPProber`` — EUC-JP (Japanese)
+- ``SJISProber`` — Shift-JIS (Japanese)
+- ``EUCKRProber`` — EUC-KR (Korean)
+- ``CP949Prober`` — CP949 (Korean)
+- ``JOHABProber`` — Johab (Korean)
 
-Most of the multi-byte encoding probers are inherited from
-``MultiByteCharSetProber`` (defined in ``mbcharsetprober.py``), and
-simply hook up the appropriate state machine and distribution analyzer
-and let ``MultiByteCharSetProber`` do the rest of the work.
-``MultiByteCharSetProber`` runs the text through the encoding-specific
-state machine, one byte at a time, to look for byte sequences that would
-indicate a conclusive positive or negative result. At the same time,
-``MultiByteCharSetProber`` feeds the text to an encoding-specific
-distribution analyzer.
+Each multi-byte prober inherits from ``MultiByteCharSetProber`` (defined
+in ``mbcharsetprober.py``) and uses two analysis techniques:
 
-The distribution analyzers (each defined in ``chardistribution.py``) use
-language-specific models of which characters are used most frequently.
-Once ``MultiByteCharSetProber`` has fed enough text to the distribution
-analyzer, it calculates a confidence rating based on the number of
-frequently-used characters, the total number of characters, and a
-language-specific distribution ratio. If the confidence is high enough,
-``MultiByteCharSetProber`` returns the result to ``MBCSGroupProber``,
-which returns it to ``UniversalDetector``, which returns it to the
-caller.
+**Coding state machines** (defined in ``mbcssm.py``) process the text
+one byte at a time, looking for byte sequences that are valid or invalid
+in the target encoding. An illegal sequence immediately eliminates that
+encoding from consideration. A uniquely identifying sequence produces an
+immediate positive result.
 
-The case of Japanese is more difficult. Single-character distribution
-analysis is not always sufficient to distinguish between ``EUC-JP`` and
-``SHIFT_JIS``, so the ``SJISProber`` (defined in ``sjisprober.py``) also
-uses 2-character distribution analysis. ``SJISContextAnalysis`` and
-``EUCJPContextAnalysis`` (both defined in ``jpcntx.py`` and both
-inheriting from a common ``JapaneseContextAnalysis`` class) check the
-frequency of Hiragana syllabary characters within the text. Once enough
-text has been processed, they return a confidence level to
-``SJISProber``, which checks both analyzers and returns the higher
-confidence level to ``MBCSGroupProber``.
+**Character distribution analysis** (defined in ``chardistribution.py``)
+uses language-specific frequency tables to measure how well the decoded
+characters match expected usage patterns. Once enough text has been
+processed, a confidence rating is calculated.
+
+The case of Japanese is more complex. Single-character distribution
+analysis alone cannot always distinguish ``EUC-JP`` from ``Shift-JIS``,
+so ``SJISProber`` (defined in ``sjisprober.py``) also uses 2-character
+context analysis. ``SJISContextAnalysis`` and ``EUCJPContextAnalysis``
+(both defined in ``jpcntx.py``) check the frequency of Hiragana
+syllabary characters to help distinguish between the two encodings.
 
 Single-byte encodings
 ---------------------
 
-The single-byte encoding prober, ``SBCSGroupProber`` (defined in
-``sbcsgroupprober.py``), is also just a shell that manages a group of
-other probers, one for each combination of single-byte encoding and
-language:
- - ``ASCII``
- - ``CP720`` (Arabic)
- - ``CP855``/IBM855 (Bulgarian, Macedonian, Russian, Serbian)
- - ``CP864`` (Arabic)
- - ``CP866``/``IBM866`` (Belarusian, Russian)
- - ``CP874`` (Thai)
- - ``ISO-8859-1`` (Dutch, English, Finnish, French, German, Italian, Portuguese, Spanish)
- - ``ISO-8859-2`` (Croatian, Czech, Hungarian, Polish, Romanian, Slovak, Slovene)
- - ``ISO-8859-3`` (Esperanto)
- - ``ISO-8859-4`` (Estonian, Latvian, Lithuanian)
- - ``ISO-8859-5`` (Belarusian, Bulgarian, Macedonian, Russian, Serbian)
- - ``ISO-8859-6`` (Arabic)
- - ``ISO-8859-7`` (Greek)
- - ``ISO-8859-8`` (Visual and Logical Hebrew)
- - ``ISO-8859-9`` (Turkish)
- - ``ISO-8859-11`` (Thai)
- - ``ISO-8859-13`` (Estonian, Latvian, Lithuanian)
- - ``ISO-8859-15`` (Danish, Finnish, French, Italian, Portuguese, Spanish)
- - ``MacCyrillic`` (Belarusian, Macedonian, Russian, Serbian)
- - ``TIS-620`` (Thai)
- - ``Windows-1250`` (Croatian, Czech, Hungarian, Polish, Romanian, Slovak, Slovene)
- - ``Windows-1251`` (Belarusian, Bulgarian, Macedonian, Russian, Serbian)
- - ``Windows-1252`` (Dutch, English, Finnish, French, German, Italian, Portuguese, Spanish)
- - ``Windows-1253`` (Greek)
- - ``Windows-1254`` (Turkish)
- - ``Windows-1255`` (Visual and Logical Hebrew)
- - ``Windows-1256`` (Arabic)
- - ``Windows-1257`` (Estonian, Latvian, Lithuanian)
+``SBCSGroupProber`` (defined in ``sbcsgroupprober.py``) manages hundreds
+of ``SingleByteCharSetProber`` instances, one for each combination of
+single-byte encoding and language. For example, ``Windows-1252`` is
+paired with English, French, German, Spanish, and many other Western
+European languages, while ``KOI8-R`` is paired with Russian.
 
-``SBCSGroupProber`` feeds the text to each of these
-encoding+language-specific probers and checks the results. These probers
-are all implemented as a single class, ``SingleByteCharSetProber``
-(defined in ``sbcharsetprober.py``), which takes a language model as an
-argument. The language model defines how frequently different
-2-character sequences appear in typical text.
-``SingleByteCharSetProber`` processes the text and tallies the most
-frequently used 2-character sequences. Once enough text has been
-processed, it calculates a confidence level based on the number of
-frequently-used sequences, the total number of characters, and a
-language-specific distribution ratio.
+Every single-byte encoding is detected the same way: each
+``SingleByteCharSetProber`` (defined in ``sbcharsetprober.py``) takes a
+bigram language model as input. These models (stored in
+``lang*model.py`` files) define how frequently each pair of consecutive
+characters appears in typical text for that language and encoding. The
+prober tallies bigram frequencies in the input and calculates a
+confidence score.
 
-Hebrew is handled as a special case. If the text appears to be Hebrew
-based on 2-character distribution analysis, ``HebrewProber`` (defined in
-``hebrewprober.py``) tries to distinguish between Visual Hebrew (where
-the source text actually stored “backwards” line-by-line, and then
-displayed verbatim so it can be read from right to left) and Logical
-Hebrew (where the source text is stored in reading order and then
-rendered right-to-left by the client). Because certain characters are
-encoded differently based on whether they appear in the middle of or at
-the end of a word, we can make a reasonable guess about direction of the
-source text, and return the appropriate encoding (``windows-1255`` for
-Logical Hebrew, or ``ISO-8859-8`` for Visual Hebrew).
+The bigram models are trained using the ``create_language_model.py``
+script from the CulturaX multilingual corpus, covering 45+ languages.
+This unified approach replaces the older system where only a few
+languages had trained models and Western encodings relied on
+special-case heuristics.
 
-windows-1252
-------------
+Hebrew is handled as a special case by ``HebrewProber`` (defined in
+``hebrewprober.py``), which distinguishes between Visual Hebrew (stored
+right-to-left, displayed verbatim) and Logical Hebrew (stored in
+reading order, rendered right-to-left by the client) by analyzing the
+positions of final-form characters.
 
-If ``UniversalDetector`` detects a high-bit character in the text, but
-none of the other multi-byte or single-byte encoding probers return a
-confident result, it creates a ``Latin1Prober`` (defined in
-``latin1prober.py``) to try to detect English text in a ``windows-1252``
-encoding. This detection is inherently unreliable, because English
-letters are encoded in the same way in many different encodings. The
-only way to distinguish ``windows-1252`` is through commonly used
-symbols like smart quotes, curly apostrophes, copyright symbols, and the
-like. ``Latin1Prober`` automatically reduces its confidence rating to
-allow more accurate probers to win if at all possible.
+Encoding era filtering and tie-breaking
+---------------------------------------
+
+After all probers report their confidence scores, ``UniversalDetector``
+filters results by the requested ``EncodingEra``. Only encodings
+belonging to the selected era(s) are considered.
+
+When multiple encodings have very close confidence scores, the detector
+prefers encodings from more modern tiers (``MODERN_WEB`` over
+``LEGACY_ISO`` over ``LEGACY_MAC``, and so on). This prevents legacy
+encodings from winning ties against their modern equivalents.
+
+See :doc:`supported-encodings` for which encodings belong to each era.
