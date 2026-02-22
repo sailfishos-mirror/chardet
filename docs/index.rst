@@ -10,9 +10,9 @@ Documentation
 .. toctree::
    :maxdepth: 2
 
-   faq
-   supported-encodings
    usage
+   supported-encodings
+   faq
    how-it-works
    api/modules
 

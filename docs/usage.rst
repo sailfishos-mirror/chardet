@@ -4,8 +4,7 @@ Usage
 Basic usage
 -----------
 
-The easiest way to use the Universal Encoding Detector library is with
-the ``detect`` function.
+The easiest way to use chardet is with the ``detect`` function.
 
 
 Example: Using the ``detect`` function
@@ -17,17 +16,31 @@ from ``0`` to ``1``, and the detected language.
 
 .. code:: python
 
-    >>> import urllib.request
-    >>> rawdata = urllib.request.urlopen('https://www.google.co.jp/').read()
     >>> import chardet
-    >>> chardet.detect(rawdata)
-    {'encoding': 'UTF-8', 'confidence': 0.99, 'language': ''}
+    >>> chardet.detect('Strauß und Müller über Änderungen'.encode('windows-1252'))
+    {'encoding': 'WINDOWS-1252', 'confidence': 0.6316251912431836, 'language': 'German'}
 
 The result dictionary always contains three keys:
 
 - ``encoding``: the detected encoding name (or ``None`` if detection failed)
 - ``confidence``: a float from ``0`` to ``1``
 - ``language``: the detected language (or ``''`` if not applicable)
+
+
+Controlling how much data to process
+-------------------------------------
+
+By default, ``detect()`` reads up to 200 KB of input in 64 KB chunks.
+You can tune this with the ``max_bytes`` and ``chunk_size`` parameters:
+
+.. code:: python
+
+    import chardet
+
+    # Process at most 50 KB, feeding 8 KB at a time internally
+    result = chardet.detect(data, max_bytes=50_000, chunk_size=8192)
+
+These parameters also apply to ``detect_all``.
 
 
 Filtering by encoding era
@@ -66,54 +79,44 @@ guess, use ``detect_all``:
 .. code:: python
 
     >>> import chardet
-    >>> chardet.detect_all(b'\xe4\xf6\xfc')
-    [{'encoding': 'Windows-1252', 'confidence': 0.73, 'language': 'German'},
-     {'encoding': 'ISO-8859-1', 'confidence': 0.60, 'language': 'German'}]
+    >>> chardet.detect_all('Strauß und Müller über Änderungen'.encode('windows-1252'))[:3]
+    [{'encoding': 'WINDOWS-1252', 'confidence': 0.6316251912431836, 'language': 'German'},
+     {'encoding': 'WINDOWS-1250', 'confidence': 0.5220501710295528, 'language': 'Czech'},
+     {'encoding': 'WINDOWS-1257', 'confidence': 0.5197657012389119, 'language': 'Estonian'}]
 
 Results are sorted by confidence (highest first). ``detect_all`` accepts
 the same ``encoding_era``, ``should_rename_legacy``, ``max_bytes``, and
 ``chunk_size`` parameters as ``detect``.
 
 
-Advanced usage
---------------
+Advanced usage: incremental detection
+--------------------------------------
 
-If you're dealing with a large amount of text, you can call the
-Universal Encoding Detector library incrementally, and it will stop as
-soon as it is confident enough to report its results.
+In most cases, the ``max_bytes`` and ``chunk_size`` parameters on
+``detect()`` and ``detect_all()`` are sufficient for controlling how much
+data is processed. However, if you need to feed data from a custom source
+(such as a network stream or a decompressor), you can use
+``UniversalDetector`` directly.
 
 Create a ``UniversalDetector`` object, then call its ``feed`` method
-repeatedly with each block of text. If the detector reaches a minimum
+repeatedly with each block of data. If the detector reaches a minimum
 threshold of confidence, it will set ``detector.done`` to ``True``.
 
-Once you've exhausted the source text, call ``detector.close()``, which
-will do some final calculations in case the detector didn't hit its
-minimum confidence threshold earlier. Then ``detector.result`` will be a
-dictionary containing the auto-detected character encoding and
-confidence level (the same as the ``chardet.detect`` function
-`returns <#example-using-the-detect-function>`__).
-
-
-Example: Detecting encoding incrementally
------------------------------------------
+Once you've exhausted the source data, call ``detector.close()`` to
+finalize detection. The result is then available in ``detector.result``.
 
 .. code:: python
 
-    import urllib.request
     from chardet.universaldetector import UniversalDetector
 
-    usock = urllib.request.urlopen('https://www.google.co.jp/')
     detector = UniversalDetector()
-    for line in usock.readlines():
-        detector.feed(line)
-        if detector.done: break
+    with open('mystery-file.txt', 'rb') as f:
+        for line in f:
+            detector.feed(line)
+            if detector.done:
+                break
     detector.close()
-    usock.close()
     print(detector.result)
-
-.. code:: python
-
-    {'encoding': 'UTF-8', 'confidence': 0.99, 'language': ''}
 
 ``UniversalDetector`` also accepts ``encoding_era`` and ``max_bytes``
 parameters:
@@ -124,12 +127,14 @@ parameters:
     from chardet.universaldetector import UniversalDetector
 
     detector = UniversalDetector(encoding_era=EncodingEra.ALL)
+    detector.feed(data)
+    detector.close()
+    print(detector.result)
 
 If you want to detect the encoding of multiple texts (such as separate
-files), you can re-use a single ``UniversalDetector`` object. Just call
-``detector.reset()`` at the start of each file, call ``detector.feed``
-as many times as you like, and then call ``detector.close()`` and check
-the ``detector.result`` dictionary for the file's results.
+files), you can re-use a single ``UniversalDetector`` object. Call
+``detector.reset()`` at the start of each file, ``feed`` as many times as
+you like, then ``close()`` and check ``detector.result``.
 
 Example: Detecting encodings of multiple files
 ----------------------------------------------
@@ -141,13 +146,14 @@ Example: Detecting encodings of multiple files
 
     detector = UniversalDetector()
     for filename in glob.glob('*.xml'):
-        print(filename.ljust(60), end='')
         detector.reset()
-        for line in open(filename, 'rb'):
-            detector.feed(line)
-            if detector.done: break
+        with open(filename, 'rb') as f:
+            for line in f:
+                detector.feed(line)
+                if detector.done:
+                    break
         detector.close()
-        print(detector.result)
+        print(f'{filename}: {detector.result}')
 
 
 Command-line tool
