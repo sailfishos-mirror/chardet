@@ -27,9 +27,12 @@ Create a language model for single byte character encoding detection based on
 training data from the CulturaX dataset.
 """
 
+import json
+import os
 import re
 import sys
 import unicodedata
+import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from collections import Counter, defaultdict
 from collections.abc import Mapping
@@ -465,30 +468,30 @@ def gen_culturax_lines(
 def calc_ngram_freqs(
     *,
     input_generator,
-    alphabet_set: set[str],
     language: str | None = None,
 ):
-    """Create a language model with the likelihoods of all bigrams in input.
+    """Build an unfiltered bigram language model from input text.
 
-    This LM is based on Unicode code point frequencies and not encoded character
-    frequencies so that this can be used for all encodings.
-
-    The LM is filtered down to bigrams to those with unigrams that have
-    frequencies greater than equal to the lowest seen alphabet character
-    frequency.
+    This reads all input text and builds character frequency counts and bigram
+    counts for ALL characters (not filtered to any alphabet). The results are
+    cached to a JSON file named ``{language.lower()}_unfiltered_bigrams.json``
+    in the current working directory so that subsequent runs can skip the
+    expensive data-reading step.
 
     For Vietnamese, special normalization is applied to decompose precomposed
     characters with tone marks (e.g., ế → ê + combining acute) to match how
-    Windows-1258 encoding actually represents Vietnamese text. This is the only
-    language-specific transformation applied during training, as Vietnamese is
-    only supported by a single encoding (Windows-1258) in Python.
+    Windows-1258 encoding actually represents Vietnamese text.
+
+    Returns ``(char_freqs, language_model)`` where *char_freqs* is a
+    ``Counter`` mapping unicode characters to raw counts, and
+    *language_model* is a ``defaultdict(Counter)`` mapping each unicode
+    character to a ``Counter`` of following characters with raw counts.
     """
-    char_freqs = Counter()
-    char_ranks = {}
-    language_model = defaultdict(Counter)
+    char_freqs: Counter[str] = Counter()
+    language_model: defaultdict[str, Counter[str]] = defaultdict(Counter)
     size_in_bytes = 0
 
-    # Calculate unfiltered frequencies
+    # Calculate unfiltered frequencies for ALL characters
     for line in input_generator:
         prev_char = None
         # Normalize so that combining and non-combining forms are
@@ -503,34 +506,82 @@ def calc_ngram_freqs(
 
         size_in_bytes += len(line.encode("utf-8"))
         for unicode_char in line:
-            # Only consider alphabet characters for this language
-            if unicode_char not in alphabet_set:
-                prev_char = None
-                continue
             char_freqs[unicode_char] += 1
             if prev_char is not None:
                 language_model[prev_char][unicode_char] += 1
             prev_char = unicode_char
 
-    num_tokens = sum(char_freqs.values())
     print(
-        f"\nUnique letter types in training data: {len(char_freqs):,}\n"
-        f"Number of letter tokens in training data: {num_tokens:,}\n"
+        f"\nUnique character types in training data: {len(char_freqs):,}\n"
+        f"Total character tokens in training data: {sum(char_freqs.values()):,}\n"
         f"Size of training data in bytes: {size_in_bytes:,}"
     )
-    missing_letters = alphabet_set - set(char_freqs.keys())
+
+    # Cache unfiltered model to disk
+    if language:
+        cache_path = f"{language.lower()}_unfiltered_bigrams.json"
+        print(f"Caching unfiltered bigram model to {cache_path}")
+        cache_data = {
+            "char_freqs": dict(char_freqs),
+            "language_model": {k: dict(v) for k, v in language_model.items()},
+        }
+        with open(cache_path, "w", encoding="utf-8") as f:
+            json.dump(cache_data, f, ensure_ascii=False)
+
+    return char_freqs, language_model
+
+
+def filter_ngram_model(
+    *,
+    char_freqs: Counter[str] | dict[str, int],
+    language_model: defaultdict[str, Counter[str]] | dict[str, dict[str, int]],
+    alphabet_set: set[str],
+    language: str | None = None,
+):
+    """Filter an unfiltered bigram model to only alphabet characters.
+
+    Takes raw (unfiltered) *char_freqs* and *language_model* as returned by
+    ``calc_ngram_freqs`` (or loaded from the JSON cache), filters them down
+    to only characters in *alphabet_set*, computes ``char_ranks``, and warns
+    about any missing alphabet letters.
+
+    Returns ``(char_ranks, filtered_language_model)`` in the same format the
+    old ``calc_ngram_freqs`` used to return.
+    """
+    # Filter char_freqs to only alphabet characters
+    filtered_char_freqs: Counter[str] = Counter(
+        {ch: count for ch, count in char_freqs.items() if ch in alphabet_set}
+    )
+
+    # Filter language_model to only alphabet characters
+    filtered_language_model: defaultdict[str, Counter[str]] = defaultdict(Counter)
+    for first_char, sub_dict in language_model.items():
+        if first_char not in alphabet_set:
+            continue
+        for second_char, count in sub_dict.items():
+            if second_char in alphabet_set:
+                filtered_language_model[first_char][second_char] = count
+
+    num_tokens = sum(filtered_char_freqs.values())
+    print(
+        f"\nUnique letter types in training data: {len(filtered_char_freqs):,}\n"
+        f"Number of letter tokens in training data: {num_tokens:,}"
+    )
+    missing_letters = alphabet_set - set(filtered_char_freqs.keys())
     if missing_letters:
-        raise ValueError(
+        warnings.warn(
             f"Training data is missing the following letters: "
             f"{', '.join(sorted(missing_letters))}"
         )
-    # Filter language model down to only those within sample size
+
+    # Compute char_ranks by sorting filtered frequencies
+    char_ranks: dict[str, int] = {}
     for rank, (unicode_char, _) in enumerate(
-        sorted(list(char_freqs.items()), key=itemgetter(1), reverse=True), 1
+        sorted(list(filtered_char_freqs.items()), key=itemgetter(1), reverse=True), 1
     ):
         char_ranks[unicode_char] = rank
 
-    return char_ranks, language_model
+    return char_ranks, filtered_language_model
 
 
 def collapse_language_model_freqs(
@@ -644,14 +695,19 @@ def print_char_to_order(var_name, order_map, charset_name, output_file):
 def print_language_model(var_name, language_model, output_file, char_ranks):
     print(f"{var_name} = {{", file=output_file)
     for first_char, sub_dict in sorted(language_model.items()):
-        # Skip empty sub_dicts
-        if not sub_dict:
+        # Skip empty sub_dicts or characters missing from training data
+        if not sub_dict or first_char not in char_ranks:
+            continue
+        filtered_sub_dict = {
+            c: l for c, l in sub_dict.items() if c in char_ranks
+        }
+        if not filtered_sub_dict:
             continue
         print(
             f"    {char_ranks[first_char]!r}: {{  # {first_char!r}",
             file=output_file,
         )
-        for second_char, likelihood in sorted(sub_dict.items()):
+        for second_char, likelihood in sorted(filtered_sub_dict.items()):
             print(
                 f"        {char_ranks[second_char]!r}: SequenceLikelihood.{likelihood.name},  # {second_char!r}",
                 file=output_file,
@@ -695,33 +751,57 @@ def train_model_for_lang(
         f"Data Source: {'Custom files' if input_paths else f'CulturaX ({lang_metadata.num_training_docs:,} docs)' if lang_metadata.num_training_docs else 'CulturaX (all docs)'}"
     )
 
-    # Setup input generator
-    if input_paths:
-        # Use custom input files if provided
-        input_gen = gen_input_lines(input_paths, input_encoding)
-        data_size_str = "custom files"
-    else:
-        # Use CulturaX dataset
-        if not HAVE_DATASETS:
-            raise ValueError(
-                "The datasets package is required. Install with: pip install datasets"
-            )
-        input_gen = gen_culturax_lines(
-            language=lang_metadata.iso_code,
-            num_docs=lang_metadata.num_training_docs,
-        )
-        data_size_str = "CulturaX"
-
-    print(
-        f"\nCreating character frequency tables for {language} from {data_size_str} training data"
-    )
-    sys.stdout.flush()
     alphabet_set = set(lang_metadata.alphabet)
-    char_ranks, language_model = calc_ngram_freqs(
-        input_generator=input_gen,
-        alphabet_set=alphabet_set,
-        language=language,
-    )
+    cache_path = f"{language.lower()}_unfiltered_bigrams.json"
+
+    if os.path.exists(cache_path):
+        # Load cached unfiltered model
+        print(f"\nLoading cached unfiltered bigram model from {cache_path}")
+        sys.stdout.flush()
+        with open(cache_path, encoding="utf-8") as f:
+            cache_data = json.load(f)
+        cached_char_freqs: dict[str, int] = cache_data["char_freqs"]
+        cached_language_model: dict[str, dict[str, int]] = cache_data[
+            "language_model"
+        ]
+        char_ranks, language_model = filter_ngram_model(
+            char_freqs=cached_char_freqs,
+            language_model=cached_language_model,
+            alphabet_set=alphabet_set,
+            language=language,
+        )
+    else:
+        # Setup input generator
+        if input_paths:
+            # Use custom input files if provided
+            input_gen = gen_input_lines(input_paths, input_encoding)
+            data_size_str = "custom files"
+        else:
+            # Use CulturaX dataset
+            if not HAVE_DATASETS:
+                raise ValueError(
+                    "The datasets package is required. Install with: pip install datasets"
+                )
+            input_gen = gen_culturax_lines(
+                language=lang_metadata.iso_code,
+                num_docs=lang_metadata.num_training_docs,
+            )
+            data_size_str = "CulturaX"
+
+        print(
+            f"\nCreating character frequency tables for {language} from {data_size_str} training data"
+        )
+        sys.stdout.flush()
+        char_freqs, unfiltered_language_model = calc_ngram_freqs(
+            input_generator=input_gen,
+            language=language,
+        )
+        char_ranks, language_model = filter_ngram_model(
+            char_freqs=char_freqs,
+            language_model=unfiltered_language_model,
+            alphabet_set=alphabet_set,
+            language=language,
+        )
 
     # Create char-to-order maps (aka char-to-rank dicts)
     charset_models = {}
