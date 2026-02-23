@@ -61,6 +61,18 @@ from .langcroatianmodel import (
     MACLATIN2_CROATIAN_MODEL,
     WINDOWS_1250_CROATIAN_MODEL,
 )
+from .langcornishmodel import (
+    CP037_CORNISH_MODEL,
+    CP437_CORNISH_MODEL,
+    CP500_CORNISH_MODEL,
+    CP850_CORNISH_MODEL,
+    CP858_CORNISH_MODEL,
+    ISO_8859_1_CORNISH_MODEL,
+    ISO_8859_14_CORNISH_MODEL,
+    ISO_8859_15_CORNISH_MODEL,
+    MACROMAN_CORNISH_MODEL,
+    WINDOWS_1252_CORNISH_MODEL,
+)
 from .langczechmodel import (
     ISO_8859_2_CZECH_MODEL,
     WINDOWS_1250_CZECH_MODEL,
@@ -331,6 +343,7 @@ from .langukrainianmodel import (
     MACCYRILLIC_UKRAINIAN_MODEL,
     WINDOWS_1251_UKRAINIAN_MODEL,
 )
+from .langurdumodel import CP1006_URDU_MODEL
 from .langvietnamesemodel import WINDOWS_1258_VIETNAMESE_MODEL
 from .langwelshmodel import (
     CP037_WELSH_MODEL,
@@ -456,6 +469,16 @@ class SBCSGroupProber(CharSetGroupProber):
             SingleByteCharSetProber(ISO_8859_2_CROATIAN_MODEL),
             SingleByteCharSetProber(MACLATIN2_CROATIAN_MODEL),
             SingleByteCharSetProber(WINDOWS_1250_CROATIAN_MODEL),
+            SingleByteCharSetProber(CP037_CORNISH_MODEL),
+            SingleByteCharSetProber(CP437_CORNISH_MODEL),
+            SingleByteCharSetProber(CP500_CORNISH_MODEL),
+            SingleByteCharSetProber(CP850_CORNISH_MODEL),
+            SingleByteCharSetProber(CP858_CORNISH_MODEL),
+            SingleByteCharSetProber(ISO_8859_1_CORNISH_MODEL),
+            SingleByteCharSetProber(ISO_8859_14_CORNISH_MODEL),
+            SingleByteCharSetProber(ISO_8859_15_CORNISH_MODEL),
+            SingleByteCharSetProber(MACROMAN_CORNISH_MODEL),
+            SingleByteCharSetProber(WINDOWS_1252_CORNISH_MODEL),
             SingleByteCharSetProber(ISO_8859_2_CZECH_MODEL),
             SingleByteCharSetProber(WINDOWS_1250_CZECH_MODEL),
             SingleByteCharSetProber(CP037_DANISH_MODEL),
@@ -657,6 +680,7 @@ class SBCSGroupProber(CharSetGroupProber):
             SingleByteCharSetProber(KOI8_U_UKRAINIAN_MODEL),
             SingleByteCharSetProber(MACCYRILLIC_UKRAINIAN_MODEL),
             SingleByteCharSetProber(WINDOWS_1251_UKRAINIAN_MODEL),
+            SingleByteCharSetProber(CP1006_URDU_MODEL),
             SingleByteCharSetProber(ISO_8859_14_WELSH_MODEL),
             SingleByteCharSetProber(CP037_WELSH_MODEL),
             SingleByteCharSetProber(CP500_WELSH_MODEL),
