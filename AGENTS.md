@@ -98,7 +98,7 @@ UniversalDetector
 ### Training Data & Scripts
 
 - `wiki_*.txt`: Cached Wikipedia training data (generated, not committed for licensing reasons)
-- `create_language_model.py`: Retrains bigram models from Wikipedia
+- `create_language_model.py`: Retrains bigram models from CulturaX
 - `convert_language_model.py`: Utility for converting between model formats
 - `bench.py`: Benchmarking script
 
@@ -178,7 +178,7 @@ uv sync
 **For single-byte encodings:**
 
 1. Add language to `chardet/metadata/languages.py` if needed
-2. Generate training model using `create_language_model.py` (requires Wikipedia data)
+2. Generate training model using `create_language_model.py`
 3. The script will create `langmylanguagemodel.py` automatically
 4. Register in `SBCSGroupProber` (`sbcsgroupprober.py`)
 5. Add test files to `tests/mynewencoding-mylanguage/`
@@ -235,9 +235,9 @@ uv sync
 1. Ensure dependencies are installed: `uv sync`
 2. Run training script:
    ```bash
-   uv run python create_language_model.py <language> --max-pages 20000
+   uv run python create_language_model.py <language>
    ```
-3. Script downloads Wikipedia articles and generates `wiki_<language>.txt` cache
+3. Script downloads CulturaX articles and generates `<language>_unfiltered_bigrams.json` cache
 4. Generates/updates `lang<language>model.py` in working directory
 5. Move generated `lang<language>model.py` to `chardet/` directory
 6. Commit `lang*model.py` files after moving
