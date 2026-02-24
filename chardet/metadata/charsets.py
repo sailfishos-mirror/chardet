@@ -171,7 +171,7 @@ CHARSETS = {
     ),
     "CP932": Charset(
         name="CP932",
-        is_multi_byte=False,
+        is_multi_byte=True,
         encoding_era=EncodingEra.MODERN_WEB,
         language_filter=LanguageFilter.JAPANESE,
     ),
