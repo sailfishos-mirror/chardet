@@ -164,7 +164,8 @@ class CharSetProber:
 
             # https://github.com/python/typeshed/issues/8182
             if buf_char == b">":  # type: ignore[comparison-overlap]
-                prev = curr + 1
+                if in_tag:
+                    prev = curr + 1
                 in_tag = False
             # https://github.com/python/typeshed/issues/8182
             elif buf_char == b"<":  # type: ignore[comparison-overlap]
