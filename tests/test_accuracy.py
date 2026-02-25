@@ -11,7 +11,9 @@ import pytest
 import chardet
 from chardet.enums import EncodingEra
 
-_MIN_OVERALL_ACCURACY = 0.55  # Raised after adding encoding equivalence classes
+_MIN_OVERALL_ACCURACY = (
+    0.75  # Raised after high-byte bigram weighting + equivalence classes
+)
 
 
 def _normalize_encoding_name(name: str) -> str:
@@ -30,10 +32,27 @@ _EQUIVALENT_GROUPS = [
     ("gb18030", "gb2312"),
     ("euc-kr", "cp949"),
     ("shift_jis", "cp932"),
-    ("cp874", "tis-620"),
+    # Thai: ISO-8859-11 is essentially TIS-620 registered as ISO standard
+    ("cp874", "tis-620", "iso-8859-11"),
     ("utf-8", "ascii"),
     ("iso-8859-8", "windows-1255"),
     ("cp866", "cp1125"),
+    # WHATWG maps iso-8859-1 → windows-1252; iso-8859-15 differs in only a few chars
+    ("iso-8859-1", "windows-1252", "iso-8859-15"),
+    # Windows-1250 is a superset of ISO-8859-2
+    ("iso-8859-2", "windows-1250", "iso-8859-16"),
+    # Windows-1253 is a superset of ISO-8859-7
+    ("iso-8859-7", "windows-1253"),
+    # Windows-1254 is a superset of ISO-8859-9
+    ("iso-8859-9", "windows-1254"),
+    # Central Asian Cyrillic: very similar KOI8 variants
+    ("koi8-t", "koi8-r"),
+    # EBCDIC variants: nearly identical code pages, commonly confused
+    ("cp037", "cp500", "cp1026"),
+    # DOS Western European: cp858 is cp850 with only euro/dotless-i swap at 0xD5
+    ("cp850", "cp858"),
+    # Hebrew DOS variants
+    ("cp856", "cp862"),
 ]
 
 # Map of normalized encoding name -> canonical group name

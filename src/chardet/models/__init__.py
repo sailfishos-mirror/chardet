@@ -63,13 +63,17 @@ def score_bigrams(
         return 0.0
 
     score = 0
-    max_possible = 0
+    weight_sum = 0
     for i in range(total_bigrams):
-        pair = (data[i], data[i + 1])
+        b1 = data[i]
+        b2 = data[i + 1]
+        pair = (b1, b2)
+        # High-byte bigrams are much more discriminative for single-byte encodings
+        w = 8 if (b1 > 0x7F or b2 > 0x7F) else 1
         if pair in model:
-            score += model[pair]
-        max_possible += 255
+            score += model[pair] * w
+        weight_sum += 255 * w
 
-    if max_possible == 0:
+    if weight_sum == 0:
         return 0.0
-    return score / max_possible
+    return score / weight_sum
