@@ -12,11 +12,13 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import atexit
 import codecs
 import collections
 import concurrent.futures
 import os
 import re
+import signal
 import struct
 import time
 import unicodedata
@@ -651,25 +653,32 @@ def main() -> None:
     print(f"Max samples per language: {args.max_samples}")
     print()
 
-    # Pre-download all language texts (parallel — I/O-bound).
-    # HuggingFace streaming iterators can hold connections open and cause the
-    # thread pool to hang on shutdown, so we use cancel_futures=True and a
-    # per-future timeout to ensure we don't block forever.
-    print(f"=== Downloading CulturaX texts ({args.download_workers} threads) ===")
+    if args.download_workers == 1:
+        print("=== Downloading CulturaX texts (single-threaded) ===")
+        for lang in sorted_langs:
+            texts = get_texts(lang, args.max_samples, args.cache_dir)
+            print(f"  {lang}: {len(texts)} texts")
+        print()
+    else:
+        # Pre-download all language texts (parallel — I/O-bound).
+        # HuggingFace streaming iterators can hold connections open and cause the
+        # thread pool to hang on shutdown, so we use cancel_futures=True and a
+        # per-future timeout to ensure we don't block forever.
+        print(f"=== Downloading CulturaX texts ({args.download_workers} threads) ===")
 
-    def _fetch(lang: str) -> tuple[str, int]:
-        texts = get_texts(lang, args.max_samples, args.cache_dir)
-        return lang, len(texts)
+        def _fetch(lang: str) -> tuple[str, int]:
+            texts = get_texts(lang, args.max_samples, args.cache_dir)
+            return lang, len(texts)
 
-    pool = concurrent.futures.ThreadPoolExecutor(
-        max_workers=args.download_workers,
-    )
-    futures = {pool.submit(_fetch, lang): lang for lang in sorted_langs}
-    for future in concurrent.futures.as_completed(futures, timeout=600):
-        lang, count = future.result(timeout=60)
-        print(f"  {lang}: {count} texts")
-    pool.shutdown(wait=False, cancel_futures=True)
-    print()
+        pool = concurrent.futures.ThreadPoolExecutor(
+            max_workers=args.download_workers,
+        )
+        futures = {pool.submit(_fetch, lang): lang for lang in sorted_langs}
+        for future in concurrent.futures.as_completed(futures, timeout=600):
+            lang, count = future.result(timeout=60)
+            print(f"  {lang}: {count} texts")
+        pool.shutdown(wait=False, cancel_futures=True)
+        print()
 
     # Build models for each encoding
     print("=== Building bigram models ===")
@@ -767,6 +776,16 @@ def main() -> None:
         # 4 (name_len) + len(name) + 4 (num_entries) + 3*n (entries)
         model_bytes = 4 + len(name.encode("utf-8")) + 4 + 3 * n
         print(f"  {name:20s}: {n:6d} bigrams ({model_bytes:,} bytes)")
+
+    # Register cleanup handler to kill all threads and subprocesses on exit
+
+    def cleanup():
+        """Kill all threads and subprocesses on exit."""
+        # Force exit
+        os._exit(0)
+
+    atexit.register(cleanup)
+    signal.signal(signal.SIGTERM, lambda s, f: cleanup())
 
 
 if __name__ == "__main__":
