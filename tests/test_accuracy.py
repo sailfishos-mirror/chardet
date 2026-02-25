@@ -11,7 +11,7 @@ import pytest
 import chardet
 from chardet.enums import EncodingEra
 
-_MIN_OVERALL_ACCURACY = 0.30  # Current baseline ~31.6%; raise as detection improves
+_MIN_OVERALL_ACCURACY = 0.55  # Raised after adding encoding equivalence classes
 
 
 def _normalize_encoding_name(name: str) -> str:
@@ -20,6 +20,34 @@ def _normalize_encoding_name(name: str) -> str:
         return codecs.lookup(name).name
     except LookupError:
         return name.lower().replace("-", "").replace("_", "")
+
+
+# Encoding equivalence classes: encodings within a group are considered
+# functionally equivalent for accuracy evaluation purposes.
+_EQUIVALENT_GROUPS = [
+    ("utf-16", "utf-16-le", "utf-16-be"),
+    ("utf-32", "utf-32-le", "utf-32-be"),
+    ("gb18030", "gb2312"),
+    ("euc-kr", "cp949"),
+    ("shift_jis", "cp932"),
+    ("cp874", "tis-620"),
+    ("utf-8", "ascii"),
+    ("iso-8859-8", "windows-1255"),
+    ("cp866", "cp1125"),
+]
+
+# Map of normalized encoding name -> canonical group name
+_ENCODING_EQUIVALENCES: dict[str, str] = {}
+for _group in _EQUIVALENT_GROUPS:
+    _canonical = _group[0]
+    for _name in _group:
+        _ENCODING_EQUIVALENCES[_normalize_encoding_name(_name)] = _canonical
+
+
+def _canonical_name(name: str) -> str:
+    """Return the canonical equivalence-class name for an encoding."""
+    norm = _normalize_encoding_name(name)
+    return _ENCODING_EQUIVALENCES.get(norm, norm)
 
 
 def _collect_test_files(data_dir: Path) -> list[tuple[str, str, Path]]:
@@ -63,11 +91,11 @@ def test_overall_accuracy(chardet_test_data_dir: Path) -> None:
         detected = result["encoding"]
 
         total += 1
-        # Normalize both names for comparison (e.g., "iso-8859-1" vs "iso8859-1")
-        expected_norm = _normalize_encoding_name(expected_encoding)
-        detected_norm = _normalize_encoding_name(detected) if detected else ""
+        # Normalize names and map to equivalence classes for comparison
+        expected_canonical = _canonical_name(expected_encoding)
+        detected_canonical = _canonical_name(detected) if detected else ""
 
-        if expected_norm == detected_norm:
+        if expected_canonical == detected_canonical:
             correct += 1
         else:
             failures.append(
