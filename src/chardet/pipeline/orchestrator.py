@@ -20,7 +20,10 @@ from chardet.pipeline.utf1632 import detect_utf1632_patterns
 from chardet.pipeline.validity import filter_by_validity
 from chardet.registry import get_candidates
 
-_NONE_RESULT = DetectionResult(encoding=None, confidence=0.0, language=None)
+_BINARY_RESULT = DetectionResult(encoding=None, confidence=0.95, language=None)
+_FALLBACK_RESULT = DetectionResult(
+    encoding="windows-1252", confidence=0.10, language=None
+)
 _STRUCTURAL_CONFIDENCE_THRESHOLD = 0.85
 
 
@@ -33,7 +36,7 @@ def run_pipeline(
     data = data[:max_bytes]
 
     if not data:
-        return [_NONE_RESULT]
+        return [_FALLBACK_RESULT]
 
     # Stage 1a: BOM detection (runs first — BOMs are definitive and
     # UTF-16/32 data looks binary due to null bytes)
@@ -57,7 +60,7 @@ def run_pipeline(
 
     # Stage 0: Binary detection
     if is_binary(data, max_bytes=max_bytes):
-        return [_NONE_RESULT]
+        return [_BINARY_RESULT]
 
     # Stage 1b: Markup charset extraction (before ASCII/UTF-8 so explicit
     # declarations like <?xml encoding="iso-8859-1"?> are honoured even
@@ -81,7 +84,7 @@ def run_pipeline(
     valid_candidates = filter_by_validity(data, candidates)
 
     if not valid_candidates:
-        return [_NONE_RESULT]
+        return [_FALLBACK_RESULT]
 
     # Stage 2b: Structural probing for multi-byte encodings
     structural_scores: list[tuple[str, float]] = []
@@ -112,6 +115,6 @@ def run_pipeline(
     results = score_candidates(data, tuple(valid_candidates))
 
     if not results:
-        return [_NONE_RESULT]
+        return [_FALLBACK_RESULT]
 
     return results

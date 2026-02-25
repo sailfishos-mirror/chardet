@@ -6,7 +6,7 @@ from chardet.pipeline.orchestrator import run_pipeline
 
 def test_empty_input():
     result = run_pipeline(b"", EncodingEra.MODERN_WEB)
-    assert result == [DetectionResult(None, 0.0, None)]
+    assert result == [DetectionResult("windows-1252", 0.10, None)]
 
 
 def test_bom_detected():
@@ -93,6 +93,7 @@ def test_binary_content():
     data = b"\x00\x01\x02\x03\x04\x05" * 100
     result = run_pipeline(data, EncodingEra.ALL)
     assert result[0].encoding is None
+    assert result[0].confidence == 0.95
 
 
 def test_xml_charset_declaration():
@@ -111,6 +112,12 @@ def test_returns_list():
     result = run_pipeline(b"Hello", EncodingEra.ALL)
     assert isinstance(result, list)
     assert all(isinstance(r, DetectionResult) for r in result)
+
+
+def test_single_high_byte_returns_encoding():
+    """A single high byte should return an encoding, not None."""
+    result = run_pipeline(b"\xe4", EncodingEra.MODERN_WEB)
+    assert result[0].encoding is not None
 
 
 def test_encoding_era_filtering():
