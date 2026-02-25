@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import concurrent.futures
 import os
+from typing import TYPE_CHECKING
 
 from chardet.models import load_models, score_bigrams
 from chardet.pipeline import DetectionResult
-from chardet.registry import EncodingInfo
+
+if TYPE_CHECKING:
+    from chardet.registry import EncodingInfo
 
 _PARALLEL_THRESHOLD = 6
 
@@ -28,7 +31,7 @@ def score_candidates(
     models = load_models()
     scores: list[tuple[str, float]] = []
 
-    workers = int(os.environ.get("CHARDET_WORKERS", 0)) or os.cpu_count() or 1
+    workers = int(os.environ.get("CHARDET_WORKERS", "0")) or os.cpu_count() or 1
     use_parallel = len(candidates) > _PARALLEL_THRESHOLD and workers > 1
 
     if use_parallel:
@@ -40,7 +43,7 @@ def score_candidates(
                 for future in concurrent.futures.as_completed(futures):
                     try:
                         scores.append(future.result())
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         enc = futures[future]
                         scores.append((enc.name, 0.0))
         except (RuntimeError, OSError):

@@ -10,7 +10,7 @@ _MODEL_CACHE: dict[str, dict[tuple[int, int], int]] | None = None
 
 def load_models() -> dict[str, dict[tuple[int, int], int]]:
     """Load all bigram models from the bundled models.bin file."""
-    global _MODEL_CACHE
+    global _MODEL_CACHE  # noqa: PLW0603
     if _MODEL_CACHE is not None:
         return _MODEL_CACHE
 

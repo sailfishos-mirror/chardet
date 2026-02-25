@@ -1,5 +1,5 @@
 # tests/test_benchmark.py
-"""Performance regression tests. Run with: pytest -m benchmark"""
+"""Performance regression tests. Run with: ``pytest -m benchmark``."""
 
 import time
 

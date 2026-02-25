@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 import chardet
 from chardet.enums import EncodingEra
@@ -36,7 +37,7 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.files:
         for filepath in args.files:
-            with open(filepath, "rb") as f:
+            with Path(filepath).open("rb") as f:
                 data = f.read()
             result = chardet.detect(data, encoding_era=era)
             if args.minimal:

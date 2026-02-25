@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 # Control chars that indicate binary (excluding tab, newline, carriage return)
-_BINARY_CONTROL_BYTES = frozenset(range(0x00, 0x09)) | frozenset(range(0x0E, 0x20))
+_BINARY_CONTROL_BYTES = frozenset(range(0x09)) | frozenset(range(0x0E, 0x20))
 
 # Threshold: if more than this fraction of bytes are binary indicators, it's binary
 _BINARY_THRESHOLD = 0.01

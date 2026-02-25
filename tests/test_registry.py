@@ -8,7 +8,8 @@ def test_encoding_info_is_frozen():
     assert isinstance(info, EncodingInfo)
     try:
         info.name = "something"  # type: ignore[misc]
-        raise AssertionError("Should not be able to mutate frozen dataclass")
+        msg = "Should not be able to mutate frozen dataclass"
+        raise AssertionError(msg)
     except AttributeError:
         pass
 

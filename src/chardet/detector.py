@@ -28,7 +28,8 @@ class UniversalDetector:
 
     def feed(self, data: bytes) -> None:
         if self._closed:
-            raise ValueError("feed() called after close() without reset()")
+            msg = "feed() called after close() without reset()"
+            raise ValueError(msg)
         if self._done:
             return
         remaining = self._max_bytes - len(self._buffer)

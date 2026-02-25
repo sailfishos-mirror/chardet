@@ -4,9 +4,12 @@
 from __future__ import annotations
 
 import codecs
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 import chardet
 from chardet.enums import EncodingEra

@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
-from chardet.enums import EncodingEra
+from typing import TYPE_CHECKING
+
 from chardet.pipeline import DetectionResult
+
+if TYPE_CHECKING:
+    from chardet.enums import EncodingEra
 from chardet.pipeline.ascii import detect_ascii
 from chardet.pipeline.binary import is_binary
 from chardet.pipeline.bom import detect_bom
@@ -90,7 +94,7 @@ def run_pipeline(
     # If a multi-byte encoding scored very high, include it prominently
     if structural_scores:
         structural_scores.sort(key=lambda x: x[1], reverse=True)
-        best_name, best_score = structural_scores[0]
+        _best_name, best_score = structural_scores[0]
         if best_score >= _STRUCTURAL_CONFIDENCE_THRESHOLD:
             results = [
                 DetectionResult(encoding=name, confidence=score, language=None)

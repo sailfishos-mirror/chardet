@@ -181,7 +181,7 @@ def _check_utf16(data: bytes) -> DetectionResult | None:
 
 
 def _looks_like_text(text: str) -> bool:
-    """Quick check: is decoded text mostly printable characters?"""
+    """Quick check: is decoded text mostly printable characters."""
     if not text:
         return False
     sample = text[:500]

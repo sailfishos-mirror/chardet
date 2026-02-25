@@ -2,17 +2,23 @@
 
 from __future__ import annotations
 
-from chardet.detector import UniversalDetector as UniversalDetector
+from chardet.detector import UniversalDetector
 from chardet.enums import EncodingEra
 from chardet.pipeline.orchestrator import run_pipeline
 
 __version__ = "6.1.0"
+__all__ = [
+    "EncodingEra",
+    "UniversalDetector",
+    "detect",
+    "detect_all",
+]
 
 
 def detect(
     data: bytes,
     max_bytes: int = 200_000,
-    chunk_size: int = 65_536,
+    chunk_size: int = 65_536,  # noqa: ARG001
     encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
 ) -> dict[str, str | float | None]:
     """Detect the encoding of the given byte string."""
@@ -23,7 +29,7 @@ def detect(
 def detect_all(
     data: bytes,
     max_bytes: int = 200_000,
-    chunk_size: int = 65_536,
+    chunk_size: int = 65_536,  # noqa: ARG001
     encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
 ) -> list[dict[str, str | float | None]]:
     """Detect all possible encodings of the given byte string."""

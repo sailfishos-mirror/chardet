@@ -51,15 +51,64 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = [
-    "E",
-    "F",
-    "I",
-    "B",
-    "C4",
-    "UP",
+    "ALL",
 ]
 ignore = [
     "E501",
+    # Incompatible pairs
+    "D203",   # incompatible with D211
+    "D213",   # incompatible with D212
+    # Formatter conflict
+    "COM812", # trailing comma (ruff formatter handles this)
+    # Docstrings (add incrementally later)
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D107",
+    # Return type annotations (add incrementally later)
+    "ANN201",
+    "ANN202",
+    # Encoding-detection code characteristics
+    "PLR2004", # magic value comparison (byte values/thresholds)
+    "C901",    # complex structure
+    "PLR0911", # too many return statements
+    "PLR0912", # too many branches
+    "PERF203", # try-except in loop
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "S101",    # assert is standard in tests
+    "S603",    # subprocess security not relevant in tests
+    "S607",    # subprocess security not relevant in tests
+    "PLW1510", # subprocess.run check not needed in tests
+    "T201",    # print is fine in tests
+    "PT011",   # pytest.raises broad match acceptable
+    "PLC0415", # conditional imports sometimes needed
+    "PERF401", # manual list comprehension (readability)
+]
+"scripts/**" = [
+    "T201",    # print is the output mechanism
+    "INP001",  # not a package
+    "ERA001",  # commented code provides training context
+    "EXE001",  # shebang is intentional
+    "BLE001",  # blind except (training resilience)
+    "PLW2901", # redefined loop variable
+    "ARG005",  # unused lambda args (signal handlers)
+    "PTH",     # os.path usage fine in scripts
+    "RUF003",  # ambiguous unicode (intentional in encoding training)
+    "S603",    # subprocess security not relevant
+    "S607",    # subprocess security not relevant
+    "PLC0415", # conditional imports
+    "RUF046",  # unnecessary int cast
+    "TRY300",  # try-consider-else style
+    "PLR0915", # too many statements
+    "FURB122", # f.write in loop (binary packing)
+]
+"src/chardet/cli.py" = [
+    "T201",    # CLI prints output to stdout
 ]
 
 [tool.ruff.format]

@@ -7,7 +7,10 @@ to further rank multi-byte encoding candidates.
 
 from __future__ import annotations
 
-from chardet.registry import EncodingInfo
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from chardet.registry import EncodingInfo
 
 # ---------------------------------------------------------------------------
 # Per-encoding structural scorers
@@ -231,7 +234,7 @@ def _score_iso_2022_kr(data: bytes) -> float:
                 i += 4
                 continue
             i += 1
-        elif b == 0x0E or b == 0x0F:  # SO / SI
+        elif b in {0x0E, 0x0F}:  # SO / SI
             indicators += 1
             valid += 1
             i += 1
@@ -322,8 +325,7 @@ _SCORERS: dict[str, object] = {
 
 
 def compute_structural_score(data: bytes, encoding_info: EncodingInfo) -> float:
-    """Return 0.0-1.0 indicating how well *data* matches *encoding_info*'s
-    expected multi-byte byte structure.
+    """Return 0.0-1.0 indicating how well *data* matches the encoding's structure.
 
     For single-byte encodings (``is_multibyte is False``), always returns 0.0.
     For empty data, always returns 0.0.

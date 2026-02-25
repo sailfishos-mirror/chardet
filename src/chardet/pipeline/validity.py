@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from chardet.registry import EncodingInfo
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from chardet.registry import EncodingInfo
 
 
 def filter_by_validity(

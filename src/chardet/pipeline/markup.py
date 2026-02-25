@@ -32,9 +32,10 @@ def _normalize_encoding(name: bytes) -> str | None:
     try:
         text = name.decode("ascii").strip().lower()
         codecs.lookup(text)  # validate only
-        return text
     except (LookupError, UnicodeDecodeError, ValueError):
         return None
+    else:
+        return text
 
 
 def detect_markup_charset(data: bytes) -> DetectionResult | None:
