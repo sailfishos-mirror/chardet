@@ -11,6 +11,7 @@ from chardet.pipeline.markup import detect_markup_charset
 from chardet.pipeline.statistical import score_candidates
 from chardet.pipeline.structural import compute_structural_score
 from chardet.pipeline.utf8 import detect_utf8
+from chardet.pipeline.utf1632 import detect_utf1632_patterns
 from chardet.pipeline.validity import filter_by_validity
 from chardet.registry import get_candidates
 
@@ -29,14 +30,22 @@ def run_pipeline(
     if not data:
         return [_NONE_RESULT]
 
-    # Stage 0: Binary detection
-    if is_binary(data, max_bytes=max_bytes):
-        return [_NONE_RESULT]
-
-    # Stage 1a: BOM
+    # Stage 1a: BOM detection (runs first — BOMs are definitive and
+    # UTF-16/32 data looks binary due to null bytes)
     bom_result = detect_bom(data)
     if bom_result is not None:
         return [bom_result]
+
+    # Stage 1a+: UTF-16/32 null-byte pattern detection (for files without
+    # BOMs — must run before binary detection since these encodings contain
+    # many null bytes that would trigger the binary check)
+    utf1632_result = detect_utf1632_patterns(data)
+    if utf1632_result is not None:
+        return [utf1632_result]
+
+    # Stage 0: Binary detection
+    if is_binary(data, max_bytes=max_bytes):
+        return [_NONE_RESULT]
 
     # Stage 1b: Markup charset extraction (before ASCII/UTF-8 so explicit
     # declarations like <?xml encoding="iso-8859-1"?> are honoured even

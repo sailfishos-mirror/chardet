@@ -16,6 +16,66 @@ def test_bom_detected():
     assert result[0].confidence == 1.0
 
 
+def test_bom_utf16_le():
+    data = b"\xff\xfe" + "Hello world".encode("utf-16-le")
+    result = run_pipeline(data, EncodingEra.ALL)
+    assert result[0].encoding == "utf-16-le"
+    assert result[0].confidence == 1.0
+
+
+def test_bom_utf16_be():
+    data = b"\xfe\xff" + "Hello world".encode("utf-16-be")
+    result = run_pipeline(data, EncodingEra.ALL)
+    assert result[0].encoding == "utf-16-be"
+    assert result[0].confidence == 1.0
+
+
+def test_bom_utf32_le():
+    data = b"\xff\xfe\x00\x00" + "Hello world".encode("utf-32-le")
+    result = run_pipeline(data, EncodingEra.ALL)
+    assert result[0].encoding == "utf-32-le"
+    assert result[0].confidence == 1.0
+
+
+def test_bom_utf32_be():
+    data = b"\x00\x00\xfe\xff" + "Hello world".encode("utf-32-be")
+    result = run_pipeline(data, EncodingEra.ALL)
+    assert result[0].encoding == "utf-32-be"
+    assert result[0].confidence == 1.0
+
+
+def test_utf16_le_no_bom():
+    """UTF-16-LE without a BOM should be detected via null-byte patterns."""
+    data = "Hello world, this is a test of UTF-16 detection.".encode("utf-16-le")
+    result = run_pipeline(data, EncodingEra.ALL)
+    assert result[0].encoding == "utf-16-le"
+    assert result[0].confidence == 0.95
+
+
+def test_utf16_be_no_bom():
+    """UTF-16-BE without a BOM should be detected via null-byte patterns."""
+    data = "Hello world, this is a test of UTF-16 detection.".encode("utf-16-be")
+    result = run_pipeline(data, EncodingEra.ALL)
+    assert result[0].encoding == "utf-16-be"
+    assert result[0].confidence == 0.95
+
+
+def test_utf32_le_no_bom():
+    """UTF-32-LE without a BOM should be detected via null-byte patterns."""
+    data = "Hello world, this is a test.".encode("utf-32-le")
+    result = run_pipeline(data, EncodingEra.ALL)
+    assert result[0].encoding == "utf-32-le"
+    assert result[0].confidence == 0.95
+
+
+def test_utf32_be_no_bom():
+    """UTF-32-BE without a BOM should be detected via null-byte patterns."""
+    data = "Hello world, this is a test.".encode("utf-32-be")
+    result = run_pipeline(data, EncodingEra.ALL)
+    assert result[0].encoding == "utf-32-be"
+    assert result[0].confidence == 0.95
+
+
 def test_pure_ascii():
     result = run_pipeline(b"Hello world 123", EncodingEra.ALL)
     assert result[0].encoding == "ascii"
