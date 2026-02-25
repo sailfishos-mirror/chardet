@@ -1,0 +1,608 @@
+"""Encoding registry with metadata for all supported encodings."""
+
+from __future__ import annotations
+
+import dataclasses
+
+from chardet.enums import EncodingEra
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class EncodingInfo:
+    """Metadata for a single encoding."""
+
+    name: str
+    aliases: tuple[str, ...]
+    era: EncodingEra
+    is_multibyte: bool
+    python_codec: str
+
+
+def get_candidates(era: EncodingEra) -> tuple[EncodingInfo, ...]:
+    """Return registry entries matching the given era filter."""
+    return tuple(enc for enc in REGISTRY if enc.era & era)
+
+
+# Era assignments match chardet 6.0.0's chardet/metadata/charsets.py
+# python_codec values verified via codecs.lookup()
+
+REGISTRY: tuple[EncodingInfo, ...] = (
+    # === MODERN_WEB ===
+    EncodingInfo(
+        name="ascii",
+        aliases=("us-ascii",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="ascii",
+    ),
+    EncodingInfo(
+        name="utf-8",
+        aliases=("utf8",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="utf-8",
+    ),
+    EncodingInfo(
+        name="utf-8-sig",
+        aliases=("utf-8-bom",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="utf-8-sig",
+    ),
+    EncodingInfo(
+        name="utf-16",
+        aliases=("utf16",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="utf-16",
+    ),
+    EncodingInfo(
+        name="utf-16-be",
+        aliases=("utf-16be",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="utf-16-be",
+    ),
+    EncodingInfo(
+        name="utf-16-le",
+        aliases=("utf-16le",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="utf-16-le",
+    ),
+    EncodingInfo(
+        name="utf-32",
+        aliases=("utf32",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="utf-32",
+    ),
+    EncodingInfo(
+        name="utf-32-be",
+        aliases=("utf-32be",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="utf-32-be",
+    ),
+    EncodingInfo(
+        name="utf-32-le",
+        aliases=("utf-32le",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="utf-32-le",
+    ),
+    # CJK - Modern Web
+    EncodingInfo(
+        name="big5",
+        aliases=("big5-tw", "csbig5"),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=True,
+        python_codec="big5",
+    ),
+    EncodingInfo(
+        name="cp932",
+        aliases=("ms932", "mskanji", "ms-kanji"),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=True,
+        python_codec="cp932",
+    ),
+    EncodingInfo(
+        name="cp949",
+        aliases=("ms949", "uhc"),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=True,
+        python_codec="cp949",
+    ),
+    EncodingInfo(
+        name="euc-jp",
+        aliases=("eucjp", "ujis", "u-jis"),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=True,
+        python_codec="euc-jp",
+    ),
+    EncodingInfo(
+        name="euc-kr",
+        aliases=("euckr",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=True,
+        python_codec="euc-kr",
+    ),
+    EncodingInfo(
+        name="gb18030",
+        aliases=("gb-18030",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=True,
+        python_codec="gb18030",
+    ),
+    EncodingInfo(
+        name="hz-gb-2312",
+        aliases=("hz",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=True,
+        python_codec="hz",
+    ),
+    EncodingInfo(
+        name="iso-2022-jp",
+        aliases=("csiso2022jp",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=True,
+        python_codec="iso2022-jp",
+    ),
+    EncodingInfo(
+        name="iso-2022-kr",
+        aliases=("csiso2022kr",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=True,
+        python_codec="iso2022-kr",
+    ),
+    EncodingInfo(
+        name="shift_jis",
+        aliases=("sjis", "shiftjis", "s_jis"),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=True,
+        python_codec="shift_jis",
+    ),
+    # Windows code pages - Modern Web
+    EncodingInfo(
+        name="cp874",
+        aliases=("windows-874",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="cp874",
+    ),
+    EncodingInfo(
+        name="windows-1250",
+        aliases=("cp1250",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="cp1250",
+    ),
+    EncodingInfo(
+        name="windows-1251",
+        aliases=("cp1251",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="cp1251",
+    ),
+    EncodingInfo(
+        name="windows-1252",
+        aliases=("cp1252",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="cp1252",
+    ),
+    EncodingInfo(
+        name="windows-1253",
+        aliases=("cp1253",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="cp1253",
+    ),
+    EncodingInfo(
+        name="windows-1254",
+        aliases=("cp1254",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="cp1254",
+    ),
+    EncodingInfo(
+        name="windows-1255",
+        aliases=("cp1255",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="cp1255",
+    ),
+    EncodingInfo(
+        name="windows-1256",
+        aliases=("cp1256",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="cp1256",
+    ),
+    EncodingInfo(
+        name="windows-1257",
+        aliases=("cp1257",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="cp1257",
+    ),
+    EncodingInfo(
+        name="windows-1258",
+        aliases=("cp1258",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="cp1258",
+    ),
+    # KOI8 - Modern Web
+    EncodingInfo(
+        name="koi8-r",
+        aliases=("koi8r",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="koi8-r",
+    ),
+    EncodingInfo(
+        name="koi8-u",
+        aliases=("koi8u",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="koi8-u",
+    ),
+    # TIS-620 - Modern Web
+    EncodingInfo(
+        name="tis-620",
+        aliases=("tis620",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="tis-620",
+    ),
+    # === LEGACY_ISO ===
+    EncodingInfo(
+        name="iso-8859-1",
+        aliases=("latin-1", "latin1", "iso8859-1"),
+        era=EncodingEra.LEGACY_ISO,
+        is_multibyte=False,
+        python_codec="iso-8859-1",
+    ),
+    EncodingInfo(
+        name="iso-8859-2",
+        aliases=("latin-2", "latin2", "iso8859-2"),
+        era=EncodingEra.LEGACY_ISO,
+        is_multibyte=False,
+        python_codec="iso-8859-2",
+    ),
+    EncodingInfo(
+        name="iso-8859-3",
+        aliases=("latin-3", "latin3", "iso8859-3"),
+        era=EncodingEra.LEGACY_ISO,
+        is_multibyte=False,
+        python_codec="iso-8859-3",
+    ),
+    EncodingInfo(
+        name="iso-8859-4",
+        aliases=("latin-4", "latin4", "iso8859-4"),
+        era=EncodingEra.LEGACY_ISO,
+        is_multibyte=False,
+        python_codec="iso-8859-4",
+    ),
+    EncodingInfo(
+        name="iso-8859-5",
+        aliases=("iso8859-5", "cyrillic"),
+        era=EncodingEra.LEGACY_ISO,
+        is_multibyte=False,
+        python_codec="iso-8859-5",
+    ),
+    EncodingInfo(
+        name="iso-8859-6",
+        aliases=("iso8859-6", "arabic"),
+        era=EncodingEra.LEGACY_ISO,
+        is_multibyte=False,
+        python_codec="iso-8859-6",
+    ),
+    EncodingInfo(
+        name="iso-8859-7",
+        aliases=("iso8859-7", "greek"),
+        era=EncodingEra.LEGACY_ISO,
+        is_multibyte=False,
+        python_codec="iso-8859-7",
+    ),
+    EncodingInfo(
+        name="iso-8859-8",
+        aliases=("iso8859-8", "hebrew"),
+        era=EncodingEra.LEGACY_ISO,
+        is_multibyte=False,
+        python_codec="iso-8859-8",
+    ),
+    EncodingInfo(
+        name="iso-8859-9",
+        aliases=("latin-5", "latin5", "iso8859-9"),
+        era=EncodingEra.LEGACY_ISO,
+        is_multibyte=False,
+        python_codec="iso-8859-9",
+    ),
+    EncodingInfo(
+        name="iso-8859-10",
+        aliases=("latin-6", "latin6", "iso8859-10"),
+        era=EncodingEra.LEGACY_ISO,
+        is_multibyte=False,
+        python_codec="iso-8859-10",
+    ),
+    EncodingInfo(
+        name="iso-8859-13",
+        aliases=("latin-7", "latin7", "iso8859-13"),
+        era=EncodingEra.LEGACY_ISO,
+        is_multibyte=False,
+        python_codec="iso-8859-13",
+    ),
+    EncodingInfo(
+        name="iso-8859-14",
+        aliases=("latin-8", "latin8", "iso8859-14"),
+        era=EncodingEra.LEGACY_ISO,
+        is_multibyte=False,
+        python_codec="iso-8859-14",
+    ),
+    EncodingInfo(
+        name="iso-8859-15",
+        aliases=("latin-9", "latin9", "iso8859-15"),
+        era=EncodingEra.LEGACY_ISO,
+        is_multibyte=False,
+        python_codec="iso-8859-15",
+    ),
+    EncodingInfo(
+        name="iso-8859-16",
+        aliases=("latin-10", "latin10", "iso8859-16"),
+        era=EncodingEra.LEGACY_ISO,
+        is_multibyte=False,
+        python_codec="iso-8859-16",
+    ),
+    # Johab - Legacy ISO per chardet 6.0.0
+    EncodingInfo(
+        name="johab",
+        aliases=(),
+        era=EncodingEra.LEGACY_ISO,
+        is_multibyte=True,
+        python_codec="johab",
+    ),
+    # === LEGACY_MAC ===
+    EncodingInfo(
+        name="mac-cyrillic",
+        aliases=("maccyrillic",),
+        era=EncodingEra.LEGACY_MAC,
+        is_multibyte=False,
+        python_codec="mac-cyrillic",
+    ),
+    EncodingInfo(
+        name="mac-greek",
+        aliases=("macgreek",),
+        era=EncodingEra.LEGACY_MAC,
+        is_multibyte=False,
+        python_codec="mac-greek",
+    ),
+    EncodingInfo(
+        name="mac-iceland",
+        aliases=("maciceland",),
+        era=EncodingEra.LEGACY_MAC,
+        is_multibyte=False,
+        python_codec="mac-iceland",
+    ),
+    EncodingInfo(
+        name="mac-latin2",
+        aliases=("maclatin2", "maccentraleurope"),
+        era=EncodingEra.LEGACY_MAC,
+        is_multibyte=False,
+        python_codec="mac-latin2",
+    ),
+    EncodingInfo(
+        name="mac-roman",
+        aliases=("macroman", "macintosh"),
+        era=EncodingEra.LEGACY_MAC,
+        is_multibyte=False,
+        python_codec="mac-roman",
+    ),
+    EncodingInfo(
+        name="mac-turkish",
+        aliases=("macturkish",),
+        era=EncodingEra.LEGACY_MAC,
+        is_multibyte=False,
+        python_codec="mac-turkish",
+    ),
+    # === LEGACY_REGIONAL ===
+    EncodingInfo(
+        name="cp720",
+        aliases=(),
+        era=EncodingEra.LEGACY_REGIONAL,
+        is_multibyte=False,
+        python_codec="cp720",
+    ),
+    EncodingInfo(
+        name="cp1006",
+        aliases=(),
+        era=EncodingEra.LEGACY_REGIONAL,
+        is_multibyte=False,
+        python_codec="cp1006",
+    ),
+    EncodingInfo(
+        name="cp1125",
+        aliases=(),
+        era=EncodingEra.LEGACY_REGIONAL,
+        is_multibyte=False,
+        python_codec="cp1125",
+    ),
+    EncodingInfo(
+        name="koi8-t",
+        aliases=(),
+        era=EncodingEra.LEGACY_REGIONAL,
+        is_multibyte=False,
+        python_codec="koi8-t",
+    ),
+    EncodingInfo(
+        name="kz-1048",
+        aliases=("kz1048", "strk1048-2002", "rk1048"),
+        era=EncodingEra.LEGACY_REGIONAL,
+        is_multibyte=False,
+        python_codec="kz1048",
+    ),
+    EncodingInfo(
+        name="ptcp154",
+        aliases=("pt154", "cp154"),
+        era=EncodingEra.LEGACY_REGIONAL,
+        is_multibyte=False,
+        python_codec="ptcp154",
+    ),
+    # === DOS ===
+    EncodingInfo(
+        name="cp437",
+        aliases=(),
+        era=EncodingEra.DOS,
+        is_multibyte=False,
+        python_codec="cp437",
+    ),
+    EncodingInfo(
+        name="cp737",
+        aliases=(),
+        era=EncodingEra.DOS,
+        is_multibyte=False,
+        python_codec="cp737",
+    ),
+    EncodingInfo(
+        name="cp775",
+        aliases=(),
+        era=EncodingEra.DOS,
+        is_multibyte=False,
+        python_codec="cp775",
+    ),
+    EncodingInfo(
+        name="cp850",
+        aliases=(),
+        era=EncodingEra.DOS,
+        is_multibyte=False,
+        python_codec="cp850",
+    ),
+    EncodingInfo(
+        name="cp852",
+        aliases=(),
+        era=EncodingEra.DOS,
+        is_multibyte=False,
+        python_codec="cp852",
+    ),
+    EncodingInfo(
+        name="cp855",
+        aliases=(),
+        era=EncodingEra.DOS,
+        is_multibyte=False,
+        python_codec="cp855",
+    ),
+    EncodingInfo(
+        name="cp856",
+        aliases=(),
+        era=EncodingEra.DOS,
+        is_multibyte=False,
+        python_codec="cp856",
+    ),
+    EncodingInfo(
+        name="cp857",
+        aliases=(),
+        era=EncodingEra.DOS,
+        is_multibyte=False,
+        python_codec="cp857",
+    ),
+    EncodingInfo(
+        name="cp858",
+        aliases=(),
+        era=EncodingEra.DOS,
+        is_multibyte=False,
+        python_codec="cp858",
+    ),
+    EncodingInfo(
+        name="cp860",
+        aliases=(),
+        era=EncodingEra.DOS,
+        is_multibyte=False,
+        python_codec="cp860",
+    ),
+    EncodingInfo(
+        name="cp861",
+        aliases=(),
+        era=EncodingEra.DOS,
+        is_multibyte=False,
+        python_codec="cp861",
+    ),
+    EncodingInfo(
+        name="cp862",
+        aliases=(),
+        era=EncodingEra.DOS,
+        is_multibyte=False,
+        python_codec="cp862",
+    ),
+    EncodingInfo(
+        name="cp863",
+        aliases=(),
+        era=EncodingEra.DOS,
+        is_multibyte=False,
+        python_codec="cp863",
+    ),
+    EncodingInfo(
+        name="cp864",
+        aliases=(),
+        era=EncodingEra.DOS,
+        is_multibyte=False,
+        python_codec="cp864",
+    ),
+    EncodingInfo(
+        name="cp865",
+        aliases=(),
+        era=EncodingEra.DOS,
+        is_multibyte=False,
+        python_codec="cp865",
+    ),
+    EncodingInfo(
+        name="cp866",
+        aliases=(),
+        era=EncodingEra.DOS,
+        is_multibyte=False,
+        python_codec="cp866",
+    ),
+    EncodingInfo(
+        name="cp869",
+        aliases=(),
+        era=EncodingEra.DOS,
+        is_multibyte=False,
+        python_codec="cp869",
+    ),
+    # === MAINFRAME ===
+    EncodingInfo(
+        name="cp037",
+        aliases=(),
+        era=EncodingEra.MAINFRAME,
+        is_multibyte=False,
+        python_codec="cp037",
+    ),
+    EncodingInfo(
+        name="cp424",
+        aliases=(),
+        era=EncodingEra.MAINFRAME,
+        is_multibyte=False,
+        python_codec="cp424",
+    ),
+    EncodingInfo(
+        name="cp500",
+        aliases=(),
+        era=EncodingEra.MAINFRAME,
+        is_multibyte=False,
+        python_codec="cp500",
+    ),
+    EncodingInfo(
+        name="cp875",
+        aliases=(),
+        era=EncodingEra.MAINFRAME,
+        is_multibyte=False,
+        python_codec="cp875",
+    ),
+    EncodingInfo(
+        name="cp1026",
+        aliases=(),
+        era=EncodingEra.MAINFRAME,
+        is_multibyte=False,
+        python_codec="cp1026",
+    ),
+)

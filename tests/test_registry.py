@@ -1,0 +1,85 @@
+# tests/test_registry.py
+from chardet.enums import EncodingEra
+from chardet.registry import REGISTRY, EncodingInfo, get_candidates
+
+
+def test_encoding_info_is_frozen():
+    info = REGISTRY[0]
+    assert isinstance(info, EncodingInfo)
+    try:
+        info.name = "something"  # type: ignore[misc]
+        raise AssertionError("Should not be able to mutate frozen dataclass")
+    except AttributeError:
+        pass
+
+
+def test_registry_is_tuple():
+    assert isinstance(REGISTRY, tuple)
+
+
+def test_registry_has_entries():
+    assert len(REGISTRY) > 50
+
+
+def test_registry_utf8_is_modern_web():
+    utf8 = next(e for e in REGISTRY if e.name == "utf-8")
+    assert EncodingEra.MODERN_WEB in utf8.era
+
+
+def test_registry_iso_8859_1_is_legacy_iso():
+    iso = next(e for e in REGISTRY if e.name == "iso-8859-1")
+    assert EncodingEra.LEGACY_ISO in iso.era
+
+
+def test_registry_cp037_is_mainframe():
+    cp037 = next(e for e in REGISTRY if e.name == "cp037")
+    assert EncodingEra.MAINFRAME in cp037.era
+
+
+def test_registry_macroman_is_legacy_mac():
+    mac = next(e for e in REGISTRY if e.name == "mac-roman")
+    assert EncodingEra.LEGACY_MAC in mac.era
+
+
+def test_registry_cp437_is_dos():
+    cp437 = next(e for e in REGISTRY if e.name == "cp437")
+    assert EncodingEra.DOS in cp437.era
+
+
+def test_registry_kz1048_is_legacy_regional():
+    kz = next(e for e in REGISTRY if e.name == "kz-1048")
+    assert EncodingEra.LEGACY_REGIONAL in kz.era
+
+
+def test_get_candidates_filters_by_era():
+    modern = get_candidates(EncodingEra.MODERN_WEB)
+    for enc in modern:
+        assert EncodingEra.MODERN_WEB in enc.era
+
+
+def test_get_candidates_all_returns_everything():
+    all_candidates = get_candidates(EncodingEra.ALL)
+    assert len(all_candidates) == len(REGISTRY)
+
+
+def test_get_candidates_combined_eras():
+    combined = get_candidates(EncodingEra.MODERN_WEB | EncodingEra.LEGACY_ISO)
+    names = {e.name for e in combined}
+    assert "utf-8" in names
+    assert "iso-8859-1" in names
+
+
+def test_multibyte_encodings_flagged():
+    shift_jis = next(e for e in REGISTRY if e.name == "shift_jis")
+    assert shift_jis.is_multibyte is True
+
+    iso_8859_1 = next(e for e in REGISTRY if e.name == "iso-8859-1")
+    assert iso_8859_1.is_multibyte is False
+
+
+def test_python_codec_is_valid():
+    import codecs
+
+    for enc in REGISTRY:
+        codec_info = codecs.lookup(enc.python_codec)
+        assert codec_info is not None, f"Invalid codec: {enc.python_codec}"
