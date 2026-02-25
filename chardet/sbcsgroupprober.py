@@ -54,13 +54,6 @@ from .langbulgarianmodel import (
     MACCYRILLIC_BULGARIAN_MODEL,
     WINDOWS_1251_BULGARIAN_MODEL,
 )
-from .langcroatianmodel import (
-    CP852_CROATIAN_MODEL,
-    ISO_8859_2_CROATIAN_MODEL,
-    ISO_8859_16_CROATIAN_MODEL,
-    MACLATIN2_CROATIAN_MODEL,
-    WINDOWS_1250_CROATIAN_MODEL,
-)
 from .langcornishmodel import (
     CP037_CORNISH_MODEL,
     CP437_CORNISH_MODEL,
@@ -72,6 +65,13 @@ from .langcornishmodel import (
     ISO_8859_15_CORNISH_MODEL,
     MACROMAN_CORNISH_MODEL,
     WINDOWS_1252_CORNISH_MODEL,
+)
+from .langcroatianmodel import (
+    CP852_CROATIAN_MODEL,
+    ISO_8859_2_CROATIAN_MODEL,
+    ISO_8859_16_CROATIAN_MODEL,
+    MACLATIN2_CROATIAN_MODEL,
+    WINDOWS_1250_CROATIAN_MODEL,
 )
 from .langczechmodel import (
     ISO_8859_2_CZECH_MODEL,
@@ -369,6 +369,12 @@ MAC_CYRILLIC_ONLY_LETTER_DETECTOR = re.compile(
     b"[\x82\x84\x85\x86\x87\x88\x89\x8b\x91\x92\x93\x94\x95\x96\x97\x99\x9b]"
 )
 
+# Minimum count of Mac Cyrillic-only bytes needed to confidently identify MacCyrillic.
+# A count of 1-4 is often just Windows-1251 smart quotes and typographic punctuation
+# (e.g. 0x93 = left double quotation mark in Win-1251, but У in MacCyrillic;
+# 0x96 = en dash in Win-1251, but Ц in MacCyrillic). Require at least 5 to be sure.
+MAC_CYRILLIC_MIN_BYTE_COUNT = 5
+
 # Detect Mac letter bytes appearing between word characters (suggests Mac encoding)
 MAC_LETTER_IN_WORD_DETECTOR = re.compile(b"[a-zA-Z][\x80-\x9f][a-zA-Z]")
 
@@ -433,7 +439,10 @@ class SBCSGroupProber(CharSetGroupProber):
         self._has_win_bytes = False
         self._has_mac_latin_letter_pattern = False
         self._has_mac_cyrillic_letter_pattern = False
+        self._mac_cyrillic_byte_count = 0
         self._has_euro_sign = False
+        self._has_xml_tags = False
+        self._xml_tag_count = 0
 
         hebrew_prober = HebrewProber()
         logical_hebrew_prober = SingleByteCharSetProber(
@@ -696,7 +705,10 @@ class SBCSGroupProber(CharSetGroupProber):
         self._has_win_bytes = False
         self._has_mac_latin_letter_pattern = False
         self._has_mac_cyrillic_letter_pattern = False
+        self._mac_cyrillic_byte_count = 0
         self._has_euro_sign = False
+        self._has_xml_tags = False
+        self._xml_tag_count = 0
 
     def feed(self, byte_str: Union[bytes, bytearray]) -> "ProbingState":
         # Detect byte patterns (only check new bytes for efficiency)
@@ -706,10 +718,22 @@ class SBCSGroupProber(CharSetGroupProber):
             byte_str
         ) or MAC_LATIN_ONLY_LETTER_DETECTOR.search(byte_str):
             self._has_mac_latin_letter_pattern = True
-        if MAC_CYRILLIC_ONLY_LETTER_DETECTOR.search(byte_str):
-            self._has_mac_cyrillic_letter_pattern = True
+        mac_cyrillic_matches = MAC_CYRILLIC_ONLY_LETTER_DETECTOR.findall(byte_str)
+        if mac_cyrillic_matches:
+            self._mac_cyrillic_byte_count += len(mac_cyrillic_matches)
+            if self._mac_cyrillic_byte_count >= MAC_CYRILLIC_MIN_BYTE_COUNT:
+                self._has_mac_cyrillic_letter_pattern = True
         if EURO_SIGN_DETECTOR.search(byte_str):
             self._has_euro_sign = True
+
+        # Detect XML/HTML structure: count opening tags (< followed by letter)
+        # This helps us know when non-Latin probers are at a disadvantage
+        # because ASCII-aware probers see all the markup text between tags
+        tag_count = byte_str.count(b"<")
+        if tag_count > 0:
+            self._xml_tag_count += tag_count
+            if self._xml_tag_count >= 5:
+                self._has_xml_tags = True
 
         # Call parent feed method
         return super().feed(byte_str)
@@ -739,6 +763,40 @@ class SBCSGroupProber(CharSetGroupProber):
             alt_conf = prober.get_confidence()
             if alt_name not in alternatives or alt_conf > alternatives[alt_name][1]:
                 alternatives[alt_name] = (prober, alt_conf)
+
+        # Heuristic 0: XML/HTML markup disambiguation for DOS codepages
+        # When input contains XML/HTML tags and a DOS codepage (CP437, CP850, etc.)
+        # wins, it's almost certainly wrong. DOS codepages predate XML and are
+        # extremely unlikely to be used for structured markup. The DOS prober
+        # wins because it processes all ASCII text between tags (URLs, dates, etc.)
+        # while non-Latin probers (keep_ascii=False) only see the sparse high-byte
+        # characters. The non-Latin probers' signal is purer but smaller.
+        # If there's any non-Latin prober with reasonable confidence, prefer it.
+        winner_charset = getattr(self._best_guess_prober, "charset", None)
+        if self._has_xml_tags and winner_charset is not None:
+            winner_era = winner_charset.encoding_era if winner_charset else None
+            if winner_era == EncodingEra.DOS:
+                # Find the best non-ASCII prober
+                best_non_ascii_prober = None
+                best_non_ascii_conf = 0.0
+                for prober in self.probers:
+                    if not prober.active or prober == self._best_guess_prober:
+                        continue
+                    prober_model = getattr(prober, "_model", None)
+                    if prober_model is not None and not prober_model.keep_ascii_letters:
+                        alt_conf = prober.get_confidence()
+                        if alt_conf > best_non_ascii_conf:
+                            best_non_ascii_conf = alt_conf
+                            best_non_ascii_prober = prober
+
+                # A non-Latin prober with >= 50% of the DOS prober's confidence
+                # is likely the correct encoding in XML content.
+                if (
+                    best_non_ascii_prober is not None
+                    and best_non_ascii_conf >= confidence * 0.50
+                ):
+                    self._best_guess_prober = best_non_ascii_prober
+                    return best_non_ascii_conf
 
         # Heuristic 1: Mac/Windows/ISO disambiguation for LATIN encodings
         is_latin_family = lower_charset_name in CONFUSED_LATIN_ENCODINGS
@@ -845,12 +903,17 @@ class SBCSGroupProber(CharSetGroupProber):
         is_cyrillic_family = lower_charset_name in CONFUSED_CYRILLIC_ENCODINGS
 
         if is_cyrillic_family and lower_charset_name == "maccyrillic":
-            # MacCyrillic wins but no Mac Cyrillic patterns → prefer Windows/ISO
-            if not self._has_mac_cyrillic_letter_pattern and not self._has_win_bytes:
+            # MacCyrillic wins but no Mac Cyrillic patterns → prefer Windows/ISO.
+            # MacCyrillic is extremely rare in practice compared to Windows-1251,
+            # so without positive evidence of Mac byte patterns, we should prefer
+            # Windows-1251. Use a looser threshold (95%) since MacCyrillic and
+            # Windows-1251 share the 0xA0-0xFF range and produce very similar
+            # confidences on files without 0x80-0x9F disambiguating bytes.
+            if not self._has_mac_cyrillic_letter_pattern:
                 for alt_name in ("windows-1251", "iso-8859-5"):
                     if alt_name in alternatives:
                         prober, alt_conf = alternatives[alt_name]
-                        if alt_conf >= confidence * 0.995:
+                        if alt_conf >= confidence * 0.95:
                             self._best_guess_prober = prober
                             return alt_conf
 
