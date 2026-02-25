@@ -61,11 +61,17 @@ class SingleByteCharSetProber(CharSetProber):
         # Optional auxiliary prober for name decision
         self._name_prober = name_prober
         self._last_order = CharacterCategory.UNDEFINED
+        self._last_byte_val = 0
         self._seq_counters: list[int] = []
         self._total_seqs = 0
         self._total_char = 0
         self._control_char = 0
         self._freq_char = 0
+        # Separate tracking for non-ASCII bigrams (used by Latin-script probers)
+        self._non_ascii_seqs = 0
+        self._non_ascii_seq_counters: list[int] = []
+        # Count of high-byte characters seen (used to gauge non-ASCII content)
+        self._high_byte_char = 0
         self.logger = logging.getLogger(__name__)
         self.reset()
 
@@ -73,12 +79,18 @@ class SingleByteCharSetProber(CharSetProber):
         super().reset()
         # char order of last character
         self._last_order = CharacterCategory.UNDEFINED
+        self._last_byte_val = 0
         self._seq_counters = [0] * len(SequenceLikelihood)
         self._total_seqs = 0
         self._total_char = 0
         self._control_char = 0
         # characters that fall in our sampling range
         self._freq_char = 0
+        # Separate tracking for non-ASCII bigrams (used by Latin-script probers)
+        self._non_ascii_seqs = 0
+        self._non_ascii_seq_counters = [0] * len(SequenceLikelihood)
+        # Count of high-byte characters seen (used to gauge non-ASCII content)
+        self._high_byte_char = 0
 
     @property
     def charset_name(self) -> Optional[str]:
@@ -93,7 +105,8 @@ class SingleByteCharSetProber(CharSetProber):
         return self._model.language
 
     def feed(self, byte_str: Union[bytes, bytearray]) -> ProbingState:
-        if self._model.keep_ascii_letters:
+        keep_ascii_letters = self._model.keep_ascii_letters
+        if keep_ascii_letters:
             byte_str = self.remove_xml_tags(byte_str)
         else:
             byte_str = self.filter_international_words(byte_str)
@@ -103,6 +116,9 @@ class SingleByteCharSetProber(CharSetProber):
         language_model = self._model.language_model
         for char in byte_str:
             order = char_to_order_map[char]
+            # Track all high-byte characters regardless of their order mapping
+            if char >= 0x80:
+                self._high_byte_char += 1
             if order < CharacterCategory.DIGIT:
                 self._total_char += 1
             elif order == CharacterCategory.UNDEFINED:
@@ -125,7 +141,22 @@ class SingleByteCharSetProber(CharSetProber):
                     else:
                         lm_cat = language_model[order][self._last_order]
                     self._seq_counters[lm_cat] += 1
+                    # For Latin-script encodings (keep_ascii_letters=True),
+                    # separately track non-ASCII bigrams. When at least one
+                    # byte in the pair is non-ASCII (>= 0x80), the bigram
+                    # is informative for distinguishing between encodings.
+                    # ASCII-to-ASCII transitions are identical across all
+                    # Latin single-byte encodings and add noise. Tracking
+                    # non-ASCII bigrams separately lets the confidence
+                    # formula use them as a more informative signal.
+                    # Inspired by chardetng (Firefox's encoding detector).
+                    if keep_ascii_letters and (
+                        char >= 0x80 or self._last_byte_val >= 0x80
+                    ):
+                        self._non_ascii_seqs += 1
+                        self._non_ascii_seq_counters[lm_cat] += 1
             self._last_order = order
+            self._last_byte_val = char
 
         charset_name = self._model.charset_name
         if self.state == ProbingState.DETECTING:
@@ -182,6 +213,45 @@ class SingleByteCharSetProber(CharSetProber):
             # of the text), the more confident we become in the current
             # charset.
             r *= self._freq_char / self._total_char
+            # For Latin-script encodings (keep_ascii_letters=True), apply
+            # adjustments based on non-ASCII bigram analysis. Non-ASCII
+            # byte pairs (where at least one byte is >= 0x80) are the truly
+            # distinctive signal for encoding detection -- ASCII-to-ASCII
+            # transitions are identical across all Latin single-byte
+            # encodings. This is inspired by chardetng (Firefox's encoding
+            # detector), which focuses solely on non-ASCII byte pairs.
+            if self._model.keep_ascii_letters:
+                if self._non_ascii_seqs >= 4:
+                    non_ascii_negative = self._non_ascii_seq_counters[
+                        SequenceLikelihood.NEGATIVE
+                    ]
+                    non_ascii_unlikely = self._non_ascii_seq_counters[
+                        SequenceLikelihood.UNLIKELY
+                    ]
+                    non_ascii_bad = non_ascii_negative + non_ascii_unlikely
+                    # If most non-ASCII bigrams are negative/unlikely, penalize.
+                    # This catches wrong encodings where the non-ASCII characters
+                    # form implausible bigrams in the target language model.
+                    bad_ratio = non_ascii_bad / self._non_ascii_seqs
+                    if bad_ratio > 0.6:
+                        r *= max(0.1, 1.0 - bad_ratio)
+                elif (
+                    self._total_seqs > 100
+                    and self._high_byte_char > 20
+                    and self._total_char > 0
+                    and self._high_byte_char / (self._total_char + self._high_byte_char)
+                    > 0.03
+                ):
+                    # Latin-script prober with many ASCII bigrams but few or
+                    # no non-ASCII bigrams, despite the input having significant
+                    # non-ASCII content (>3% high bytes, >20 total). This means
+                    # this prober's encoding maps most high bytes to non-letter
+                    # categories (SYMBOL/CONTROL), suggesting it doesn't
+                    # understand the non-ASCII content. Penalize proportionally.
+                    non_ascii_ratio = self._non_ascii_seqs / self._total_seqs
+                    if non_ascii_ratio < 0.05:
+                        penalty = 0.25 + (non_ascii_ratio / 0.05) * 0.75
+                        r *= penalty
             if r >= 1.0:
                 r = 0.99
         return r
