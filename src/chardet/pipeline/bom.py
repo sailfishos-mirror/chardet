@@ -1,0 +1,23 @@
+"""Stage 1: BOM (Byte Order Mark) detection."""
+
+from __future__ import annotations
+
+from chardet.pipeline import DetectionResult
+
+# Ordered longest-first so UTF-32 is checked before UTF-16
+# (UTF-32-LE BOM starts with the same bytes as UTF-16-LE BOM)
+_BOMS: tuple[tuple[bytes, str], ...] = (
+    (b"\x00\x00\xfe\xff", "utf-32-be"),
+    (b"\xff\xfe\x00\x00", "utf-32-le"),
+    (b"\xef\xbb\xbf", "utf-8-sig"),
+    (b"\xfe\xff", "utf-16-be"),
+    (b"\xff\xfe", "utf-16-le"),
+)
+
+
+def detect_bom(data: bytes) -> DetectionResult | None:
+    """Check for a BOM at the start of data. Returns result or None."""
+    for bom_bytes, encoding in _BOMS:
+        if data.startswith(bom_bytes):
+            return DetectionResult(encoding=encoding, confidence=1.0, language=None)
+    return None
