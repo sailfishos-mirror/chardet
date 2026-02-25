@@ -50,11 +50,14 @@ ENCODING_LANG_MAP: dict[str, list[str]] = {
     # Arabic and Farsi
     "iso-8859-6": ["ar", "fa"],
     "cp720": ["ar", "fa"],
+    "cp864": ["ar"],
     "windows-1256": ["ar", "fa"],
     "cp1006": ["ur"],
     # Hebrew
     "iso-8859-8": ["he"],
     "cp424": ["he"],
+    "cp856": ["he"],
+    "cp862": ["he"],
     "windows-1255": ["he"],
     # Greek
     "iso-8859-7": ["el"],
@@ -413,14 +416,6 @@ def encode_text(text: str, codec_name: str) -> bytes | None:
 def _article_cache_dir(cache_dir: str, lang: str) -> str:
     """Return the per-article cache directory for a language."""
     return os.path.join(cache_dir, "culturax", lang)
-
-
-def _cached_article_count(cache_dir: str, lang: str) -> int:
-    """Count how many articles are already cached for a language."""
-    d = _article_cache_dir(cache_dir, lang)
-    if not os.path.isdir(d):
-        return 0
-    return len([f for f in os.listdir(d) if f.endswith(".txt")])
 
 
 def _load_cached_articles(cache_dir: str, lang: str, max_samples: int) -> list[str]:

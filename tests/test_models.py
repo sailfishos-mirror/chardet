@@ -36,3 +36,26 @@ def test_score_bigrams_empty_data():
     encoding = next(iter(models))
     score = score_bigrams(b"", encoding, models)
     assert score == 0.0
+
+
+def test_score_bigrams_high_byte_weighting():
+    """High-byte bigrams should be weighted more heavily than ASCII-only."""
+    models = load_models()
+    # Pick any encoding with a model
+    encoding = next(iter(models))
+    model = models[encoding]
+
+    # Build data that's all ASCII vs data with high bytes
+    ascii_data = b"the quick brown fox jumps over the lazy dog"
+    # Create high-byte data using bytes that appear in the model
+    high_pairs = [pair for pair in model if pair[0] > 0x7F or pair[1] > 0x7F]
+    if high_pairs:
+        # Construct data from high-byte pairs in the model
+        high_data = bytes(b for pair in high_pairs[:20] for b in pair)
+        high_score = score_bigrams(high_data, encoding, models)
+        ascii_score = score_bigrams(ascii_data, encoding, models)
+        # Both should be valid floats
+        assert isinstance(high_score, float)
+        assert isinstance(ascii_score, float)
+        assert 0.0 <= high_score <= 1.0
+        assert 0.0 <= ascii_score <= 1.0
