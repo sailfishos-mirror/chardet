@@ -7,6 +7,7 @@ from chardet.pipeline import DetectionResult
 from chardet.pipeline.ascii import detect_ascii
 from chardet.pipeline.binary import is_binary
 from chardet.pipeline.bom import detect_bom
+from chardet.pipeline.escape import detect_escape_encoding
 from chardet.pipeline.markup import detect_markup_charset
 from chardet.pipeline.statistical import score_candidates
 from chardet.pipeline.structural import compute_structural_score
@@ -42,6 +43,13 @@ def run_pipeline(
     utf1632_result = detect_utf1632_patterns(data)
     if utf1632_result is not None:
         return [utf1632_result]
+
+    # Escape-sequence encodings (ISO-2022, HZ-GB-2312): must run before
+    # binary detection (ESC is a control byte) and before ASCII detection
+    # (HZ-GB-2312 uses only printable ASCII plus tildes).
+    escape_result = detect_escape_encoding(data)
+    if escape_result is not None:
+        return [escape_result]
 
     # Stage 0: Binary detection
     if is_binary(data, max_bytes=max_bytes):
