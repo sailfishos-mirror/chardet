@@ -1,0 +1,58 @@
+"""Command-line interface for chardet."""
+
+from __future__ import annotations
+
+import argparse
+import sys
+
+import chardet
+from chardet.enums import EncodingEra
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description="Detect character encoding of files.")
+    parser.add_argument("files", nargs="*", help="Files to detect encoding of")
+    parser.add_argument(
+        "--minimal", action="store_true", help="Output only the encoding name"
+    )
+    parser.add_argument(
+        "--legacy", action="store_true", help="Include legacy encodings"
+    )
+    parser.add_argument(
+        "-e", "--encoding-era", default=None, help="Encoding era filter"
+    )
+    parser.add_argument(
+        "--version", action="version", version=f"chardet {chardet.__version__}"
+    )
+
+    args = parser.parse_args(argv)
+
+    if args.encoding_era:
+        era = EncodingEra[args.encoding_era.upper()]
+    elif args.legacy:
+        era = EncodingEra.ALL
+    else:
+        era = EncodingEra.MODERN_WEB
+
+    if args.files:
+        for filepath in args.files:
+            with open(filepath, "rb") as f:
+                data = f.read()
+            result = chardet.detect(data, encoding_era=era)
+            if args.minimal:
+                print(result["encoding"])
+            else:
+                print(
+                    f"{filepath}: {result['encoding']} with confidence {result['confidence']}"
+                )
+    else:
+        data = sys.stdin.buffer.read()
+        result = chardet.detect(data, encoding_era=era)
+        if args.minimal:
+            print(result["encoding"])
+        else:
+            print(f"stdin: {result['encoding']} with confidence {result['confidence']}")
+
+
+if __name__ == "__main__":
+    main()
