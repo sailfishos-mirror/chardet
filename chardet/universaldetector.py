@@ -68,11 +68,15 @@ class UniversalDetector:
     """
 
     MINIMUM_THRESHOLD = 0.20
+    # Minimum confidence for the fallback path (when no prober meets
+    # MINIMUM_THRESHOLD and UTF-8 is ruled out).  This must be high enough
+    # to reject random noise from binary files but low enough to accept
+    # legitimate short-input detections.
+    FALLBACK_THRESHOLD = 0.05
     HIGH_BYTE_DETECTOR = re.compile(b"[\x80-\xff]")
     ESC_DETECTOR = re.compile(b"(\033|~{)")
     # Threshold for "very close" confidence scores where era preference applies
     VERY_CLOSE_THRESHOLD = 0.005  # 0.5%
-
     # Map ISO encodings to their Windows equivalents (imported from sbcsgroupprober)
     ISO_WIN_MAP = ISO_WIN_MAP
 
@@ -543,8 +547,33 @@ class UniversalDetector:
                         "confidence": utf8_prober.get_confidence(),
                         "language": utf8_prober.language,
                     }
+                elif max_prober and max_prober_confidence > self.FALLBACK_THRESHOLD:
+                    # Fallback: UTF-8 was ruled out but we still have a best
+                    # guess from the probers.  Return it with its actual
+                    # confidence rather than returning None.  This handles
+                    # short inputs and inputs with few non-ASCII characters
+                    # where probers cannot accumulate enough evidence to meet
+                    # MINIMUM_THRESHOLD, yet the best guess is still useful.
+                    charset_name = max_prober.charset_name
+                    if charset_name:
+                        confidence = max_prober_confidence
+                        if self.should_rename_legacy:
+                            charset_name = self.LEGACY_MAP.get(
+                                charset_name.lower(), charset_name
+                            )
+                        self.result = {
+                            "encoding": charset_name,
+                            "confidence": confidence,
+                            "language": max_prober.language,
+                        }
+                    else:
+                        self.result = {
+                            "encoding": None,
+                            "confidence": 0.0,
+                            "language": None,
+                        }
                 else:
-                    # UTF-8 was ruled out, return None
+                    # No probers produced any confidence at all
                     self.result = {
                         "encoding": None,
                         "confidence": 0.0,
