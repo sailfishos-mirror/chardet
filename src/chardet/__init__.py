@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from chardet.detector import UniversalDetector as UniversalDetector
 from chardet.enums import EncodingEra
 from chardet.pipeline.orchestrator import run_pipeline
 
