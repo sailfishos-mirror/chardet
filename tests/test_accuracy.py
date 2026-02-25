@@ -11,7 +11,7 @@ import pytest
 import chardet
 from chardet.enums import EncodingEra
 
-_MIN_OVERALL_ACCURACY = 0.70  # 5pp below 79.3% accuracy, rounded down to nearest 5%
+_MIN_OVERALL_ACCURACY = 0.79
 
 
 def _normalize_encoding_name(name: str) -> str:
