@@ -1,0 +1,338 @@
+"""Stage 2b: Multi-byte structural probing.
+
+Computes how well byte patterns in the data match the expected multi-byte
+structure for a given encoding.  Used after byte-validity filtering (Stage 2a)
+to further rank multi-byte encoding candidates.
+"""
+
+from __future__ import annotations
+
+from chardet.registry import EncodingInfo
+
+# ---------------------------------------------------------------------------
+# Per-encoding structural scorers
+# ---------------------------------------------------------------------------
+
+
+def _score_shift_jis(data: bytes) -> float:
+    """Score data against Shift_JIS / CP932 structure.
+
+    Lead bytes: 0x81-0x9F, 0xE0-0xEF
+    Trail bytes: 0x40-0x7E, 0x80-0xFC
+    """
+    lead_count = 0
+    valid_count = 0
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if (0x81 <= b <= 0x9F) or (0xE0 <= b <= 0xEF):
+            lead_count += 1
+            if i + 1 < length:
+                trail = data[i + 1]
+                if (0x40 <= trail <= 0x7E) or (0x80 <= trail <= 0xFC):
+                    valid_count += 1
+                    i += 2
+                    continue
+            # Lead byte without valid trail
+            i += 1
+        else:
+            i += 1
+    if lead_count == 0:
+        return 0.0
+    return valid_count / lead_count
+
+
+def _score_euc_jp(data: bytes) -> float:
+    """Score data against EUC-JP structure.
+
+    Two-byte: Lead 0xA1-0xFE, Trail 0xA1-0xFE
+    SS2 (half-width katakana): 0x8E + 0xA1-0xDF
+    SS3 (JIS X 0212): 0x8F + 0xA1-0xFE + 0xA1-0xFE
+    """
+    lead_count = 0
+    valid_count = 0
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if b == 0x8E:
+            # SS2 sequence
+            lead_count += 1
+            if i + 1 < length and 0xA1 <= data[i + 1] <= 0xDF:
+                valid_count += 1
+                i += 2
+                continue
+            i += 1
+        elif b == 0x8F:
+            # SS3 sequence
+            lead_count += 1
+            if (
+                i + 2 < length
+                and 0xA1 <= data[i + 1] <= 0xFE
+                and 0xA1 <= data[i + 2] <= 0xFE
+            ):
+                valid_count += 1
+                i += 3
+                continue
+            i += 1
+        elif 0xA1 <= b <= 0xFE:
+            lead_count += 1
+            if i + 1 < length and 0xA1 <= data[i + 1] <= 0xFE:
+                valid_count += 1
+                i += 2
+                continue
+            i += 1
+        else:
+            i += 1
+    if lead_count == 0:
+        return 0.0
+    return valid_count / lead_count
+
+
+def _score_euc_kr(data: bytes) -> float:
+    """Score data against EUC-KR / CP949 structure.
+
+    Lead 0xA1-0xFE; Trail 0xA1-0xFE
+    """
+    lead_count = 0
+    valid_count = 0
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if 0xA1 <= b <= 0xFE:
+            lead_count += 1
+            if i + 1 < length and 0xA1 <= data[i + 1] <= 0xFE:
+                valid_count += 1
+                i += 2
+                continue
+            i += 1
+        else:
+            i += 1
+    if lead_count == 0:
+        return 0.0
+    return valid_count / lead_count
+
+
+def _score_gb18030(data: bytes) -> float:
+    """Score data against GB18030 / GB2312 structure.
+
+    2-byte: Lead 0xA1-0xF7, Trail 0xA1-0xFE
+    4-byte: byte1 0x81-0xFE, byte2 0x30-0x39, byte3 0x81-0xFE, byte4 0x30-0x39
+    """
+    lead_count = 0
+    valid_count = 0
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if 0x81 <= b <= 0xFE:
+            lead_count += 1
+            # Try 4-byte first (byte2 in 0x30-0x39 distinguishes from 2-byte)
+            if (
+                i + 3 < length
+                and 0x30 <= data[i + 1] <= 0x39
+                and 0x81 <= data[i + 2] <= 0xFE
+                and 0x30 <= data[i + 3] <= 0x39
+            ):
+                valid_count += 1
+                i += 4
+                continue
+            # 2-byte: Lead 0xA1-0xF7, Trail 0xA1-0xFE
+            if 0xA1 <= b <= 0xF7 and i + 1 < length and 0xA1 <= data[i + 1] <= 0xFE:
+                valid_count += 1
+                i += 2
+                continue
+            # GBK extension: Lead 0x81-0xFE, Trail 0x40-0x7E or 0x80-0xFE
+            if i + 1 < length:
+                trail = data[i + 1]
+                if (0x40 <= trail <= 0x7E) or (0x80 <= trail <= 0xFE):
+                    valid_count += 1
+                    i += 2
+                    continue
+            i += 1
+        else:
+            i += 1
+    if lead_count == 0:
+        return 0.0
+    return valid_count / lead_count
+
+
+def _score_big5(data: bytes) -> float:
+    """Score data against Big5 structure.
+
+    Lead 0xA1-0xF9; Trail 0x40-0x7E, 0xA1-0xFE
+    """
+    lead_count = 0
+    valid_count = 0
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if 0xA1 <= b <= 0xF9:
+            lead_count += 1
+            if i + 1 < length:
+                trail = data[i + 1]
+                if (0x40 <= trail <= 0x7E) or (0xA1 <= trail <= 0xFE):
+                    valid_count += 1
+                    i += 2
+                    continue
+            i += 1
+        else:
+            i += 1
+    if lead_count == 0:
+        return 0.0
+    return valid_count / lead_count
+
+
+def _score_iso_2022_jp(data: bytes) -> float:
+    """Score data for ISO-2022-JP structure (escape-sequence based).
+
+    Look for ESC sequences: ESC ( B, ESC ( J, ESC $ @, ESC $ B
+    """
+    esc_count = 0
+    valid_count = 0
+    i = 0
+    length = len(data)
+    while i < length:
+        if data[i] == 0x1B:  # ESC
+            esc_count += 1
+            if i + 2 < length:
+                seq = data[i + 1 : i + 3]
+                if seq in (b"(B", b"(J", b"$@", b"$B"):
+                    valid_count += 1
+                    i += 3
+                    continue
+            i += 1
+        else:
+            i += 1
+    if esc_count == 0:
+        return 0.0
+    return valid_count / esc_count
+
+
+def _score_iso_2022_kr(data: bytes) -> float:
+    """Score data for ISO-2022-KR structure (escape-sequence based).
+
+    Designator: ESC $ ) C
+    Shift-in (SI, 0x0F) and Shift-out (SO, 0x0E) toggle between ASCII and KS.
+    """
+    indicators = 0
+    valid = 0
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if b == 0x1B:  # ESC
+            indicators += 1
+            if i + 3 < length and data[i + 1 : i + 4] == b"$)C":
+                valid += 1
+                i += 4
+                continue
+            i += 1
+        elif b == 0x0E or b == 0x0F:  # SO / SI
+            indicators += 1
+            valid += 1
+            i += 1
+        else:
+            i += 1
+    if indicators == 0:
+        return 0.0
+    return valid / indicators
+
+
+def _score_hz_gb_2312(data: bytes) -> float:
+    """Score data for HZ-GB-2312 structure (tilde-escape based).
+
+    ~{ enters GB mode, ~} leaves GB mode, ~~ is literal tilde.
+    """
+    tilde_count = 0
+    valid_count = 0
+    i = 0
+    length = len(data)
+    while i < length:
+        if data[i] == 0x7E:  # tilde
+            tilde_count += 1
+            if i + 1 < length:
+                follow = data[i + 1]
+                if follow in (0x7B, 0x7D, 0x7E, 0x0A):
+                    # ~{  ~}  ~~  ~\n
+                    valid_count += 1
+                    i += 2
+                    continue
+            i += 1
+        else:
+            i += 1
+    if tilde_count == 0:
+        return 0.0
+    return valid_count / tilde_count
+
+
+def _score_johab(data: bytes) -> float:
+    """Score data against Johab structure.
+
+    Lead: 0x84-0xD3, 0xD8-0xDE, 0xE0-0xF9
+    Trail: 0x31-0x7E, 0x91-0xFE
+    """
+    lead_count = 0
+    valid_count = 0
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if (0x84 <= b <= 0xD3) or (0xD8 <= b <= 0xDE) or (0xE0 <= b <= 0xF9):
+            lead_count += 1
+            if i + 1 < length:
+                trail = data[i + 1]
+                if (0x31 <= trail <= 0x7E) or (0x91 <= trail <= 0xFE):
+                    valid_count += 1
+                    i += 2
+                    continue
+            i += 1
+        else:
+            i += 1
+    if lead_count == 0:
+        return 0.0
+    return valid_count / lead_count
+
+
+# ---------------------------------------------------------------------------
+# Dispatch table: encoding name -> scorer function
+# ---------------------------------------------------------------------------
+
+_SCORERS: dict[str, object] = {
+    "shift_jis": _score_shift_jis,
+    "cp932": _score_shift_jis,
+    "euc-jp": _score_euc_jp,
+    "euc-kr": _score_euc_kr,
+    "cp949": _score_euc_kr,
+    "gb18030": _score_gb18030,
+    "big5": _score_big5,
+    "iso-2022-jp": _score_iso_2022_jp,
+    "iso-2022-kr": _score_iso_2022_kr,
+    "hz-gb-2312": _score_hz_gb_2312,
+    "johab": _score_johab,
+}
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+
+def compute_structural_score(data: bytes, encoding_info: EncodingInfo) -> float:
+    """Return 0.0-1.0 indicating how well *data* matches *encoding_info*'s
+    expected multi-byte byte structure.
+
+    For single-byte encodings (``is_multibyte is False``), always returns 0.0.
+    For empty data, always returns 0.0.
+    """
+    if not data or not encoding_info.is_multibyte:
+        return 0.0
+
+    scorer = _SCORERS.get(encoding_info.name)
+    if scorer is None:
+        return 0.0
+
+    return scorer(data)
