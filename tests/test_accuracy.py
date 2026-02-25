@@ -11,9 +11,7 @@ import pytest
 import chardet
 from chardet.enums import EncodingEra
 
-_MIN_OVERALL_ACCURACY = (
-    0.75  # Raised after high-byte bigram weighting + equivalence classes
-)
+_MIN_OVERALL_ACCURACY = 0.70  # 5pp below 79.3% accuracy, rounded down to nearest 5%
 
 
 def _normalize_encoding_name(name: str) -> str:
@@ -45,14 +43,10 @@ _EQUIVALENT_GROUPS = [
     ("iso-8859-7", "windows-1253"),
     # Windows-1254 is a superset of ISO-8859-9
     ("iso-8859-9", "windows-1254"),
-    # Central Asian Cyrillic: very similar KOI8 variants
-    ("koi8-t", "koi8-r"),
     # EBCDIC variants: nearly identical code pages, commonly confused
     ("cp037", "cp500", "cp1026"),
     # DOS Western European: cp858 is cp850 with only euro/dotless-i swap at 0xD5
     ("cp850", "cp858"),
-    # Hebrew DOS variants
-    ("cp856", "cp862"),
 ]
 
 # Map of normalized encoding name -> canonical group name
