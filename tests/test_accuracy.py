@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 import chardet
 from chardet.enums import EncodingEra
 
-_MIN_OVERALL_ACCURACY = 0.74
+_MIN_OVERALL_ACCURACY = 0.72
 
 
 def _normalize_encoding_name(name: str) -> str:

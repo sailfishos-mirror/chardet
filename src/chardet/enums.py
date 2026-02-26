@@ -13,3 +13,14 @@ class EncodingEra(enum.IntFlag):
     DOS = 16
     MAINFRAME = 32
     ALL = MODERN_WEB | LEGACY_ISO | LEGACY_MAC | LEGACY_REGIONAL | DOS | MAINFRAME
+
+
+# Priority order for tiebreaking: lower number = higher priority.
+ERA_PRIORITY: dict[EncodingEra, int] = {
+    EncodingEra.MODERN_WEB: 0,
+    EncodingEra.LEGACY_ISO: 1,
+    EncodingEra.LEGACY_REGIONAL: 2,
+    EncodingEra.DOS: 3,
+    EncodingEra.LEGACY_MAC: 4,
+    EncodingEra.MAINFRAME: 5,
+}

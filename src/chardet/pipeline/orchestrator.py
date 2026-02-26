@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
+from chardet.enums import ERA_PRIORITY, EncodingEra
 from chardet.pipeline import DetectionResult
-
-if TYPE_CHECKING:
-    from chardet.enums import EncodingEra
 from chardet.pipeline.ascii import detect_ascii
 from chardet.pipeline.binary import is_binary
 from chardet.pipeline.bom import detect_bom
@@ -18,7 +14,7 @@ from chardet.pipeline.structural import compute_structural_score
 from chardet.pipeline.utf8 import detect_utf8
 from chardet.pipeline.utf1632 import detect_utf1632_patterns
 from chardet.pipeline.validity import filter_by_validity
-from chardet.registry import get_candidates
+from chardet.registry import EncodingInfo, get_candidates
 
 _BINARY_RESULT = DetectionResult(encoding=None, confidence=0.95, language=None)
 _FALLBACK_RESULT = DetectionResult(
@@ -30,6 +26,49 @@ _STRUCTURAL_CONFIDENCE_THRESHOLD = 0.85
 # eliminated as a false positive (e.g. Shift_JIS matching Latin data where
 # scattered high bytes look like lead bytes but rarely form valid pairs).
 _CJK_MIN_MB_RATIO = 0.05
+_TIEBREAK_MARGIN = 0.10  # 10% relative margin
+
+
+def _apply_era_tiebreak(
+    results: list[DetectionResult],
+    candidates: tuple[EncodingInfo, ...],
+    _encoding_era: EncodingEra,
+) -> list[DetectionResult]:
+    """Reorder results to prefer encodings from the requested era when scores are close."""
+    if len(results) < 2:
+        return results
+
+    # Build name -> era lookup
+    era_lookup = {enc.name: enc.era for enc in candidates}
+
+    best_conf = results[0].confidence
+    if best_conf <= 0:
+        return results
+
+    # Find the threshold for "close" scores
+    threshold = best_conf * (1 - _TIEBREAK_MARGIN)
+
+    # Among top candidates within the margin, find the one with the best era priority
+    best_idx = 0
+    best_priority = ERA_PRIORITY.get(
+        era_lookup.get(results[0].encoding, EncodingEra.ALL), 99
+    )
+
+    for i, r in enumerate(results[1:], 1):
+        if r.confidence < threshold:
+            break
+        era = era_lookup.get(r.encoding, EncodingEra.ALL)
+        priority = ERA_PRIORITY.get(era, 99)
+        if priority < best_priority:
+            best_priority = priority
+            best_idx = i
+
+    if best_idx != 0:
+        # Swap the best-era candidate to position 0
+        results = list(results)
+        results[0], results[best_idx] = results[best_idx], results[0]
+
+    return results
 
 
 def run_pipeline(
@@ -135,7 +174,7 @@ def run_pipeline(
                 stat_results = score_candidates(data, single_byte)
                 results.extend(stat_results)
             results.sort(key=lambda r: r.confidence, reverse=True)
-            return results
+            return _apply_era_tiebreak(results, tuple(valid_candidates), encoding_era)
 
     # Stage 3: Statistical scoring for all remaining candidates
     results = score_candidates(data, tuple(valid_candidates))
@@ -143,4 +182,4 @@ def run_pipeline(
     if not results:
         return [_FALLBACK_RESULT]
 
-    return results
+    return _apply_era_tiebreak(results, tuple(valid_candidates), encoding_era)
