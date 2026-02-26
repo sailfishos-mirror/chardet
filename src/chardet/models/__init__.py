@@ -5,16 +5,20 @@ from __future__ import annotations
 import importlib.resources
 import struct
 
-_MODEL_CACHE: dict[str, dict[tuple[int, int], int]] | None = None
+_MODEL_CACHE: dict[str, bytearray] | None = None
 
 
-def load_models() -> dict[str, dict[tuple[int, int], int]]:
-    """Load all bigram models from the bundled models.bin file."""
+def load_models() -> dict[str, bytearray]:
+    """Load all bigram models from the bundled models.bin file.
+
+    Each model is a bytearray of length 65536 (256*256).
+    Index: (b1 << 8) | b2 -> weight (0-255).
+    """
     global _MODEL_CACHE  # noqa: PLW0603
     if _MODEL_CACHE is not None:
         return _MODEL_CACHE
 
-    models: dict[str, dict[tuple[int, int], int]] = {}
+    models: dict[str, bytearray] = {}
     ref = importlib.resources.files("chardet.models").joinpath("models.bin")
     data = ref.read_bytes()
 
@@ -34,12 +38,12 @@ def load_models() -> dict[str, dict[tuple[int, int], int]]:
         (num_entries,) = struct.unpack_from("!I", data, offset)
         offset += 4
 
-        bigrams: dict[tuple[int, int], int] = {}
+        table = bytearray(65536)
         for _ in range(num_entries):
             b1, b2, weight = struct.unpack_from("!BBB", data, offset)
             offset += 3
-            bigrams[(b1, b2)] = weight
-        models[name] = bigrams
+            table[(b1 << 8) | b2] = weight
+        models[name] = table
 
     _MODEL_CACHE = models
     return models
@@ -48,15 +52,13 @@ def load_models() -> dict[str, dict[tuple[int, int], int]]:
 def score_bigrams(
     data: bytes,
     encoding: str,
-    models: dict[str, dict[tuple[int, int], int]],
+    models: dict[str, bytearray],
 ) -> float:
     """Score data against a specific encoding's bigram model. Returns 0.0-1.0."""
     if not data or encoding not in models:
         return 0.0
 
     model = models[encoding]
-    if not model:
-        return 0.0
 
     total_bigrams = len(data) - 1
     if total_bigrams <= 0:
@@ -67,11 +69,9 @@ def score_bigrams(
     for i in range(total_bigrams):
         b1 = data[i]
         b2 = data[i + 1]
-        pair = (b1, b2)
         # High-byte bigrams are much more discriminative for single-byte encodings
         w = 8 if (b1 > 0x7F or b2 > 0x7F) else 1
-        if pair in model:
-            score += model[pair] * w
+        score += model[(b1 << 8) | b2] * w
         weight_sum += 255 * w
 
     if weight_sum == 0:

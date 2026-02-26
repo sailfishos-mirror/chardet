@@ -57,8 +57,14 @@ def test_score_bigrams_high_byte_weighting() -> None:
 
     # Build data that's all ASCII vs data with high bytes
     ascii_data = b"the quick brown fox jumps over the lazy dog"
-    # Create high-byte data using bytes that appear in the model
-    high_pairs = [pair for pair in model if pair[0] > 0x7F or pair[1] > 0x7F]
+    # Create high-byte data using bytes that appear in the model (bytearray table)
+    high_pairs = []
+    for idx in range(65536):
+        if model[idx] > 0:
+            b1 = idx >> 8
+            b2 = idx & 0xFF
+            if b1 > 0x7F or b2 > 0x7F:
+                high_pairs.append((b1, b2))
     if high_pairs:
         # Construct data from high-byte pairs in the model
         high_data = bytes(b for pair in high_pairs[:20] for b in pair)
@@ -143,8 +149,16 @@ def test_deserialize_trailing_bytes_raises(tmp_models_path: str) -> None:
 
 def test_roundtrip_matches_load_models(tmp_path: Path) -> None:
     """The production models.bin should roundtrip through serialize/deserialize."""
-    production_models = load_models()
+    production_tables = load_models()  # dict[str, bytearray]
+    # Convert bytearray tables back to dict format for serialize/deserialize roundtrip
+    production_dicts: dict[str, dict[tuple[int, int], int]] = {}
+    for name, table in production_tables.items():
+        bigrams: dict[tuple[int, int], int] = {}
+        for idx in range(65536):
+            if table[idx] > 0:
+                bigrams[(idx >> 8, idx & 0xFF)] = table[idx]
+        production_dicts[name] = bigrams
     tmp_models = str(tmp_path / "roundtrip_models.bin")
-    serialize_models(production_models, tmp_models)
+    serialize_models(production_dicts, tmp_models)
     loaded = deserialize_models(tmp_models)
-    assert loaded == production_models
+    assert loaded == production_dicts
