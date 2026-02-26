@@ -121,8 +121,11 @@ def _score_euc_kr(data: bytes) -> float:
 def _score_gb18030(data: bytes) -> float:
     """Score data against GB18030 / GB2312 structure.
 
-    2-byte: Lead 0xA1-0xF7, Trail 0xA1-0xFE
-    4-byte: byte1 0x81-0xFE, byte2 0x30-0x39, byte3 0x81-0xFE, byte4 0x30-0x39
+    Only counts strict GB2312 2-byte pairs (lead 0xA1-0xF7, trail 0xA1-0xFE)
+    and GB18030 4-byte sequences.  The broader GBK extension range
+    (lead 0x81-0xFE, trail 0x40-0x7E / 0x80-0xFE) is intentionally excluded
+    because it is so permissive that unrelated single-byte data (EBCDIC, DOS
+    codepages, etc.) can score 1.0, leading to false positives.
     """
     lead_count = 0
     valid_count = 0
@@ -142,18 +145,11 @@ def _score_gb18030(data: bytes) -> float:
                 valid_count += 1
                 i += 4
                 continue
-            # 2-byte: Lead 0xA1-0xF7, Trail 0xA1-0xFE
+            # 2-byte GB2312: Lead 0xA1-0xF7, Trail 0xA1-0xFE
             if 0xA1 <= b <= 0xF7 and i + 1 < length and 0xA1 <= data[i + 1] <= 0xFE:
                 valid_count += 1
                 i += 2
                 continue
-            # GBK extension: Lead 0x81-0xFE, Trail 0x40-0x7E or 0x80-0xFE
-            if i + 1 < length:
-                trail = data[i + 1]
-                if (0x40 <= trail <= 0x7E) or (0x80 <= trail <= 0xFE):
-                    valid_count += 1
-                    i += 2
-                    continue
             i += 1
         else:
             i += 1

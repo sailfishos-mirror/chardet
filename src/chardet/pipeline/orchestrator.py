@@ -25,6 +25,11 @@ _FALLBACK_RESULT = DetectionResult(
     encoding="windows-1252", confidence=0.10, language=None
 )
 _STRUCTURAL_CONFIDENCE_THRESHOLD = 0.85
+# Minimum structural score (valid multi-byte sequences / lead bytes) required
+# to keep a CJK multi-byte candidate.  Below this threshold the encoding is
+# eliminated as a false positive (e.g. Shift_JIS matching Latin data where
+# scattered high bytes look like lead bytes but rarely form valid pairs).
+_CJK_MIN_MB_RATIO = 0.05
 
 
 def run_pipeline(
@@ -85,6 +90,21 @@ def run_pipeline(
 
     if not valid_candidates:
         return [_FALLBACK_RESULT]
+
+    # Gate: eliminate CJK multi-byte candidates unless the data contains
+    # actual multi-byte sequences (score >= _CJK_MIN_MB_RATIO).
+    gated_candidates = []
+    for enc in valid_candidates:
+        if enc.is_multibyte:
+            mb_score = compute_structural_score(data, enc)
+            if mb_score < _CJK_MIN_MB_RATIO:
+                continue  # No multi-byte structure -> eliminate
+        gated_candidates.append(enc)
+
+    if not gated_candidates:
+        return [_FALLBACK_RESULT]
+
+    valid_candidates = gated_candidates
 
     # Stage 2b: Structural probing for multi-byte encodings
     structural_scores: list[tuple[str, float]] = []
