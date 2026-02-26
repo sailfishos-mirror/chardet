@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import codecs
 import sys
 import time
 from collections import defaultdict
@@ -13,82 +12,7 @@ from charset_normalizer import from_bytes
 
 import chardet
 from chardet.enums import EncodingEra
-
-# ---------------------------------------------------------------------------
-# Directional encoding equivalences (copied from test_accuracy.py)
-# ---------------------------------------------------------------------------
-
-
-def _normalize_encoding_name(name: str) -> str:
-    """Normalize encoding name for comparison."""
-    try:
-        return codecs.lookup(name).name
-    except LookupError:
-        return name.lower().replace("-", "").replace("_", "")
-
-
-# Directional superset relationships: detecting any of the supersets
-# when the expected encoding is the subset counts as correct.
-# E.g., expected=ascii, detected=utf-8 -> correct (utf-8 ⊃ ascii).
-# But expected=utf-8, detected=ascii -> wrong (ascii ⊄ utf-8).
-_SUPERSETS: dict[str, frozenset[str]] = {
-    "ascii": frozenset({"utf-8"}),
-    "tis-620": frozenset({"iso-8859-11", "cp874"}),
-    "iso-8859-11": frozenset({"cp874"}),
-    "gb2312": frozenset({"gb18030"}),
-    "shift_jis": frozenset({"cp932"}),
-    "euc-kr": frozenset({"cp949"}),
-}
-
-# Bidirectional equivalents — same character repertoire, byte-order only.
-_BIDIRECTIONAL_GROUPS: list[tuple[str, ...]] = [
-    ("utf-16", "utf-16-le", "utf-16-be"),
-    ("utf-32", "utf-32-le", "utf-32-be"),
-]
-
-# Build normalized superset lookup: normalized subset -> frozenset of normalized supersets
-_NORMALIZED_SUPERSETS: dict[str, frozenset[str]] = {
-    _normalize_encoding_name(subset): frozenset(
-        _normalize_encoding_name(s) for s in supersets
-    )
-    for subset, supersets in _SUPERSETS.items()
-}
-
-# Build normalized bidirectional lookup: normalized name -> frozenset of normalized group members
-_NORMALIZED_BIDIR: dict[str, frozenset[str]] = {}
-for _group in _BIDIRECTIONAL_GROUPS:
-    _normed = frozenset(_normalize_encoding_name(n) for n in _group)
-    for _name in _group:
-        _NORMALIZED_BIDIR[_normalize_encoding_name(_name)] = _normed
-
-
-def _is_correct(expected: str, detected: str | None) -> bool:
-    """Check whether *detected* is an acceptable answer for *expected*.
-
-    Acceptable means:
-    1. Exact match (after normalization), OR
-    2. Both belong to the same bidirectional byte-order group, OR
-    3. *detected* is a known superset of *expected*.
-    """
-    if detected is None:
-        return False
-    norm_exp = _normalize_encoding_name(expected)
-    norm_det = _normalize_encoding_name(detected)
-
-    # 1. Exact match
-    if norm_exp == norm_det:
-        return True
-
-    # 2. Bidirectional (same byte-order group)
-    if norm_exp in _NORMALIZED_BIDIR and norm_det in _NORMALIZED_BIDIR[norm_exp]:
-        return True
-
-    # 3. Superset is acceptable (detected is a known superset of expected)
-    return (
-        norm_exp in _NORMALIZED_SUPERSETS
-        and norm_det in _NORMALIZED_SUPERSETS[norm_exp]
-    )
-
+from chardet.equivalences import is_correct
 
 # ---------------------------------------------------------------------------
 # Collect test files (same logic as test_accuracy.py)
@@ -171,7 +95,7 @@ def run_comparison(data_dir: Path) -> None:
         t0 = time.perf_counter()
         chardet_detected = detect_chardet(data)
         chardet_time += time.perf_counter() - t0
-        chardet_match = _is_correct(expected_encoding, chardet_detected)
+        chardet_match = is_correct(expected_encoding, chardet_detected)
 
         chardet_per_enc[expected_encoding]["total"] += 1
         if chardet_match:
@@ -187,7 +111,7 @@ def run_comparison(data_dir: Path) -> None:
         t0 = time.perf_counter()
         cn_detected = detect_charset_normalizer(data)
         cn_time += time.perf_counter() - t0
-        cn_match = _is_correct(expected_encoding, cn_detected)
+        cn_match = is_correct(expected_encoding, cn_detected)
 
         cn_per_enc[expected_encoding]["total"] += 1
         if cn_match:
