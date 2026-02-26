@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-_TEST_DATA_REPO = "https://github.com/chardet/chardet.git"
-_TEST_DATA_SUBDIR = "tests"
+_TEST_DATA_REPO = "https://github.com/chardet/test-data.git"
+_COMMIT_HASH_FILE = ".commit-hash"
 
 # Add scripts/ to sys.path so we can import utils
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
@@ -30,41 +30,64 @@ def chardet_test_data_dir() -> Path:
     repo_root = Path(__file__).parent.parent
     local_data = repo_root / "tests" / "data"
     if local_data.is_dir() and any(local_data.iterdir()):
+        if _cache_is_stale(local_data):
+            shutil.rmtree(local_data)
+            _clone_test_data(local_data)
         return local_data
 
-    # Sparse checkout just the tests directory
+    _clone_test_data(local_data)
+    return local_data
+
+
+def _cache_is_stale(local_data: Path) -> bool:
+    """Return True if the cached test data is outdated.
+
+    Compares the stored commit hash against the remote HEAD.  Returns False
+    (not stale) if the hash file is missing or the network check fails, so
+    tests can still run offline.
+    """
+    hash_file = local_data / _COMMIT_HASH_FILE
+    if not hash_file.is_file():
+        return False
+    local_hash = hash_file.read_text().strip()
+    try:
+        result = subprocess.run(
+            ["git", "ls-remote", _TEST_DATA_REPO, "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=10,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+        return False
+    remote_hash = result.stdout.split()[0] if result.stdout.strip() else ""
+    return local_hash != remote_hash
+
+
+def _clone_test_data(local_data: Path) -> None:
+    """Shallow-clone the test-data repo into *local_data* and record the commit hash."""
     with tempfile.TemporaryDirectory() as tmp:
         subprocess.run(
-            [
-                "git",
-                "clone",
-                "--depth=1",
-                "--filter=blob:none",
-                "--sparse",
-                _TEST_DATA_REPO,
-                tmp,
-            ],
+            ["git", "clone", "--depth=1", _TEST_DATA_REPO, tmp],
             check=True,
             capture_output=True,
         )
-        subprocess.run(
-            ["git", "sparse-checkout", "set", _TEST_DATA_SUBDIR],
+        # Record the commit hash so we can tell if the cache is stale
+        head = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
             cwd=tmp,
             check=True,
             capture_output=True,
+            text=True,
         )
-        src = Path(tmp) / _TEST_DATA_SUBDIR
+        src = Path(tmp)
         local_data.mkdir(parents=True, exist_ok=True)
         for item in src.iterdir():
-            if item.name in ("__pycache__", ".git"):
+            if not item.is_dir() or item.name.startswith("."):
                 continue
             dest = local_data / item.name
-            if item.is_dir():
-                shutil.copytree(item, dest, dirs_exist_ok=True)
-            else:
-                shutil.copy2(item, dest)
-
-    return local_data
+            shutil.copytree(item, dest, dirs_exist_ok=True)
+        (local_data / _COMMIT_HASH_FILE).write_text(head.stdout.strip() + "\n")
 
 
 def _get_data_dir() -> Path:

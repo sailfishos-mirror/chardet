@@ -14,4 +14,6 @@ build/
 htmlcov/
 data/
 tests/data/
+.claude/settings.local.json
+.worktrees/
 uv.lock
