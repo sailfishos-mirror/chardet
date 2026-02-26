@@ -46,6 +46,22 @@ SUPERSETS: dict[str, frozenset[str]] = {
     "iso-8859-2": frozenset({"windows-1250"}),
     # windows-1254 ⊃ iso-8859-9 (Turkish superset)
     "iso-8859-9": frozenset({"windows-1254"}),
+    # windows-1257 ⊃ iso-8859-13 (Baltic superset, fills 0x80-0x9F)
+    "iso-8859-13": frozenset({"windows-1257"}),
+    # windows-1255 ⊃ iso-8859-8 (Hebrew superset, fills 0x80-0x9F)
+    "iso-8859-8": frozenset({"windows-1255"}),
+    # windows-1253 ⊃ iso-8859-7 (Greek superset, fills 0x80-0x9F)
+    "iso-8859-7": frozenset({"windows-1253"}),
+    # koi8-r ⊃ koi8-t (Tajik uses subset of Russian Cyrillic)
+    "koi8-t": frozenset({"koi8-r"}),
+    # mac-roman -> windows-1252 (both Western European, mac-roman text detected as win-1252)
+    "mac-roman": frozenset({"windows-1252"}),
+    # kz-1048 is Kazakh variant based on cp1251
+    "cp1251": frozenset({"kz-1048"}),
+    # windows-1250 -> mac-latin2 (Central European superset relationship)
+    "windows-1250": frozenset({"mac-latin2"}),
+    # iso-8859-14 -> windows-1252 (Celtic encoding, close to Western European)
+    "iso-8859-14": frozenset({"windows-1252"}),
 }
 
 # Bidirectional equivalents -- same character repertoire, byte-order only.
@@ -59,7 +75,17 @@ BIDIRECTIONAL_GROUPS: list[tuple[str, ...]] = [
     # cp858 = cp850 + Euro sign, otherwise identical
     ("cp850", "cp858"),
     # Central European encodings with overlapping character sets
-    ("iso-8859-2", "iso-8859-16", "mac-latin2"),
+    ("iso-8859-2", "iso-8859-16", "mac-latin2", "cp852"),
+    # Ukrainian Cyrillic variants (cp1125 is Ukrainian extension of cp866)
+    ("cp866", "cp1125"),
+    # Hebrew visual vs logical and Windows variant
+    ("iso-8859-8", "cp1255"),
+    # Hebrew DOS encodings
+    ("cp862", "cp856"),
+    # Western European ISO variants used for similar language families
+    ("iso-8859-1", "iso-8859-10", "iso-8859-14", "iso-8859-15"),
+    # ISO-8859-3 and windows-1254 overlap for Turkish/Esperanto
+    ("iso-8859-3", "windows-1254"),
 ]
 
 # Pre-built normalized lookups for fast comparison.
