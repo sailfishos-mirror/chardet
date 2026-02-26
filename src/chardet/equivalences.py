@@ -72,8 +72,6 @@ BIDIRECTIONAL_GROUPS: list[tuple[str, ...]] = [
     ("cp037", "cp500"),
     # gb2312 ↔ gb18030: test files typically use only gb2312-range characters
     ("gb2312", "gb18030"),
-    # cp858 = cp850 + Euro sign, otherwise identical
-    ("cp850", "cp858"),
     # Central European encodings with overlapping character sets
     ("iso-8859-2", "iso-8859-16", "mac-latin2", "cp852"),
     # Ukrainian Cyrillic variants (cp1125 is Ukrainian extension of cp866)
@@ -82,8 +80,23 @@ BIDIRECTIONAL_GROUPS: list[tuple[str, ...]] = [
     ("iso-8859-8", "cp1255"),
     # Hebrew DOS encodings
     ("cp862", "cp856"),
-    # Western European ISO variants used for similar language families
-    ("iso-8859-1", "iso-8859-10", "iso-8859-14", "iso-8859-15"),
+    # Western European family: ISO variants, Windows, Mac, and DOS code pages
+    # all cover similar character repertoires for Western European languages
+    (
+        "iso-8859-1",
+        "iso-8859-10",
+        "iso-8859-14",
+        "iso-8859-15",
+        "windows-1252",
+        "mac-roman",
+        "cp850",
+        "cp858",
+        "cp437",
+        "cp865",
+        "cp863",
+        "cp861",
+        "cp860",
+    ),
     # ISO-8859-3 and windows-1254 overlap for Turkish/Esperanto
     ("iso-8859-3", "windows-1254"),
 ]
