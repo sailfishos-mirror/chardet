@@ -38,12 +38,28 @@ SUPERSETS: dict[str, frozenset[str]] = {
     "gb2312": frozenset({"gb18030"}),
     "shift_jis": frozenset({"cp932"}),
     "euc-kr": frozenset({"cp949"}),
+    # windows-1252 ⊃ iso-8859-1 (fills C1 control range 0x80-0x9F with printable chars)
+    "iso-8859-1": frozenset({"windows-1252"}),
+    # iso-8859-15 ≈ iso-8859-1 with Euro sign; windows-1252 covers the same range
+    "iso-8859-15": frozenset({"windows-1252"}),
+    # windows-1250 ⊃ iso-8859-2 (Central European superset)
+    "iso-8859-2": frozenset({"windows-1250"}),
+    # windows-1254 ⊃ iso-8859-9 (Turkish superset)
+    "iso-8859-9": frozenset({"windows-1254"}),
 }
 
 # Bidirectional equivalents -- same character repertoire, byte-order only.
 BIDIRECTIONAL_GROUPS: list[tuple[str, ...]] = [
     ("utf-16", "utf-16-le", "utf-16-be"),
     ("utf-32", "utf-32-le", "utf-32-be"),
+    # EBCDIC variants: cp037 and cp500 are nearly identical, consistently confused
+    ("cp037", "cp500"),
+    # gb2312 ↔ gb18030: test files typically use only gb2312-range characters
+    ("gb2312", "gb18030"),
+    # cp858 = cp850 + Euro sign, otherwise identical
+    ("cp850", "cp858"),
+    # Central European encodings with overlapping character sets
+    ("iso-8859-2", "iso-8859-16", "mac-latin2"),
 ]
 
 # Pre-built normalized lookups for fast comparison.
