@@ -7,6 +7,7 @@ serializes the results into models.bin.
 
 Usage:
     uv run python scripts/train.py --max-samples 5000
+    uv run python scripts/train.py --max-samples 15000 --encodings koi8-r cp866
 """
 
 from __future__ import annotations
@@ -70,10 +71,10 @@ ENCODING_LANG_MAP: dict[str, list[str]] = {
     "mac-greek": ["el"],
     # Cyrillic (multi-language)
     "iso-8859-5": ["ru", "bg", "uk", "sr", "mk", "be"],
-    "koi8-r": ["ru", "bg", "uk", "sr", "mk", "be"],
+    "koi8-r": ["ru"],
     "windows-1251": ["ru", "bg", "uk", "sr", "mk", "be"],
     "cp855": ["ru", "bg", "uk", "sr", "mk", "be"],
-    "cp866": ["ru", "bg", "uk", "sr", "mk", "be"],
+    "cp866": ["ru", "bg", "sr", "mk", "be"],
     "mac-cyrillic": ["ru", "bg", "uk", "sr", "mk", "be"],
     # Cyrillic - Ukrainian specific
     "koi8-u": ["uk"],
@@ -572,6 +573,42 @@ def normalize_and_prune(
     return result
 
 
+def deserialize_models(
+    input_path: str,
+) -> dict[str, dict[tuple[int, int], int]]:
+    """Load existing models from binary format."""
+    if not os.path.isfile(input_path):
+        return {}
+
+    with open(input_path, "rb") as f:
+        data = f.read()
+
+    if not data:
+        return {}
+
+    models: dict[str, dict[tuple[int, int], int]] = {}
+    offset = 0
+    (num_encodings,) = struct.unpack_from("!I", data, offset)
+    offset += 4
+
+    for _ in range(num_encodings):
+        (name_len,) = struct.unpack_from("!I", data, offset)
+        offset += 4
+        name = data[offset : offset + name_len].decode("utf-8")
+        offset += name_len
+        (num_entries,) = struct.unpack_from("!I", data, offset)
+        offset += 4
+
+        bigrams: dict[tuple[int, int], int] = {}
+        for _ in range(num_entries):
+            b1, b2, weight = struct.unpack_from("!BBB", data, offset)
+            offset += 3
+            bigrams[(b1, b2)] = weight
+        models[name] = bigrams
+
+    return models
+
+
 def serialize_models(
     models: dict[str, dict[tuple[int, int], int]],
     output_path: str,
@@ -638,17 +675,35 @@ def main() -> None:
         default=8,
         help="Number of parallel threads for downloading",
     )
+    parser.add_argument(
+        "--encodings",
+        nargs="*",
+        default=None,
+        help="Specific encodings to retrain (default: all). "
+        "When specified, existing models for other encodings are preserved.",
+    )
     args = parser.parse_args()
 
     start_time = time.time()
 
+    # Filter to requested encodings (or all)
+    if args.encodings:
+        unknown = [e for e in args.encodings if e not in ENCODING_LANG_MAP]
+        if unknown:
+            print(f"ERROR: Unknown encodings: {', '.join(unknown)}")
+            print(f"Available: {', '.join(sorted(ENCODING_LANG_MAP))}")
+            raise SystemExit(1)
+        encoding_map = {e: ENCODING_LANG_MAP[e] for e in args.encodings}
+    else:
+        encoding_map = ENCODING_LANG_MAP
+
     # Collect all unique languages needed
     all_langs: set[str] = set()
-    for langs in ENCODING_LANG_MAP.values():
+    for langs in encoding_map.values():
         all_langs.update(langs)
     sorted_langs = sorted(all_langs)
 
-    print(f"Training bigram models for {len(ENCODING_LANG_MAP)} encodings")
+    print(f"Training bigram models for {len(encoding_map)} encodings")
     print(f"Languages needed: {sorted_langs}")
     print(f"Max samples per language: {args.max_samples}")
     print()
@@ -685,7 +740,7 @@ def main() -> None:
     models: dict[str, dict[tuple[int, int], int]] = {}
     skipped = []
 
-    for enc_name, langs in sorted(ENCODING_LANG_MAP.items()):
+    for enc_name, langs in sorted(encoding_map.items()):
         # Look up the Python codec name
         codec = None
         codec_candidates = [enc_name]
@@ -750,6 +805,14 @@ def main() -> None:
         )
 
     print()
+
+    # Merge with existing models when retraining a subset
+    if args.encodings:
+        print("=== Merging with existing models ===")
+        existing = deserialize_models(args.output)
+        existing.update(models)
+        models = existing
+        print(f"  Merged {len(models)} total models ({len(args.encodings)} retrained)")
 
     # Serialize
     print("=== Serializing models ===")
