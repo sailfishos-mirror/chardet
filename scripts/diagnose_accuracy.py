@@ -12,31 +12,11 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from utils import collect_test_files
+
 import chardet
 from chardet.enums import EncodingEra
 from chardet.equivalences import is_correct, normalize_encoding_name
-
-# ---------------------------------------------------------------------------
-# Collect test files
-# ---------------------------------------------------------------------------
-
-
-def _collect_test_files(data_dir: Path) -> list[tuple[str, str, Path]]:
-    test_files: list[tuple[str, str, Path]] = []
-    for encoding_dir in sorted(data_dir.iterdir()):
-        if not encoding_dir.is_dir():
-            continue
-        parts = encoding_dir.name.rsplit("-", 1)
-        if len(parts) != 2:
-            continue
-        encoding_name, language = parts
-        test_files.extend(
-            (encoding_name, language, filepath)
-            for filepath in sorted(encoding_dir.iterdir())
-            if filepath.is_file()
-        )
-    return test_files
-
 
 # ---------------------------------------------------------------------------
 # Main diagnostic
@@ -67,7 +47,7 @@ def main() -> None:
         print(f"ERROR: Test data directory not found: {data_dir}", file=sys.stderr)
         sys.exit(1)
 
-    test_files = _collect_test_files(data_dir)
+    test_files = collect_test_files(data_dir)
     print(f"Found {len(test_files)} test files\n")
 
     # ---- Per-file results ----

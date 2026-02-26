@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -12,6 +13,11 @@ import pytest
 
 _TEST_DATA_REPO = "https://github.com/chardet/chardet.git"
 _TEST_DATA_SUBDIR = "tests"
+
+# Add scripts/ to sys.path so we can import utils
+sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+
+from utils import collect_test_files  # noqa: E402
 
 
 @pytest.fixture(scope="session")
@@ -59,3 +65,26 @@ def chardet_test_data_dir() -> Path:
                 shutil.copy2(item, dest)
 
     return local_data
+
+
+def _get_data_dir() -> Path:
+    """Get the test data directory (for use at collection time, outside fixtures)."""
+    repo_root = Path(__file__).parent.parent
+    local_data = repo_root / "tests" / "data"
+    if local_data.is_dir() and any(local_data.iterdir()):
+        return local_data
+    pytest.skip("No test data found — run accuracy tests once to clone data")
+    return local_data  # unreachable, satisfies type checker
+
+
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+    """Parametrize accuracy tests dynamically from test data on disk."""
+    if "expected_encoding" in metafunc.fixturenames:
+        data_dir = _get_data_dir()
+        test_files = collect_test_files(data_dir)
+        ids = [f"{enc}-{lang}/{fp.name}" for enc, lang, fp in test_files]
+        metafunc.parametrize(
+            ("expected_encoding", "language", "test_file_path"),
+            test_files,
+            ids=ids,
+        )
