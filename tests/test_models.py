@@ -1,23 +1,33 @@
+import sys
+from pathlib import Path
+
+import pytest
+
+# Add scripts/ to path so we can import train.py
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+
+from train import deserialize_models, serialize_models
+
 from chardet.models import load_models, score_bigrams
 
 
-def test_load_models_returns_dict():
+def test_load_models_returns_dict() -> None:
     models = load_models()
     assert isinstance(models, dict)
 
 
-def test_load_models_has_entries():
+def test_load_models_has_entries() -> None:
     models = load_models()
     assert len(models) > 0
 
 
-def test_model_keys_are_strings():
+def test_model_keys_are_strings() -> None:
     models = load_models()
     for key in models:
         assert isinstance(key, str)
 
 
-def test_score_bigrams_returns_float():
+def test_score_bigrams_returns_float() -> None:
     models = load_models()
     encoding = next(iter(models))
     score = score_bigrams(b"Hello world this is a test", encoding, models)
@@ -25,20 +35,20 @@ def test_score_bigrams_returns_float():
     assert 0.0 <= score <= 1.0
 
 
-def test_score_bigrams_unknown_encoding():
+def test_score_bigrams_unknown_encoding() -> None:
     models = load_models()
     score = score_bigrams(b"Hello", "not-a-real-encoding", models)
     assert score == 0.0
 
 
-def test_score_bigrams_empty_data():
+def test_score_bigrams_empty_data() -> None:
     models = load_models()
     encoding = next(iter(models))
     score = score_bigrams(b"", encoding, models)
     assert score == 0.0
 
 
-def test_score_bigrams_high_byte_weighting():
+def test_score_bigrams_high_byte_weighting() -> None:
     """High-byte bigrams should be weighted more heavily than ASCII-only."""
     models = load_models()
     # Pick any encoding with a model
@@ -59,3 +69,82 @@ def test_score_bigrams_high_byte_weighting():
         assert isinstance(ascii_score, float)
         assert 0.0 <= high_score <= 1.0
         assert 0.0 <= ascii_score <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# serialize_models / deserialize_models roundtrip tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def tmp_models_path(tmp_path: Path) -> str:
+    return str(tmp_path / "test_models.bin")
+
+
+def test_roundtrip_single_encoding(tmp_models_path: str) -> None:
+    """Serialize and deserialize a single encoding model."""
+    original = {"utf-8": {(65, 66): 200, (0xC3, 0xA4): 150}}
+    serialize_models(original, tmp_models_path)
+    loaded = deserialize_models(tmp_models_path)
+    assert loaded == original
+
+
+def test_roundtrip_multiple_encodings(tmp_models_path: str) -> None:
+    """Serialize and deserialize multiple encoding models."""
+    original = {
+        "utf-8": {(65, 66): 200, (67, 68): 100},
+        "iso-8859-1": {(0xE4, 0x20): 255},
+        "shift_jis": {(0x82, 0xA0): 180, (0x83, 0x41): 90},
+    }
+    serialize_models(original, tmp_models_path)
+    loaded = deserialize_models(tmp_models_path)
+    assert loaded == original
+
+
+def test_roundtrip_empty_bigrams(tmp_models_path: str) -> None:
+    """An encoding with zero bigrams should roundtrip correctly."""
+    original = {"empty-enc": {}}
+    serialize_models(original, tmp_models_path)
+    loaded = deserialize_models(tmp_models_path)
+    assert loaded == original
+
+
+def test_roundtrip_zero_encodings(tmp_models_path: str) -> None:
+    """Zero encodings should roundtrip correctly."""
+    original: dict[str, dict[tuple[int, int], int]] = {}
+    serialize_models(original, tmp_models_path)
+    loaded = deserialize_models(tmp_models_path)
+    assert loaded == original
+
+
+def test_deserialize_missing_file() -> None:
+    """Missing file should return empty dict."""
+    result = deserialize_models("/nonexistent/path/models.bin")
+    assert result == {}
+
+
+def test_deserialize_empty_file(tmp_models_path: str) -> None:
+    """Empty file should return empty dict."""
+    Path(tmp_models_path).write_bytes(b"")
+    result = deserialize_models(tmp_models_path)
+    assert result == {}
+
+
+def test_deserialize_trailing_bytes_raises(tmp_models_path: str) -> None:
+    """File with trailing bytes after valid data should raise ValueError."""
+    original = {"utf-8": {(65, 66): 200}}
+    serialize_models(original, tmp_models_path)
+    # Append garbage bytes
+    p = Path(tmp_models_path)
+    p.write_bytes(p.read_bytes() + b"\xff\xff")
+    with pytest.raises(ValueError, match="trailing bytes"):
+        deserialize_models(tmp_models_path)
+
+
+def test_roundtrip_matches_load_models(tmp_path: Path) -> None:
+    """The production models.bin should roundtrip through serialize/deserialize."""
+    production_models = load_models()
+    tmp_models = str(tmp_path / "roundtrip_models.bin")
+    serialize_models(production_models, tmp_models)
+    loaded = deserialize_models(tmp_models)
+    assert loaded == production_models

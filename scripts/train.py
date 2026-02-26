@@ -35,6 +35,22 @@ import unicodedata
 # Each encoding is trained on text from the languages it was designed to
 # represent — no English fallbacks for non-English encodings.
 
+_WESTERN_EUROPEAN_LANGS = [
+    "fr",
+    "de",
+    "es",
+    "pt",
+    "it",
+    "nl",
+    "da",
+    "sv",
+    "no",
+    "fi",
+    "is",
+    "id",
+    "ms",
+]
+
 ENCODING_LANG_MAP: dict[str, list[str]] = {
     # CJK - Japanese
     "shift_jis": ["ja"],
@@ -95,66 +111,10 @@ ENCODING_LANG_MAP: dict[str, list[str]] = {
     "mac-turkish": ["tr"],
     "cp1026": ["tr"],
     # Western European (Latin-1 family) — broad set of Latin-script languages
-    "iso-8859-1": [
-        "fr",
-        "de",
-        "es",
-        "pt",
-        "it",
-        "nl",
-        "da",
-        "sv",
-        "no",
-        "fi",
-        "is",
-        "id",
-        "ms",
-    ],
-    "windows-1252": [
-        "fr",
-        "de",
-        "es",
-        "pt",
-        "it",
-        "nl",
-        "da",
-        "sv",
-        "no",
-        "fi",
-        "is",
-        "id",
-        "ms",
-    ],
-    "iso-8859-15": [
-        "fr",
-        "de",
-        "es",
-        "pt",
-        "it",
-        "nl",
-        "da",
-        "sv",
-        "no",
-        "fi",
-        "is",
-        "id",
-        "ms",
-    ],
-    "mac-roman": [
-        "fr",
-        "de",
-        "es",
-        "pt",
-        "it",
-        "nl",
-        "da",
-        "sv",
-        "no",
-        "fi",
-        "is",
-        "id",
-        "ms",
-    ],
+    "iso-8859-1": _WESTERN_EUROPEAN_LANGS,
+    "windows-1252": _WESTERN_EUROPEAN_LANGS,
+    "iso-8859-15": _WESTERN_EUROPEAN_LANGS,
+    "mac-roman": _WESTERN_EUROPEAN_LANGS,
     # DOS Western European
     "cp437": ["fr", "de", "es", "pt", "it", "nl", "da", "sv"],
     "cp850": ["fr", "de", "es", "pt", "it", "nl", "da", "sv"],
@@ -662,6 +622,10 @@ def deserialize_models(
             bigrams[(b1, b2)] = weight
         models[name] = bigrams
 
+    if offset != len(data):
+        msg = f"Corrupt models file: {len(data) - offset} trailing bytes"
+        raise ValueError(msg)
+
     return models
 
 
@@ -733,7 +697,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--encodings",
-        nargs="*",
+        nargs="+",
         default=None,
         help="Specific encodings to retrain (default: all). "
         "When specified, existing models for other encodings are preserved.",
