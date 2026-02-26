@@ -74,8 +74,8 @@ def analyze_thai_encodings(data_dir: Path) -> None:
             cr = detect_chardet(data)
             cn = detect_charset_normalizer(data)
 
-            cr_str = cr if cr else "None"
-            cn_str = cn if cn else "None"
+            cr_str = cr or "None"
+            cn_str = cn or "None"
 
             chardet_results[cr_str] += 1
             cn_results[cn_str] += 1

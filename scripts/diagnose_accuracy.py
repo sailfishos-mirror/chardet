@@ -137,7 +137,7 @@ def main() -> None:
         wrong_answers: Counter[str] = Counter()
         sizes = []
         for detected, _conf, sz, _path in failures[enc]:
-            label = detected if detected else "<None>"
+            label = detected or "<None>"
             wrong_answers[label] += 1
             sizes.append(sz)
 
@@ -173,7 +173,7 @@ def main() -> None:
 
         print(f"    Failures ({f}):")
         for detected, conf, sz, path in failures.get(enc, []):
-            det_label = detected if detected else "<None>"
+            det_label = detected or "<None>"
             print(
                 f"      expected={enc}, got={det_label} (conf={conf:.2f}), "
                 f"size={sz:,}B, path={path}"
