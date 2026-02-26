@@ -8,10 +8,13 @@ Two kinds of acceptable mismatch:
 
 1. **Directional supersets**: detecting a superset encoding when the expected
    encoding is a subset is correct (e.g., detecting utf-8 when expected is
-   ascii), but not the reverse.
+   ascii), but not the reverse. Each superset must map every
+   alphanumeric/punctuation/currency byte in the subset to the identical
+   character, with only additional such characters in the superset.
 
-2. **Bidirectional byte-order variants**: UTF-16/UTF-32 endian variants are
-   interchangeable since they encode the same character repertoire.
+2. **Bidirectional equivalents**: encodings that are byte-for-byte identical
+   for all alphanumeric/punctuation/currency characters (currently only
+   UTF-16/UTF-32 endian variants).
 """
 
 from __future__ import annotations
@@ -38,67 +41,16 @@ SUPERSETS: dict[str, frozenset[str]] = {
     "gb2312": frozenset({"gb18030"}),
     "shift_jis": frozenset({"cp932"}),
     "euc-kr": frozenset({"cp949"}),
-    # windows-1252 ⊃ iso-8859-1 (fills C1 control range 0x80-0x9F with printable chars)
+    # windows-1252 ⊃ iso-8859-1 (fills C1 control range 0x80-0x9F with 27 printable chars)
     "iso-8859-1": frozenset({"windows-1252"}),
-    # iso-8859-15 ≈ iso-8859-1 with Euro sign; windows-1252 covers the same range
-    "iso-8859-15": frozenset({"windows-1252"}),
-    # windows-1250 ⊃ iso-8859-2 (Central European superset)
-    "iso-8859-2": frozenset({"windows-1250"}),
-    # windows-1254 ⊃ iso-8859-9 (Turkish superset)
+    # windows-1254 ⊃ iso-8859-9 (fills C1 control range 0x80-0x9F with 25 printable chars)
     "iso-8859-9": frozenset({"windows-1254"}),
-    # windows-1257 ⊃ iso-8859-13 (Baltic superset, fills 0x80-0x9F)
-    "iso-8859-13": frozenset({"windows-1257"}),
-    # windows-1255 ⊃ iso-8859-8 (Hebrew superset, fills 0x80-0x9F)
-    "iso-8859-8": frozenset({"windows-1255"}),
-    # windows-1253 ⊃ iso-8859-7 (Greek superset, fills 0x80-0x9F)
-    "iso-8859-7": frozenset({"windows-1253"}),
-    # koi8-r ⊃ koi8-t (Tajik uses subset of Russian Cyrillic)
-    "koi8-t": frozenset({"koi8-r"}),
-    # mac-roman -> windows-1252 (both Western European, mac-roman text detected as win-1252)
-    "mac-roman": frozenset({"windows-1252"}),
-    # kz-1048 is Kazakh variant based on cp1251
-    "cp1251": frozenset({"kz-1048"}),
-    # windows-1250 -> mac-latin2 (Central European superset relationship)
-    "windows-1250": frozenset({"mac-latin2"}),
-    # iso-8859-14 -> windows-1252 (Celtic encoding, close to Western European)
-    "iso-8859-14": frozenset({"windows-1252"}),
 }
 
-# Bidirectional equivalents -- same character repertoire, byte-order only.
+# Bidirectional equivalents -- byte-order variants only.
 BIDIRECTIONAL_GROUPS: list[tuple[str, ...]] = [
     ("utf-16", "utf-16-le", "utf-16-be"),
     ("utf-32", "utf-32-le", "utf-32-be"),
-    # EBCDIC variants: cp037 and cp500 are nearly identical, consistently confused
-    ("cp037", "cp500"),
-    # gb2312 ↔ gb18030: test files typically use only gb2312-range characters
-    ("gb2312", "gb18030"),
-    # Central European encodings with overlapping character sets
-    ("iso-8859-2", "iso-8859-16", "mac-latin2", "cp852"),
-    # Ukrainian Cyrillic variants (cp1125 is Ukrainian extension of cp866)
-    ("cp866", "cp1125"),
-    # Hebrew visual vs logical and Windows variant
-    ("iso-8859-8", "cp1255"),
-    # Hebrew DOS encodings
-    ("cp862", "cp856"),
-    # Western European family: ISO variants, Windows, Mac, and DOS code pages
-    # all cover similar character repertoires for Western European languages
-    (
-        "iso-8859-1",
-        "iso-8859-10",
-        "iso-8859-14",
-        "iso-8859-15",
-        "windows-1252",
-        "mac-roman",
-        "cp850",
-        "cp858",
-        "cp437",
-        "cp865",
-        "cp863",
-        "cp861",
-        "cp860",
-    ),
-    # ISO-8859-3 and windows-1254 overlap for Turkish/Esperanto
-    ("iso-8859-3", "windows-1254"),
 ]
 
 # Pre-built normalized lookups for fast comparison.

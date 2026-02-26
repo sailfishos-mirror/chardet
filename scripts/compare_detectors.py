@@ -4,13 +4,17 @@
 Includes:
 - Rich per-encoding comparison with directional equivalences and winner column
 - Win/loss/tie summaries
+- Memory usage comparison (peak traced allocations)
 - Thai encoding deep-dive (cp874 / tis-620 / iso-8859-11)
 - Short-input edge cases
 """
 
 from __future__ import annotations
 
+import json
+import subprocess
 import sys
+import textwrap
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -38,6 +42,108 @@ def detect_charset_normalizer(data: bytes) -> str | None:
     if best is None:
         return None
     return best.encoding
+
+
+# ---------------------------------------------------------------------------
+# Subprocess-isolated measurement (memory + import time)
+# ---------------------------------------------------------------------------
+
+
+def _format_bytes(n: int) -> str:
+    """Format byte count as human-readable string."""
+    if n >= 1 << 20:
+        return f"{n / (1 << 20):.1f} MiB"
+    if n >= 1 << 10:
+        return f"{n / (1 << 10):.1f} KiB"
+    return f"{n} B"
+
+
+def _measure_in_subprocess(
+    detector: str,
+    scripts_dir: str,
+    data_dir: str,
+) -> dict[str, int | float]:
+    """Measure import time and memory in an isolated subprocess.
+
+    Two memory metrics are reported so they can cross-check each other:
+
+    * **tracemalloc** (``traced_*``) -- only CPython-allocated objects; precise
+      but blind to C-extension allocations.
+    * **RSS** (``rss_*``) -- resident set size via ``resource.getrusage``;
+      captures *all* memory (C extensions, mmap, etc.) but includes the
+      interpreter and test-data overhead shared by both subprocesses.
+
+    ``tracemalloc.reset_peak()`` is called right before the library import so
+    the reported peak covers only import + detection, not file loading.
+    """
+    code = textwrap.dedent(f"""\
+        import json, platform, resource, sys, time, tracemalloc
+        from pathlib import Path
+
+        tracemalloc.start()
+
+        sys.path.insert(0, {scripts_dir!r})
+        from utils import collect_test_files
+
+        test_files = collect_test_files(Path({data_dir!r}))
+        all_data = [fp.read_bytes() for _, _, fp in test_files]
+
+        # Baseline: utils + file data loaded, detector library NOT yet imported.
+        baseline_current, _ = tracemalloc.get_traced_memory()
+        tracemalloc.reset_peak()          # peak now tracks only import+detect
+        rss_before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+
+        if {detector!r} == "chardet":
+            t0 = time.perf_counter()
+            import chardet
+            from chardet.enums import EncodingEra
+            import_time = time.perf_counter() - t0
+            after_import, _ = tracemalloc.get_traced_memory()
+            for d in all_data:
+                chardet.detect(d, encoding_era=EncodingEra.ALL)
+        else:
+            t0 = time.perf_counter()
+            from charset_normalizer import from_bytes
+            import_time = time.perf_counter() - t0
+            after_import, _ = tracemalloc.get_traced_memory()
+            for d in all_data:
+                r = from_bytes(d)
+                r.best()
+
+        _, traced_peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+
+        rss_after = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        # macOS reports ru_maxrss in bytes; Linux in KiB.
+        if platform.system() != "Darwin":
+            rss_before *= 1024
+            rss_after *= 1024
+
+        print(json.dumps({{
+            "import_time": import_time,
+            "traced_import": after_import - baseline_current,
+            "traced_peak": traced_peak - baseline_current,
+            "rss_before": rss_before,
+            "rss_after": rss_after,
+        }}))
+    """)
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        print(f"  WARNING: {detector} subprocess failed:", file=sys.stderr)
+        print(f"  {result.stderr.strip()}", file=sys.stderr)
+        return {
+            "import_time": 0.0,
+            "traced_import": 0,
+            "traced_peak": 0,
+            "rss_before": 0,
+            "rss_after": 0,
+        }
+    return json.loads(result.stdout.strip())
 
 
 # ---------------------------------------------------------------------------
@@ -157,6 +263,9 @@ def run_comparison(data_dir: Path) -> None:
         print(f"    {' = '.join(group)}")
     print()
 
+    # Pre-read all file data so I/O doesn't affect timing or memory measurement.
+    test_entries = [(enc, lang, fp, fp.read_bytes()) for enc, lang, fp in test_files]
+
     # Per-encoding stats
     chardet_per_enc: dict[str, dict[str, int]] = defaultdict(
         lambda: {"correct": 0, "total": 0}
@@ -177,8 +286,7 @@ def run_comparison(data_dir: Path) -> None:
     chardet_time = 0.0
     cn_time = 0.0
 
-    for expected_encoding, _language, filepath in test_files:
-        data = filepath.read_bytes()
+    for expected_encoding, _language, filepath, data in test_entries:
         total += 1
 
         # --- chardet rewrite ---
@@ -214,20 +322,59 @@ def run_comparison(data_dir: Path) -> None:
             )
 
     # ---------------------------------------------------------------------------
+    # Subprocess-isolated measurement (memory + import time)
+    # ---------------------------------------------------------------------------
+
+    scripts_dir = str(Path(__file__).resolve().parent)
+    data_dir_str = str(data_dir)
+    print("Measuring import time & memory (isolated subprocesses)...")
+    chardet_sub = _measure_in_subprocess("chardet", scripts_dir, data_dir_str)
+    cn_sub = _measure_in_subprocess("charset-normalizer", scripts_dir, data_dir_str)
+
+    # ---------------------------------------------------------------------------
     # Report
     # ---------------------------------------------------------------------------
 
     chardet_acc = chardet_correct / total if total else 0
     cn_acc = cn_correct / total if total else 0
 
+    print()
     print("=" * 100)
     print("OVERALL ACCURACY (directional equivalences)")
     print("=" * 100)
     print(
-        f"  chardet-rewrite:      {chardet_correct}/{total} = {chardet_acc:.1%}  ({chardet_time:.2f}s)"
+        f"  chardet-rewrite:      {chardet_correct}/{total} = {chardet_acc:.1%}  "
+        f"({chardet_time:.2f}s)"
     )
     print(
         f"  charset-normalizer:   {cn_correct}/{total} = {cn_acc:.1%}  ({cn_time:.2f}s)"
+    )
+    print()
+    print("=" * 100)
+    print("STARTUP & MEMORY (isolated subprocesses)")
+    print("=" * 100)
+    print(
+        f"  {'':25} {'import time':>12}  "
+        f"{'traced import':>14} {'traced peak':>14}  "
+        f"{'RSS before':>12} {'RSS after':>12}"
+    )
+    print(f"  {'-' * 25} {'-' * 12}  {'-' * 14} {'-' * 14}  {'-' * 12} {'-' * 12}")
+    for label, sub in [
+        ("chardet-rewrite", chardet_sub),
+        ("charset-normalizer", cn_sub),
+    ]:
+        print(
+            f"  {label:<25} "
+            f"{sub['import_time']:>11.3f}s  "
+            f"{_format_bytes(sub['traced_import']):>14} "
+            f"{_format_bytes(sub['traced_peak']):>14}  "
+            f"{_format_bytes(sub['rss_before']):>12} "
+            f"{_format_bytes(sub['rss_after']):>12}"
+        )
+    print()
+    print("  traced = tracemalloc (CPython allocations only)")
+    print(
+        "  RSS    = resident set size (all memory incl. C extensions; shared baseline)"
     )
     print()
 
