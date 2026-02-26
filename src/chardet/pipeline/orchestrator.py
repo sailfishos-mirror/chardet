@@ -93,10 +93,13 @@ def run_pipeline(
 
     # Gate: eliminate CJK multi-byte candidates unless the data contains
     # actual multi-byte sequences (score >= _CJK_MIN_MB_RATIO).
+    # Cache the computed scores so Stage 2b can reuse them.
+    mb_scores: dict[str, float] = {}
     gated_candidates = []
     for enc in valid_candidates:
         if enc.is_multibyte:
             mb_score = compute_structural_score(data, enc)
+            mb_scores[enc.name] = mb_score
             if mb_score < _CJK_MIN_MB_RATIO:
                 continue  # No multi-byte structure -> eliminate
         gated_candidates.append(enc)
@@ -107,10 +110,13 @@ def run_pipeline(
     valid_candidates = gated_candidates
 
     # Stage 2b: Structural probing for multi-byte encodings
+    # Reuse scores already computed during the CJK gate above.
     structural_scores: list[tuple[str, float]] = []
     for enc in valid_candidates:
         if enc.is_multibyte:
-            score = compute_structural_score(data, enc)
+            score = mb_scores.get(enc.name)
+            if score is None:
+                score = compute_structural_score(data, enc)
             if score > 0.0:
                 structural_scores.append((enc.name, score))
 
