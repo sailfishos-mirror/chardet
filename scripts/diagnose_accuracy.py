@@ -17,52 +17,79 @@ import chardet
 from chardet.enums import EncodingEra
 
 # ---------------------------------------------------------------------------
-# Encoding equivalence classes (copied from test_accuracy.py)
+# Directional encoding equivalences (copied from test_accuracy.py)
 # ---------------------------------------------------------------------------
-
-# Only groups verified as true superset/subset relationships where all
-# non-control printable characters in one encoding exist in the other.
-# See scripts/verify_equivalences.py for the full analysis.
-#
-# REMOVED (byte-level differences in printable range):
-#   ("cp874", "tis-620", "iso-8859-11") -> cp874 differs from tis-620/iso-8859-11
-#                                           (kept tis-620/iso-8859-11 pair only)
-#   ("iso-8859-8", "windows-1255")      -> 21 bytes differ + extras on both sides
-#   ("cp866", "cp1125")                 -> 8 bytes differ (Ukrainian extensions)
-#   ("iso-8859-1", "windows-1252", "iso-8859-15") -> all pairs differ (0x80-0x9F)
-#   ("iso-8859-2", "windows-1250", "iso-8859-16") -> all pairs differ significantly
-#   ("iso-8859-7", "windows-1253")      -> 24 bytes differ
-#   ("iso-8859-9", "windows-1254")      -> 25 bytes differ
-#   ("cp037", "cp500", "cp1026")        -> all pairs differ (EBCDIC rearrangements)
-#   ("cp850", "cp858")                  -> 1 byte differs (0xD5: dotless-i vs euro)
-_EQUIVALENT_GROUPS = [
-    ("utf-16", "utf-16-le", "utf-16-be"),
-    ("utf-32", "utf-32-le", "utf-32-be"),
-    ("gb18030", "gb2312"),
-    ("euc-kr", "cp949"),
-    ("shift_jis", "cp932"),
-    ("tis-620", "iso-8859-11"),  # tis-620 is a strict subset of iso-8859-11
-    ("utf-8", "ascii"),
-]
 
 
 def _normalize_encoding_name(name: str) -> str:
+    """Normalize encoding name for comparison."""
     try:
         return codecs.lookup(name).name
     except LookupError:
         return name.lower().replace("-", "").replace("_", "")
 
 
-_ENCODING_EQUIVALENCES: dict[str, str] = {}
-for _group in _EQUIVALENT_GROUPS:
-    _canonical = _group[0]
+# Directional superset relationships: detecting any of the supersets
+# when the expected encoding is the subset counts as correct.
+# E.g., expected=ascii, detected=utf-8 -> correct (utf-8 ⊃ ascii).
+# But expected=utf-8, detected=ascii -> wrong (ascii ⊄ utf-8).
+_SUPERSETS: dict[str, frozenset[str]] = {
+    "ascii": frozenset({"utf-8"}),
+    "tis-620": frozenset({"iso-8859-11", "cp874"}),
+    "iso-8859-11": frozenset({"cp874"}),
+    "gb2312": frozenset({"gb18030"}),
+    "shift_jis": frozenset({"cp932"}),
+    "euc-kr": frozenset({"cp949"}),
+}
+
+# Bidirectional equivalents — same character repertoire, byte-order only.
+_BIDIRECTIONAL_GROUPS: list[tuple[str, ...]] = [
+    ("utf-16", "utf-16-le", "utf-16-be"),
+    ("utf-32", "utf-32-le", "utf-32-be"),
+]
+
+# Build normalized superset lookup: normalized subset -> frozenset of normalized supersets
+_NORMALIZED_SUPERSETS: dict[str, frozenset[str]] = {
+    _normalize_encoding_name(subset): frozenset(
+        _normalize_encoding_name(s) for s in supersets
+    )
+    for subset, supersets in _SUPERSETS.items()
+}
+
+# Build normalized bidirectional lookup: normalized name -> frozenset of normalized group members
+_NORMALIZED_BIDIR: dict[str, frozenset[str]] = {}
+for _group in _BIDIRECTIONAL_GROUPS:
+    _normed = frozenset(_normalize_encoding_name(n) for n in _group)
     for _name in _group:
-        _ENCODING_EQUIVALENCES[_normalize_encoding_name(_name)] = _canonical
+        _NORMALIZED_BIDIR[_normalize_encoding_name(_name)] = _normed
 
 
-def _canonical_name(name: str) -> str:
-    norm = _normalize_encoding_name(name)
-    return _ENCODING_EQUIVALENCES.get(norm, norm)
+def _is_correct(expected: str, detected: str | None) -> bool:
+    """Check whether *detected* is an acceptable answer for *expected*.
+
+    Acceptable means:
+    1. Exact match (after normalization), OR
+    2. Both belong to the same bidirectional byte-order group, OR
+    3. *detected* is a known superset of *expected*.
+    """
+    if detected is None:
+        return False
+    norm_exp = _normalize_encoding_name(expected)
+    norm_det = _normalize_encoding_name(detected)
+
+    # 1. Exact match
+    if norm_exp == norm_det:
+        return True
+
+    # 2. Bidirectional (same byte-order group)
+    if norm_exp in _NORMALIZED_BIDIR and norm_det in _NORMALIZED_BIDIR[norm_exp]:
+        return True
+
+    # 3. Superset is acceptable (detected is a known superset of expected)
+    return (
+        norm_exp in _NORMALIZED_SUPERSETS
+        and norm_det in _NORMALIZED_SUPERSETS[norm_exp]
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -120,10 +147,10 @@ def main() -> None:
     print(f"Found {len(test_files)} test files\n")
 
     # ---- Per-file results ----
-    # For each expected encoding (canonical): track correct/total/failures
+    # For each expected encoding (normalized): track correct/total/failures
     enc_total: Counter[str] = Counter()
     enc_correct: Counter[str] = Counter()
-    # failures[expected_canonical] -> list of (detected_raw, confidence, size, path)
+    # failures[normalized_expected] -> list of (detected_raw, confidence, size, path)
     failures: dict[str, list[tuple[str | None, float, int, str]]] = defaultdict(list)
     none_results: list[
         tuple[str, str, int, str]
@@ -140,19 +167,16 @@ def main() -> None:
         size = len(data)
         short_path = f"{filepath.parent.name}/{filepath.name}"
 
-        expected_canonical = _canonical_name(expected_encoding)
-        detected_canonical = _canonical_name(detected) if detected else ""
+        norm_expected = _normalize_encoding_name(expected_encoding)
 
         total += 1
-        enc_total[expected_canonical] += 1
+        enc_total[norm_expected] += 1
 
-        if expected_canonical == detected_canonical:
+        if _is_correct(expected_encoding, detected):
             correct += 1
-            enc_correct[expected_canonical] += 1
+            enc_correct[norm_expected] += 1
         else:
-            failures[expected_canonical].append(
-                (detected, confidence, size, short_path)
-            )
+            failures[norm_expected].append((detected, confidence, size, short_path))
             if detected is None:
                 none_results.append((expected_encoding, language, size, short_path))
 
@@ -184,10 +208,10 @@ def main() -> None:
     print("PER-ENCODING ACCURACY (sorted by number of failures)")
     print("=" * 80)
 
-    # Build rows: (failures, canonical_enc, total, correct, accuracy)
+    # Build rows: (failures, normalized_enc, total, correct, accuracy)
     rows = []
-    all_canonicals = set(enc_total.keys())
-    for enc in all_canonicals:
+    all_encodings = set(enc_total.keys())
+    for enc in all_encodings:
         t = enc_total[enc]
         c = enc_correct[enc]
         f = t - c
@@ -198,11 +222,7 @@ def main() -> None:
     for fail_count, enc, t, c, acc in rows:
         marker = (
             " <<<"
-            if any(
-                _normalize_encoding_name(fe) == _normalize_encoding_name(enc)
-                or _canonical_name(fe) == enc
-                for fe in FOCUS_ENCODINGS
-            )
+            if any(_normalize_encoding_name(fe) == enc for fe in FOCUS_ENCODINGS)
             else ""
         )
         print(f"\n  {enc}: {c}/{t} correct ({acc:.1%}) — {fail_count} failures{marker}")
@@ -229,11 +249,11 @@ def main() -> None:
     print("DEEP DIVE: FOCUS ENCODINGS (every failure listed)")
     print("=" * 80)
 
-    focus_canonicals = set()
+    focus_normalized = set()
     for fe in FOCUS_ENCODINGS:
-        focus_canonicals.add(_canonical_name(fe))
+        focus_normalized.add(_normalize_encoding_name(fe))
 
-    for enc in sorted(focus_canonicals):
+    for enc in sorted(focus_normalized):
         t = enc_total.get(enc, 0)
         c = enc_correct.get(enc, 0)
         if t == 0:
@@ -264,7 +284,7 @@ def main() -> None:
     print(f"  Correct: {correct}")
     print(f"  Failures: {total_failures}")
     print(f"  None results: {len(none_results)}")
-    print(f"  Unique expected encodings (canonical): {len(all_canonicals)}")
+    print(f"  Unique expected encodings: {len(all_encodings)}")
     print("  Encodings with 0% accuracy: ", end="")
     zero_acc = [enc for f, enc, t, c, acc in rows if acc == 0.0 and t > 0]
     print(", ".join(zero_acc) if zero_acc else "(none)")
