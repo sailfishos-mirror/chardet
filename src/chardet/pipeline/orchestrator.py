@@ -28,6 +28,89 @@ _FALLBACK_RESULT = DetectionResult(
     encoding="windows-1252", confidence=0.10, language=None
 )
 _STRUCTURAL_CONFIDENCE_THRESHOLD = 0.85
+
+# Common Western Latin encodings that share the iso-8859-1 character
+# repertoire for the byte values where iso-8859-10 is indistinguishable.
+# Used as swap targets when demoting iso-8859-10 — we prefer these over
+# iso-8859-10, but do not want to accidentally promote an unrelated encoding
+# (e.g. windows-1254).
+_COMMON_LATIN_ENCODINGS: frozenset[str] = frozenset(
+    {
+        "iso-8859-1",
+        "iso-8859-15",
+        "windows-1252",
+    }
+)
+
+# Bytes where iso-8859-10 decodes to a different character than iso-8859-1.
+# Computed programmatically via:
+#   {b for b in range(0x80, 0x100)
+#    if bytes([b]).decode('iso-8859-10') != bytes([b]).decode('iso-8859-1')}
+# If none of these bytes are present in the data, iso-8859-10 is
+# indistinguishable from more common Latin encodings, so we demote it.
+_ISO_8859_10_DISTINGUISHING: frozenset[int] = frozenset(
+    {
+        0xA1,
+        0xA2,
+        0xA3,
+        0xA4,
+        0xA5,
+        0xA6,
+        0xA8,
+        0xA9,
+        0xAA,
+        0xAB,
+        0xAC,
+        0xAE,
+        0xAF,
+        0xB1,
+        0xB2,
+        0xB3,
+        0xB4,
+        0xB5,
+        0xB6,
+        0xB8,
+        0xB9,
+        0xBA,
+        0xBB,
+        0xBC,
+        0xBD,
+        0xBE,
+        0xBF,
+        0xC0,
+        0xC7,
+        0xC8,
+        0xCA,
+        0xCC,
+        0xD1,
+        0xD2,
+        0xD7,
+        0xD9,
+        0xE0,
+        0xE7,
+        0xE8,
+        0xEA,
+        0xEC,
+        0xF1,
+        0xF2,
+        0xF7,
+        0xF9,
+        0xFF,
+    }
+)
+
+
+def _has_iso_8859_10_evidence(data: bytes) -> bool:
+    """Return True if data contains bytes unique to iso-8859-10.
+
+    Checks whether any non-ASCII byte in *data* falls in the set of byte
+    values that decode differently under iso-8859-10 vs iso-8859-1.  If none
+    do, the data is equally valid under both encodings and there is no
+    byte-level evidence for preferring iso-8859-10.
+    """
+    return any(b in _ISO_8859_10_DISTINGUISHING for b in data if b > 0x7F)
+
+
 # Minimum structural score (valid multi-byte sequences / lead bytes) required
 # to keep a CJK multi-byte candidate.  Below this threshold the encoding is
 # eliminated as a false positive (e.g. Shift_JIS matching Latin data where
@@ -188,5 +271,21 @@ def run_pipeline(
 
     if not results:
         return [_FALLBACK_RESULT]
+
+    # Demote iso-8859-10 if no distinguishing bytes present.
+    # The iso-8859-10 bigram model can win on data that contains only bytes
+    # shared with iso-8859-1 / iso-8859-15 / windows-1252.  When there is no
+    # byte-level evidence for iso-8859-10, swap it with the first common
+    # Western Latin candidate so we prefer iso-8859-1 et al. without
+    # accidentally promoting an unrelated encoding like windows-1254.
+    if (
+        len(results) > 1
+        and results[0].encoding == "iso-8859-10"
+        and not _has_iso_8859_10_evidence(data)
+    ):
+        for i, r in enumerate(results[1:], 1):
+            if r.encoding in _COMMON_LATIN_ENCODINGS:
+                results[0], results[i] = results[i], results[0]
+                break
 
     return results
