@@ -1,14 +1,8 @@
 """Stage 3: Statistical bigram scoring."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
 from chardet.models import BigramProfile, load_models, score_best_language
 from chardet.pipeline import DetectionResult
-
-if TYPE_CHECKING:
-    from chardet.registry import EncodingInfo
+from chardet.registry import EncodingInfo
 
 
 def score_candidates(
