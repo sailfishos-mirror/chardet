@@ -5,7 +5,7 @@ import struct
 
 _MODEL_CACHE: dict[str, bytearray] | None = None
 # Pre-grouped index: encoding name -> [(lang, model), ...]
-_ENC_INDEX: dict[str, list[tuple[str, bytearray]]] | None = None
+_ENC_INDEX: dict[str, list[tuple[str | None, bytearray]]] | None = None
 
 
 def load_models() -> dict[str, bytearray]:
@@ -49,13 +49,13 @@ def load_models() -> dict[str, bytearray]:
     return models
 
 
-def _get_enc_index() -> dict[str, list[tuple[str, bytearray]]]:
+def _get_enc_index() -> dict[str, list[tuple[str | None, bytearray]]]:
     """Return a pre-grouped index mapping encoding name -> [(lang, model), ...]."""
     global _ENC_INDEX  # noqa: PLW0603
     if _ENC_INDEX is not None:
         return _ENC_INDEX
     models = load_models()
-    index: dict[str, list[tuple[str, bytearray]]] = {}
+    index: dict[str, list[tuple[str | None, bytearray]]] = {}
     for key, model in models.items():
         if "/" in key:
             lang, enc = key.split("/", 1)

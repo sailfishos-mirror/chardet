@@ -195,7 +195,7 @@ _CJK_MIN_BYTE_COVERAGE = 0.35
 def _gate_cjk_candidates(
     data: bytes,
     valid_candidates: tuple[EncodingInfo, ...],
-) -> tuple[list[EncodingInfo], dict[str, float]]:
+) -> tuple[tuple[EncodingInfo, ...], dict[str, float]]:
     """Eliminate CJK multi-byte candidates that lack genuine multi-byte structure.
 
     Three checks are applied in order to each multi-byte candidate:
@@ -232,13 +232,13 @@ def _gate_cjk_candidates(
             if byte_coverage < _CJK_MIN_BYTE_COVERAGE:
                 continue  # Most high bytes are orphans -> not CJK
         gated.append(enc)
-    return gated, mb_scores
+    return tuple(gated), mb_scores
 
 
 def _score_structural_candidates(
     data: bytes,
     structural_scores: list[tuple[str, float]],
-    valid_candidates: list[EncodingInfo],
+    valid_candidates: tuple[EncodingInfo, ...],
 ) -> list[DetectionResult]:
     """Score structurally-valid CJK candidates using statistical bigrams.
 

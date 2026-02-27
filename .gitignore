@@ -6,6 +6,8 @@ dist/
 build/
 .eggs/
 *.egg
+*.so
+*.pyd
 .venv/
 .env
 .ruff_cache/
