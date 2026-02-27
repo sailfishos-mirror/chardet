@@ -751,9 +751,10 @@ def _build_one_model(  # noqa: PLR0913
     """
     model_key = f"{lang}/{enc_name}"
 
-    # Load texts from disk cache (lazy, cached per worker)
+    # Load texts from disk cache only (never download in workers).
+    # The download phase in main() must complete before workers start.
     if lang not in _worker_text_cache:
-        _worker_text_cache[lang] = get_texts(lang, max_samples, cache_dir)
+        _worker_text_cache[lang] = _load_cached_articles(cache_dir, lang, max_samples)
     texts = _worker_text_cache[lang]
 
     if not texts:
