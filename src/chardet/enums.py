@@ -13,3 +13,19 @@ class EncodingEra(enum.IntFlag):
     DOS = 16
     MAINFRAME = 32
     ALL = MODERN_WEB | LEGACY_ISO | LEGACY_MAC | LEGACY_REGIONAL | DOS | MAINFRAME
+
+
+class LanguageFilter(enum.IntFlag):
+    """Language filter flags for UniversalDetector (chardet 6.x API compat).
+
+    Accepted but not used — our pipeline does not filter by language group.
+    """
+
+    CHINESE_SIMPLIFIED = 0x01
+    CHINESE_TRADITIONAL = 0x02
+    JAPANESE = 0x04
+    KOREAN = 0x08
+    NON_CJK = 0x10
+    ALL = 0x1F
+    CHINESE = CHINESE_SIMPLIFIED | CHINESE_TRADITIONAL
+    CJK = CHINESE | JAPANESE | KOREAN

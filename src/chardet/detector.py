@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from chardet.enums import EncodingEra
+from chardet.enums import EncodingEra, LanguageFilter
 from chardet.pipeline.ascii import detect_ascii
 from chardet.pipeline.bom import detect_bom
 from chardet.pipeline.escape import detect_escape_encoding
@@ -23,6 +23,8 @@ _MIN_INCREMENTAL_CHECK = 64
 class UniversalDetector:
     def __init__(
         self,
+        lang_filter: LanguageFilter = LanguageFilter.ALL,  # noqa: ARG002
+        should_rename_legacy: bool | None = None,  # noqa: ARG002
         encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
         max_bytes: int = 200_000,
     ) -> None:
@@ -35,7 +37,7 @@ class UniversalDetector:
         self._has_non_ascii = False
         self._last_checked: int = 0
 
-    def feed(self, data: bytes) -> None:
+    def feed(self, byte_str: bytes | bytearray) -> None:
         if self._closed:
             msg = "feed() called after close() without reset()"
             raise ValueError(msg)
@@ -43,7 +45,7 @@ class UniversalDetector:
             return
         remaining = self._max_bytes - len(self._buffer)
         if remaining > 0:
-            self._buffer.extend(data[:remaining])
+            self._buffer.extend(byte_str[:remaining])
         self._try_incremental_detect()
 
     def _try_incremental_detect(self) -> None:
@@ -96,16 +98,17 @@ class UniversalDetector:
                 self._done = True
                 return
 
-    def close(self) -> None:
-        if self._closed:
-            return
-        self._closed = True
-        if self._result is not None:
-            return
-        data = bytes(self._buffer)
-        results = run_pipeline(data, self._encoding_era, max_bytes=self._max_bytes)
-        self._result = results[0].to_dict()
-        self._done = True
+    def close(self) -> dict[str, str | float | None]:
+        if not self._closed:
+            self._closed = True
+            if self._result is None:
+                data = bytes(self._buffer)
+                results = run_pipeline(
+                    data, self._encoding_era, max_bytes=self._max_bytes
+                )
+                self._result = results[0].to_dict()
+                self._done = True
+        return self.result
 
     def reset(self) -> None:
         self._buffer = bytearray()
