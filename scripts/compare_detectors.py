@@ -20,7 +20,6 @@ import statistics
 import subprocess
 import sys
 import tempfile
-import textwrap
 from collections import defaultdict
 from pathlib import Path
 
@@ -82,22 +81,19 @@ def _cleanup_venv(venv_dir: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _run_detector_subprocess(
+def _run_timing_subprocess(
     python_executable: str,
-    scripts_dir: str,
     data_dir: str,
     *,
     detector_type: str = "chardet",
     use_encoding_era: bool = True,
-) -> tuple[list[tuple[str, str, str, str | None]], float, list[float]]:
-    """Run detection in an isolated subprocess.
+) -> tuple[list[tuple[str, str, str, str | None]], float, list[float], float]:
+    """Run detection timing in an isolated subprocess via ``benchmark_time.py``.
 
     Parameters
     ----------
     python_executable : str
         Path to the Python interpreter in the target venv.
-    scripts_dir : str
-        Path to the scripts directory (for ``collect_test_files``).
     data_dir : str
         Path to the test data directory.
     detector_type : str
@@ -108,90 +104,50 @@ def _run_detector_subprocess(
     Returns
     -------
     tuple
-        ``(results, elapsed, file_times)`` where *results* is a list of
-        ``(expected_encoding, language, filepath_str, detected_encoding)``
-        tuples and *file_times* is a list of per-file durations in seconds.
+        ``(results, elapsed, file_times, import_time)`` where *results* is a
+        list of ``(expected_encoding, language, filepath_str,
+        detected_encoding)`` tuples, *file_times* is a list of per-file
+        durations in seconds, and *import_time* is the detector import time.
 
     """
-    if detector_type == "chardet":
-        if use_encoding_era:
-            detect_expr = (
-                'chardet.detect(data, encoding_era=EncodingEra.ALL)["encoding"]'
-            )
-            import_block = "import chardet\nfrom chardet.enums import EncodingEra"
-        else:
-            detect_expr = 'chardet.detect(data)["encoding"]'
-            import_block = "import chardet"
-    elif detector_type == "charset-normalizer":
-        detect_expr = (
-            "((lambda r: r.best().encoding if r.best() else None)(from_bytes(data)))"
-        )
-        import_block = "from charset_normalizer import from_bytes"
-    elif detector_type == "cchardet":
-        detect_expr = 'cchardet.detect(data)["encoding"]'
-        import_block = "import cchardet"
-    else:
-        msg = f"Unknown detector_type: {detector_type!r}"
-        raise ValueError(msg)
+    benchmark_script = str(Path(__file__).resolve().parent / "benchmark_time.py")
+    cmd = [
+        python_executable,
+        benchmark_script,
+        "--detector",
+        detector_type,
+        "--data-dir",
+        data_dir,
+        "--json-only",
+    ]
+    if use_encoding_era:
+        cmd.append("--use-encoding-era")
 
-    # Indent the import block for embedding inside the dedented script
-    indented_import = "\n        ".join(import_block.split("\n"))
-
-    code = textwrap.dedent(f"""\
-        import json, sys, time
-        from pathlib import Path
-
-        sys.path.insert(0, {scripts_dir!r})
-        from utils import collect_test_files
-
-        {indented_import}
-
-        test_files = collect_test_files(Path({data_dir!r}))
-        t0 = time.perf_counter()
-        for expected_enc, language, filepath in test_files:
-            data = filepath.read_bytes()
-            ft0 = time.perf_counter()
-            detected = {detect_expr}
-            file_elapsed = time.perf_counter() - ft0
-            print(json.dumps({{
-                "expected": expected_enc,
-                "language": language,
-                "path": str(filepath),
-                "detected": detected,
-                "elapsed": file_elapsed,
-            }}))
-        elapsed = time.perf_counter() - t0
-        print(json.dumps({{"__timing__": elapsed}}))
-    """)
-
-    result = subprocess.run(
-        [python_executable, "-c", code],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if result.returncode != 0:
         print(
             f"  WARNING: subprocess detection failed:\n  {result.stderr.strip()}",
             file=sys.stderr,
         )
-        return [], 0.0, []
+        return [], 0.0, [], 0.0
 
     results: list[tuple[str, str, str, str | None]] = []
     file_times: list[float] = []
     timing = 0.0
+    import_time = 0.0
     for line in result.stdout.strip().split("\n"):
         if not line:
             continue
         obj = json.loads(line)
         if "__timing__" in obj:
             timing = obj["__timing__"]
+            import_time = obj["import_time"]
         else:
             results.append(
                 (obj["expected"], obj["language"], obj["path"], obj["detected"])
             )
             file_times.append(obj["elapsed"])
-    return results, timing, file_times
+    return results, timing, file_times, import_time
 
 
 # ---------------------------------------------------------------------------
@@ -208,16 +164,16 @@ def _format_bytes(n: int) -> str:
     return f"{n} B"
 
 
-def _measure_in_subprocess(
+def _measure_memory_subprocess(
     detector: str,
     data_dir: str,
     *,
     python_executable: str | None = None,
     use_encoding_era: bool = True,
-) -> dict[str, int | float]:
-    """Measure import time and memory by running ``benchmark.py`` in a subprocess."""
+) -> dict[str, int]:
+    """Measure memory by running ``benchmark_memory.py`` in a subprocess."""
     exe = python_executable or sys.executable
-    benchmark_script = str(Path(__file__).resolve().parent / "benchmark.py")
+    benchmark_script = str(Path(__file__).resolve().parent / "benchmark_memory.py")
     cmd = [
         exe,
         benchmark_script,
@@ -232,16 +188,14 @@ def _measure_in_subprocess(
 
     result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if result.returncode != 0:
-        print(f"  WARNING: {detector} benchmark subprocess failed:", file=sys.stderr)
+        print(f"  WARNING: {detector} memory benchmark failed:", file=sys.stderr)
         print(f"  {result.stderr.strip()}", file=sys.stderr)
         return {
-            "import_time": 0.0,
             "traced_import": 0,
             "traced_peak": 0,
             "rss_before": 0,
             "rss_after": 0,
         }
-    # benchmark.py always prints JSON first; take only the first line
     return json.loads(result.stdout.strip().split("\n")[0])
 
 
@@ -319,31 +273,32 @@ def run_comparison(
             "file_times": [],
         }
 
-    scripts_dir = str(Path(__file__).resolve().parent)
     data_dir_str = str(data_dir)
 
     # --- Subprocess detection for all detectors ---
+    import_times: dict[str, float] = {}
     for label, detector_type, python_exe, use_era in detectors:
         print(f"  Running detection for {label} ...")
-        results, elapsed, file_times = _run_detector_subprocess(
+        results, elapsed, file_times, import_time = _run_timing_subprocess(
             python_exe,
-            scripts_dir,
             data_dir_str,
             detector_type=detector_type,
             use_encoding_era=use_era,
         )
         stats[label]["time"] = elapsed
         stats[label]["file_times"] = file_times
+        import_times[label] = import_time
         for expected, _language, path_str, detected in results:
             _record_result(stats[label], expected, Path(path_str), detected)
 
     total = stats[detectors[0][0]]["total"]
 
-    # --- Subprocess-isolated measurement (memory + import time) ---
-    print("Measuring import time & memory (isolated subprocesses)...")
+    # --- Subprocess-isolated memory measurement ---
+    print("Measuring memory (isolated subprocesses)...")
     memory: dict[str, dict] = {}
     for label, detector_type, python_exe, use_era in detectors:
-        memory[label] = _measure_in_subprocess(
+        print(f"  Measuring memory for {label} ...")
+        memory[label] = _measure_memory_subprocess(
             detector_type,
             data_dir_str,
             python_executable=python_exe,
@@ -421,7 +376,7 @@ def run_comparison(
         sub = memory[label]
         print(
             f"  {label:<{max_label}} "
-            f"{sub['import_time']:>11.3f}s  "
+            f"{import_times[label]:>11.3f}s  "
             f"{_format_bytes(sub['traced_import']):>14} "
             f"{_format_bytes(sub['traced_peak']):>14}  "
             f"{_format_bytes(sub['rss_before']):>12} "
@@ -569,7 +524,7 @@ if __name__ == "__main__":
         "--cn-variants",
         action="store_true",
         default=False,
-        help="Include charset-normalizer mypyc + pure-Python subprocess variants",
+        help="Include charset-normalizer pure-Python subprocess variant",
     )
     args = parser.parse_args()
 
@@ -593,18 +548,19 @@ if __name__ == "__main__":
         # extra_detectors: list of (label, detector_type, venv_python)
         extra_detectors: list[tuple[str, str, Path]] = []
 
-        if args.cn_variants:
-            print("Setting up charset-normalizer variant venvs ...")
-            label = "charset-normalizer (mypyc)"
-            try:
-                venv_dir, python_path = _create_detector_venv(
-                    label, ["charset-normalizer"]
-                )
-                venvs[label] = (venv_dir, python_path)
-                extra_detectors.append((label, "charset-normalizer", python_path))
-            except subprocess.CalledProcessError as exc:
-                print(f"  WARNING: failed to create venv for {label}: {exc}")
+        # Always create an isolated charset-normalizer (mypyc) venv
+        print("Setting up charset-normalizer venv ...")
+        cn_label = "charset-normalizer"
+        try:
+            venv_dir, python_path = _create_detector_venv(
+                cn_label, ["charset-normalizer"]
+            )
+            venvs[cn_label] = (venv_dir, python_path)
+        except subprocess.CalledProcessError as exc:
+            print(f"  WARNING: failed to create venv for {cn_label}: {exc}")
 
+        if args.cn_variants:
+            print("Setting up charset-normalizer pure-Python venv ...")
             label = "charset-normalizer (pure)"
             try:
                 venv_dir, python_path = _create_detector_venv(
@@ -629,8 +585,11 @@ if __name__ == "__main__":
         # Build unified detector list: (label, detector_type, python_exe, use_era)
         detectors: list[tuple[str, str, str, bool]] = [
             ("chardet-rewrite", "chardet", sys.executable, True),
-            ("charset-normalizer", "charset-normalizer", sys.executable, False),
         ]
+        if cn_label in venvs:
+            detectors.append(
+                (cn_label, "charset-normalizer", str(venvs[cn_label][1]), False)
+            )
         for version in args.chardet_version:
             label = f"chardet {version}"
             if label in venvs:

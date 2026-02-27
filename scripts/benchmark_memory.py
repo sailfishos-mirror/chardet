@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-"""Benchmark a single encoding detector: import time, memory, and per-file speed.
+"""Benchmark a single encoding detector: memory usage only.
+
+Uses ``tracemalloc`` (started early) and RSS via ``resource.getrusage``.
 
 Can be run standalone for human-readable output, or with ``--json-only`` for
 machine-readable JSON (used by ``compare_detectors.py``).
@@ -11,11 +13,12 @@ import argparse
 import json
 import platform
 import resource
-import statistics
 import sys
-import time
 import tracemalloc
 from pathlib import Path
+
+# Start tracemalloc as early as possible to capture baseline accurately.
+tracemalloc.start()
 
 
 def _format_bytes(n: int) -> str:
@@ -29,7 +32,7 @@ def _format_bytes(n: int) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Benchmark a single encoding detector.",
+        description="Benchmark a single encoding detector (memory only).",
     )
     parser.add_argument(
         "--detector",
@@ -62,9 +65,6 @@ def main() -> None:
         print(f"ERROR: data directory not found: {data_dir}", file=sys.stderr)
         sys.exit(1)
 
-    # Start tracemalloc early to capture baseline
-    tracemalloc.start()
-
     # Make scripts/ importable for utils.collect_test_files
     scripts_dir = str(Path(__file__).resolve().parent)
     if scripts_dir not in sys.path:
@@ -76,21 +76,19 @@ def main() -> None:
         print("ERROR: no test files found!", file=sys.stderr)
         sys.exit(1)
 
-    # Pre-read all file data so I/O doesn't affect timing
+    # Pre-read all file data so I/O doesn't affect measurement
     all_data = [(enc, lang, fp, fp.read_bytes()) for enc, lang, fp in test_files]
 
     # Baseline: utils + file data loaded, detector library NOT yet imported
     baseline_current, _ = tracemalloc.get_traced_memory()
-    tracemalloc.reset_peak()  # peak now tracks only import + detect
+    tracemalloc.reset_peak()
     rss_before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
     # Import detector and build detect function
-    t0 = time.perf_counter()
     if args.detector == "chardet" and args.use_encoding_era:
         import chardet
         from chardet.enums import EncodingEra
 
-        import_time = time.perf_counter() - t0
         after_import, _ = tracemalloc.get_traced_memory()
 
         def detect(data: bytes) -> str | None:
@@ -99,7 +97,6 @@ def main() -> None:
     elif args.detector == "chardet":
         import chardet
 
-        import_time = time.perf_counter() - t0
         after_import, _ = tracemalloc.get_traced_memory()
 
         def detect(data: bytes) -> str | None:
@@ -108,7 +105,6 @@ def main() -> None:
     elif args.detector == "cchardet":
         import cchardet
 
-        import_time = time.perf_counter() - t0
         after_import, _ = tracemalloc.get_traced_memory()
 
         def detect(data: bytes) -> str | None:
@@ -117,7 +113,6 @@ def main() -> None:
     else:
         from charset_normalizer import from_bytes
 
-        import_time = time.perf_counter() - t0
         after_import, _ = tracemalloc.get_traced_memory()
 
         def detect(data: bytes) -> str | None:
@@ -125,12 +120,9 @@ def main() -> None:
             best = r.best()
             return best.encoding if best else None
 
-    # Run detection over all files, collect per-file times
-    file_times: list[float] = []
+    # Run detection over all files (slow under tracemalloc, but needed for peak)
     for _enc, _lang, _fp, data in all_data:
-        ft0 = time.perf_counter()
         detect(data)
-        file_times.append(time.perf_counter() - ft0)
 
     _, traced_peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()
@@ -141,49 +133,29 @@ def main() -> None:
         rss_before *= 1024
         rss_after *= 1024
 
-    results = {
-        "detector": args.detector,
-        "use_encoding_era": args.use_encoding_era,
-        "num_files": len(all_data),
-        "import_time": import_time,
-        "traced_import": after_import - baseline_current,
-        "traced_peak": traced_peak - baseline_current,
-        "rss_before": rss_before,
-        "rss_after": rss_after,
-    }
+    traced_import = after_import - baseline_current
+    traced_peak_delta = traced_peak - baseline_current
 
-    # Always print JSON
-    print(json.dumps(results))
-
-    if not args.json_only:
-        # Human-readable summary
-        total_ms = sum(file_times) * 1000
-        mean_ms = statistics.mean(file_times) * 1000 if file_times else 0.0
-        median_ms = statistics.median(file_times) * 1000 if file_times else 0.0
-        if len(file_times) >= 20:
-            q = statistics.quantiles(file_times, n=20)
-            p90_ms = q[17] * 1000
-            p95_ms = q[18] * 1000
-        else:
-            p90_ms = p95_ms = 0.0
-
-        print()
+    if args.json_only:
+        print(
+            json.dumps(
+                {
+                    "traced_import": traced_import,
+                    "traced_peak": traced_peak_delta,
+                    "rss_before": rss_before,
+                    "rss_after": rss_after,
+                }
+            )
+        )
+    else:
         print(f"Detector: {args.detector}")
         if args.detector == "chardet":
             print(f"  encoding_era: {args.use_encoding_era}")
         print(f"  Files:        {len(all_data)}")
         print()
-        print("Timing:")
-        print(f"  Import:       {import_time:.3f}s")
-        print(f"  Detection:    {total_ms:.0f}ms total")
-        print(
-            f"  Per-file:     mean={mean_ms:.2f}ms  median={median_ms:.2f}ms"
-            f"  p90={p90_ms:.2f}ms  p95={p95_ms:.2f}ms"
-        )
-        print()
         print("Memory:")
-        print(f"  Traced import: {_format_bytes(after_import - baseline_current)}")
-        print(f"  Traced peak:   {_format_bytes(traced_peak - baseline_current)}")
+        print(f"  Traced import: {_format_bytes(traced_import)}")
+        print(f"  Traced peak:   {_format_bytes(traced_peak_delta)}")
         print(f"  RSS before:    {_format_bytes(rss_before)}")
         print(f"  RSS after:     {_format_bytes(rss_after)}")
 
