@@ -371,7 +371,7 @@ def run_pipeline(
                 structural_scores.append((enc.name, score))
 
     # If a multi-byte encoding scored very high, score all candidates
-    # (CJK + single-byte) statistically and apply mess penalty.
+    # (CJK + single-byte) statistically.
     if structural_scores:
         structural_scores.sort(key=lambda x: x[1], reverse=True)
         _best_name, best_score = structural_scores[0]

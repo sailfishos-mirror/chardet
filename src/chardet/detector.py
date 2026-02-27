@@ -65,11 +65,12 @@ class UniversalDetector:
         # data has arrived.
         if buf_len - self._last_checked < _MIN_INCREMENTAL_CHECK:
             return
+        prev_checked = self._last_checked
         self._last_checked = buf_len
 
-        # Track whether any non-ASCII byte has been seen
+        # Track whether any non-ASCII byte has been seen (only scan new bytes)
         if not self._has_non_ascii:
-            self._has_non_ascii = any(b > 0x7F for b in self._buffer)
+            self._has_non_ascii = any(b > 0x7F for b in self._buffer[prev_checked:])
 
         # Escape-sequence encodings (ISO-2022, HZ-GB-2312)
         escape_result = detect_escape_encoding(buf)

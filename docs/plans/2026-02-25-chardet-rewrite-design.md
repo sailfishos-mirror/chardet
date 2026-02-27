@@ -191,10 +191,10 @@ that can resolve most CJK ambiguity without reaching Stage 3.
 Surviving candidates scored using byte bigram frequency models:
 
 1. Compute bigram frequency distribution of the input (single pass, stored as a
-   `BigramProfile` with separate low-byte and high-byte frequency dicts)
-2. For each candidate, dot-product the profile against its trained model.
-   High-byte bigrams (either byte > 0x7F) are weighted 8x to emphasise the
-   non-ASCII signal that distinguishes encodings
+   `BigramProfile` with a single ``weighted_freq`` dict where counts are
+   pre-multiplied by their weight — 8x for non-ASCII bigrams, 1x otherwise)
+2. For each candidate, dot-product the profile against its trained model in a
+   single dict traversal with no per-item branching
 3. Normalize scores to confidence values, return ranked results
 
 The bigram profile is computed once and reused across all candidate models,

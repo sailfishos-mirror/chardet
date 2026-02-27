@@ -69,9 +69,14 @@ def detect_markup_charset(data: bytes) -> DetectionResult | None:
 
 
 def _validate_bytes(data: bytes, encoding: str) -> bool:
-    """Check that *data* can be decoded under *encoding* without errors."""
+    """Check that *data* can be decoded under *encoding* without errors.
+
+    Only validates the first ``_SCAN_LIMIT`` bytes to avoid decoding a
+    full 200KB input just to verify a charset declaration found in the
+    header.
+    """
     try:
-        data.decode(encoding)
+        data[:_SCAN_LIMIT].decode(encoding)
     except (UnicodeDecodeError, LookupError):
         return False
     return True
