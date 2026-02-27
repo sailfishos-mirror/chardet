@@ -58,7 +58,7 @@ def detect_markup_charset(data: bytes) -> DetectionResult | None:
         match = pattern.search(head)
         if match:
             encoding = _normalize_encoding(match.group(1))
-            if encoding is not None:
+            if encoding is not None and _validate_bytes(data, encoding):
                 return DetectionResult(
                     encoding=encoding,
                     confidence=_MARKUP_CONFIDENCE,
@@ -66,3 +66,12 @@ def detect_markup_charset(data: bytes) -> DetectionResult | None:
                 )
 
     return None
+
+
+def _validate_bytes(data: bytes, encoding: str) -> bool:
+    """Check that *data* can be decoded under *encoding* without errors."""
+    try:
+        data.decode(encoding)
+    except (UnicodeDecodeError, LookupError):
+        return False
+    return True

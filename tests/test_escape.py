@@ -44,6 +44,33 @@ def test_hz_gb_2312_needs_both_markers() -> None:
     assert result is None
 
 
+def test_hz_gb_2312_rejects_english_with_tildes() -> None:
+    # English text containing ~{ and ~} must NOT be detected as HZ-GB-2312
+    data = b"The formula ~{x + y~} is simple."
+    result = detect_escape_encoding(data)
+    assert result is None
+
+
+def test_hz_gb_2312_rejects_odd_length_region() -> None:
+    # Odd-length region between markers is not valid GB2312 pairs
+    data = b"~{ABC~}"
+    result = detect_escape_encoding(data)
+    assert result is None
+
+
+def test_hz_gb_2312_rejects_empty_region() -> None:
+    data = b"~{~}"
+    result = detect_escape_encoding(data)
+    assert result is None
+
+
+def test_hz_gb_2312_rejects_bytes_outside_range() -> None:
+    # Bytes outside 0x21-0x7E (e.g., space 0x20) are not valid GB2312
+    data = b"~{ a ~}"
+    result = detect_escape_encoding(data)
+    assert result is None
+
+
 def test_plain_ascii_returns_none() -> None:
     data = b"Hello World"
     result = detect_escape_encoding(data)

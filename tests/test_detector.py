@@ -69,6 +69,39 @@ def test_multiple_feeds():
     assert detector.result["encoding"] is not None
 
 
+def test_done_after_ascii_feed():
+    """feed() should set done=True for pure ASCII after enough data."""
+    detector = UniversalDetector()
+    detector.feed(b"Hello world, this is enough ASCII data for detection. " * 2)
+    assert detector.done is True
+    assert detector.result["encoding"] == "ascii"
+
+
+def test_done_after_utf8_feed():
+    """feed() should set done=True for valid UTF-8 with multibyte chars."""
+    detector = UniversalDetector()
+    data = "Héllo wörld café résumé naïve über".encode()
+    detector.feed(data * 2)
+    assert detector.done is True
+    assert detector.result["encoding"] == "utf-8"
+
+
+def test_done_after_escape_feed():
+    """feed() should set done=True for ISO-2022-JP escape sequences."""
+    detector = UniversalDetector()
+    data = b"Hello \x1b$B$3$s$K$A$O\x1b(B World" + b" " * 64
+    detector.feed(data)
+    assert detector.done is True
+    assert detector.result["encoding"] == "iso-2022-jp"
+
+
+def test_incremental_ascii_not_premature():
+    """feed() should not set done for ASCII with too little data."""
+    detector = UniversalDetector()
+    detector.feed(b"Hi")
+    assert detector.done is False
+
+
 def test_encoding_era_parameter():
     detector = UniversalDetector(encoding_era=EncodingEra.MODERN_WEB)
     detector.feed(b"Hello world")

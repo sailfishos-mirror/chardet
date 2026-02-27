@@ -3,14 +3,21 @@
 from __future__ import annotations
 
 from chardet.enums import EncodingEra
+from chardet.pipeline.ascii import detect_ascii
 from chardet.pipeline.bom import detect_bom
+from chardet.pipeline.escape import detect_escape_encoding
 from chardet.pipeline.orchestrator import run_pipeline
+from chardet.pipeline.utf8 import detect_utf8
 
 _NONE_RESULT: dict[str, str | float | None] = {
     "encoding": None,
     "confidence": 0.0,
     "language": None,
 }
+
+# Minimum bytes before running deterministic checks (avoids repeated work
+# on tiny feed() calls).
+_MIN_INCREMENTAL_CHECK = 64
 
 
 class UniversalDetector:
@@ -25,6 +32,8 @@ class UniversalDetector:
         self._done = False
         self._closed = False
         self._result: dict[str, str | float | None] | None = None
+        self._has_non_ascii = False
+        self._last_checked: int = 0
 
     def feed(self, data: bytes) -> None:
         if self._closed:
@@ -35,11 +44,56 @@ class UniversalDetector:
         remaining = self._max_bytes - len(self._buffer)
         if remaining > 0:
             self._buffer.extend(data[:remaining])
-        if len(self._buffer) >= 4 and self._result is None:
-            bom_result = detect_bom(bytes(self._buffer))
-            if bom_result is not None:
-                self._result = bom_result.to_dict()
+        self._try_incremental_detect()
+
+    def _try_incremental_detect(self) -> None:
+        """Run fast deterministic checks on the buffer to enable early done."""
+        buf_len = len(self._buffer)
+        if self._result is not None or buf_len < 4:
+            return
+
+        buf = bytes(self._buffer)
+
+        # BOM detection (definitive)
+        bom_result = detect_bom(buf)
+        if bom_result is not None:
+            self._result = bom_result.to_dict()
+            self._done = True
+            return
+
+        # Avoid re-checking on every tiny feed; only recheck after enough new
+        # data has arrived.
+        if buf_len - self._last_checked < _MIN_INCREMENTAL_CHECK:
+            return
+        self._last_checked = buf_len
+
+        # Track whether any non-ASCII byte has been seen
+        if not self._has_non_ascii:
+            self._has_non_ascii = any(b > 0x7F for b in self._buffer)
+
+        # Escape-sequence encodings (ISO-2022, HZ-GB-2312)
+        escape_result = detect_escape_encoding(buf)
+        if escape_result is not None:
+            self._result = escape_result.to_dict()
+            self._done = True
+            return
+
+        # Pure ASCII (only confident if we haven't seen non-ASCII and have
+        # enough data)
+        if not self._has_non_ascii and buf_len >= _MIN_INCREMENTAL_CHECK:
+            ascii_result = detect_ascii(buf)
+            if ascii_result is not None:
+                self._result = ascii_result.to_dict()
                 self._done = True
+                return
+
+        # UTF-8 structural validation
+        if self._has_non_ascii:
+            utf8_result = detect_utf8(buf)
+            if utf8_result is not None:
+                self._result = utf8_result.to_dict()
+                self._done = True
+                return
 
     def close(self) -> None:
         if self._closed:
@@ -57,6 +111,8 @@ class UniversalDetector:
         self._done = False
         self._closed = False
         self._result = None
+        self._has_non_ascii = False
+        self._last_checked = 0
 
     @property
     def done(self) -> bool:

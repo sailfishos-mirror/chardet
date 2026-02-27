@@ -30,7 +30,7 @@ def test_detect_utf8_multibyte():
 
 def test_detect_empty():
     result = chardet.detect(b"")
-    assert result["encoding"] == "windows-1252"
+    assert result["encoding"] == "utf-8"
     assert result["confidence"] == 0.10
 
 

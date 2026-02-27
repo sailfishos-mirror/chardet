@@ -65,6 +65,21 @@ def test_unknown_encoding_returns_none():
     assert result is None
 
 
+def test_lying_charset_declaration_rejected():
+    # Declares shift_jis but contains invalid bytes for that encoding
+    data = b'<meta charset="shift_jis">' + "日本語テスト".encode()
+    result = detect_markup_charset(data)
+    assert result is None
+
+
+def test_valid_charset_declaration_accepted():
+    # Declares shift_jis and contains valid shift_jis bytes
+    data = b'<meta charset="shift_jis">' + "日本語テスト".encode("shift_jis")
+    result = detect_markup_charset(data)
+    assert result is not None
+    assert result.encoding == "shift_jis"
+
+
 def test_only_scans_first_bytes():
     padding = b"<!-- " + b"x" * 2000 + b" -->"
     data = padding + b'<meta charset="utf-8">'

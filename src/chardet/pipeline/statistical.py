@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from chardet.models import load_models, score_best_language
+from chardet.models import BigramProfile, load_models, score_best_language
 from chardet.pipeline import DetectionResult
 
 if TYPE_CHECKING:
@@ -19,10 +19,11 @@ def score_candidates(
         return []
 
     models = load_models()
+    profile = BigramProfile(data)
     scores: list[tuple[str, float, str | None]] = []
 
     for enc in candidates:
-        s, lang = score_best_language(data, enc.name, models)
+        s, lang = score_best_language(data, enc.name, models, profile=profile)
         scores.append((enc.name, s, lang))
 
     # Sort by score descending

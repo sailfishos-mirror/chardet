@@ -10,6 +10,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from chardet.registry import EncodingInfo
 
 # ---------------------------------------------------------------------------
@@ -300,7 +302,7 @@ def _score_johab(data: bytes) -> float:
 # Dispatch table: encoding name -> scorer function
 # ---------------------------------------------------------------------------
 
-_SCORERS: dict[str, object] = {
+_SCORERS: dict[str, Callable[[bytes], float]] = {
     "shift_jis": _score_shift_jis,
     "cp932": _score_shift_jis,
     "euc-jp": _score_euc_jp,
@@ -475,7 +477,7 @@ def _mb_bytes_johab(data: bytes) -> int:
     return mb
 
 
-_MB_BYTE_COUNTERS: dict[str, object] = {
+_MB_BYTE_COUNTERS: dict[str, Callable[[bytes], int]] = {
     "shift_jis": _mb_bytes_shift_jis,
     "cp932": _mb_bytes_shift_jis,
     "euc-jp": _mb_bytes_euc_jp,

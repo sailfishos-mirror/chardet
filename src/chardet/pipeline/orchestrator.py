@@ -8,12 +8,12 @@ from chardet.pipeline import DetectionResult
 
 if TYPE_CHECKING:
     from chardet.enums import EncodingEra
+    from chardet.registry import EncodingInfo
 from chardet.pipeline.ascii import detect_ascii
 from chardet.pipeline.binary import is_binary
 from chardet.pipeline.bom import detect_bom
 from chardet.pipeline.escape import detect_escape_encoding
 from chardet.pipeline.markup import detect_markup_charset
-from chardet.pipeline.mess import compute_mess_score
 from chardet.pipeline.statistical import score_candidates
 from chardet.pipeline.structural import (
     compute_multibyte_byte_coverage,
@@ -25,6 +25,7 @@ from chardet.pipeline.validity import filter_by_validity
 from chardet.registry import get_candidates
 
 _BINARY_RESULT = DetectionResult(encoding=None, confidence=0.95, language=None)
+_EMPTY_RESULT = DetectionResult(encoding="utf-8", confidence=0.10, language=None)
 _FALLBACK_RESULT = DetectionResult(
     encoding="windows-1252", confidence=0.10, language=None
 )
@@ -193,8 +194,8 @@ _CJK_MIN_BYTE_COVERAGE = 0.35
 
 def _gate_cjk_candidates(
     data: bytes,
-    valid_candidates: list,
-) -> tuple[list, dict[str, float]]:
+    valid_candidates: tuple[EncodingInfo, ...],
+) -> tuple[list[EncodingInfo], dict[str, float]]:
     """Eliminate CJK multi-byte candidates that lack genuine multi-byte structure.
 
     Three checks are applied in order to each multi-byte candidate:
@@ -216,7 +217,7 @@ def _gate_cjk_candidates(
     """
     non_ascii_count = sum(1 for b in data if b > 0x7F)
     mb_scores: dict[str, float] = {}
-    gated: list = []
+    gated: list[EncodingInfo] = []
     for enc in valid_candidates:
         if enc.is_multibyte:
             mb_score = compute_structural_score(data, enc)
@@ -235,7 +236,7 @@ def _gate_cjk_candidates(
 def _score_structural_candidates(
     data: bytes,
     structural_scores: list[tuple[str, float]],
-    valid_candidates: list,
+    valid_candidates: list[EncodingInfo],
 ) -> list[DetectionResult]:
     """Score structurally-valid CJK candidates using statistical bigrams.
 
@@ -258,7 +259,8 @@ def _score_structural_candidates(
     single_byte = tuple(e for e in valid_candidates if not e.is_multibyte)
     if single_byte:
         results.extend(score_candidates(data, single_byte))
-    return _apply_mess_penalty(data, results)
+    results.sort(key=lambda r: r.confidence, reverse=True)
+    return results
 
 
 def _demote_niche_latin(
@@ -289,40 +291,6 @@ def _demote_niche_latin(
     return results
 
 
-def _apply_mess_penalty(
-    data: bytes, results: list[DetectionResult]
-) -> list[DetectionResult]:
-    """Penalize candidates that produce messy Unicode when decoded.
-
-    Decodes *data* with each candidate encoding and computes a mess score.
-    Confidence is reduced proportionally to the mess score.  Results are
-    re-sorted by adjusted confidence.
-    """
-    if len(results) <= 1:
-        return results
-
-    scored_results: list[DetectionResult] = []
-    for r in results:
-        if r.encoding is None:
-            scored_results.append(r)
-            continue
-        try:
-            decoded = data.decode(r.encoding)
-            mess = compute_mess_score(decoded)
-        except (UnicodeDecodeError, LookupError):
-            mess = 1.0
-        adjusted_confidence = r.confidence * (1.0 - mess)
-        scored_results.append(
-            DetectionResult(
-                encoding=r.encoding,
-                confidence=max(adjusted_confidence, 0.01),
-                language=r.language,
-            )
-        )
-    scored_results.sort(key=lambda r: r.confidence, reverse=True)
-    return scored_results
-
-
 def run_pipeline(
     data: bytes,
     encoding_era: EncodingEra,
@@ -332,7 +300,7 @@ def run_pipeline(
     data = data[:max_bytes]
 
     if not data:
-        return [_FALLBACK_RESULT]
+        return [_EMPTY_RESULT]
 
     # Stage 1a: BOM detection (runs first — BOMs are definitive and
     # UTF-16/32 data looks binary due to null bytes)
@@ -415,6 +383,4 @@ def run_pipeline(
     if not results:
         return [_FALLBACK_RESULT]
 
-    # Post-decode mess detection and niche Latin demotion.
-    results = _apply_mess_penalty(data, results)
     return _demote_niche_latin(data, results)

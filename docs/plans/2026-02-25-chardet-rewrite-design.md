@@ -15,9 +15,7 @@ statistical models and clean-room detection algorithms. No GPL/LGPL code is used
 4. High encoding accuracy on the chardet test suite
 5. Language detection included as a byproduct of encoding detection (not a
    primary goal)
-6. High performance: optimize for detection speed, lower memory usage. Parallel
-   encoding hypothesis testing within a single `detect()` call using all
-   available cores
+6. High performance: optimize for detection speed, lower memory usage
 7. Zero runtime dependencies (dev/training dependencies are fine)
 8. Must work on PyPy, primarily optimized for CPython
 9. Modern Python project setup (uv, ruff, pytest, pre-commit)
@@ -49,7 +47,7 @@ chardet/
 │       │   ├── markup.py        # Stage 1: HTML/XML charset extraction
 │       │   ├── validity.py      # Stage 2a: Byte sequence validity checking
 │       │   ├── structural.py    # Stage 2b: Multi-byte structural probing
-│       │   └── statistical.py   # Stage 3: Bigram frequency scoring (parallel)
+│       │   └── statistical.py   # Stage 3: Bigram frequency scoring
 │       └── models/
 │           ├── __init__.py      # Model loading utilities (struct.unpack)
 │           └── models.bin       # Bundled sparse bigram frequency tables
@@ -188,34 +186,30 @@ These are simple state machines per encoding based on public encoding
 specifications — no trained models, no LGPL code. Provides confidence scores
 that can resolve most CJK ambiguity without reaching Stage 3.
 
-### Stage 3 — Statistical Scoring (parallel)
+### Stage 3 — Statistical Scoring
 
 Surviving candidates scored using byte bigram frequency models:
 
-1. Compute bigram frequency distribution of the input
-2. For each candidate, compute similarity score against its trained model
-   (cosine similarity or chi-squared distance)
-3. Fan out using `concurrent.futures.ProcessPoolExecutor` — each worker scores
-   a batch of encodings
-4. Collect scores, normalize to confidence values, return ranked results
+1. Compute bigram frequency distribution of the input (single pass, stored as a
+   `BigramProfile` with separate low-byte and high-byte frequency dicts)
+2. For each candidate, dot-product the profile against its trained model.
+   High-byte bigrams (either byte > 0x7F) are weighted 8x to emphasise the
+   non-ASCII signal that distinguishes encodings
+3. Normalize scores to confidence values, return ranked results
 
-**Parallelism threshold:** If fewer than ~6-8 candidates survive to Stage 3,
-score sequentially to avoid process pool overhead.
+The bigram profile is computed once and reused across all candidate models,
+reducing per-model cost from O(n) to O(distinct_bigrams).
 
-## Parallelism & Performance
+## Performance
 
-- `concurrent.futures.ProcessPoolExecutor` lazily initialized at module level
-- Worker count defaults to `os.cpu_count()`, configurable via `CHARDET_WORKERS`
-  env var
-- Each worker process loads model data into its own memory on startup
-- For small candidate sets, skip pool and score single-threaded
-- `CHARDET_WORKERS=1` disables parallelism entirely
+Scoring is single-threaded. `ProcessPoolExecutor` was evaluated during
+development but removed: the overhead of process creation and data
+serialization exceeded the scoring cost for typical inputs. The single-pass
+`BigramProfile` optimisation makes sequential scoring fast enough for all
+practical use cases.
 
-**PyPy compatibility:** `ProcessPoolExecutor` works on PyPy. No CPython-specific
-C extensions. All model loading uses `struct` module.
-
-**Pool failure handling:** If pool worker crashes or initialization fails, fall
-back to single-threaded scoring silently.
+**PyPy compatibility:** No CPython-specific C extensions. All model loading
+uses `struct` module.
 
 ## Model Training & Storage
 
@@ -247,8 +241,7 @@ No giant dict literals — avoids the CPython 3.12 `sys.settrace` performance bu
 ### Model Loading
 
 Lazy-loading module-level cache. First `detect()` call loads all models via
-`struct.unpack`. Subsequent calls reuse cached data. Process pool workers load
-models independently from the `.bin` file.
+`struct.unpack`. Subsequent calls reuse cached data.
 
 ## Encoding Registry
 
@@ -283,7 +276,7 @@ issues).
 
 ### Input Edge Cases
 
-- **Empty input:** Return `{'encoding': None, 'confidence': 0.0, 'language': None}`
+- **Empty input:** Return `{'encoding': 'utf-8', 'confidence': 0.10, 'language': None}`
 - **Binary content:** Detected in Stage 0, return `None` encoding
 - **Single byte:** ASCII check may succeed, otherwise low-confidence result
 - **`max_bytes` truncation:** Slice input before entering pipeline

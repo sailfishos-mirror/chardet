@@ -69,24 +69,56 @@ def _get_enc_index() -> dict[str, list[tuple[str, bytearray]]]:
     return index
 
 
+class BigramProfile:
+    """Pre-computed bigram frequency distribution for a data sample.
+
+    Computing this once and reusing it across all models reduces per-model
+    scoring from O(n) to O(distinct_bigrams).
+    """
+
+    __slots__ = ("high_freq", "low_freq", "weight_sum")
+
+    def __init__(self, data: bytes) -> None:
+        total_bigrams = len(data) - 1
+        if total_bigrams <= 0:
+            self.low_freq: dict[int, int] = {}
+            self.high_freq: dict[int, int] = {}
+            self.weight_sum: int = 0
+            return
+
+        low: dict[int, int] = {}
+        high: dict[int, int] = {}
+        w_sum = 0
+        for i in range(total_bigrams):
+            b1 = data[i]
+            b2 = data[i + 1]
+            idx = (b1 << 8) | b2
+            if b1 > 0x7F or b2 > 0x7F:
+                high[idx] = high.get(idx, 0) + 1
+                w_sum += 8
+            else:
+                low[idx] = low.get(idx, 0) + 1
+                w_sum += 1
+        self.low_freq = low
+        self.high_freq = high
+        self.weight_sum = w_sum
+
+
+def _score_with_profile(profile: BigramProfile, model: bytearray) -> float:
+    """Score a pre-computed bigram profile against a single model."""
+    if profile.weight_sum == 0:
+        return 0.0
+    score = 0
+    for idx, count in profile.low_freq.items():
+        score += model[idx] * count
+    for idx, count in profile.high_freq.items():
+        score += model[idx] * count * 8
+    return score / (255 * profile.weight_sum)
+
+
 def _score_with_model(data: bytes, model: bytearray) -> float:
     """Score data against a single model bytearray."""
-    total_bigrams = len(data) - 1
-    if total_bigrams <= 0:
-        return 0.0
-
-    score = 0
-    weight_sum = 0
-    for i in range(total_bigrams):
-        b1 = data[i]
-        b2 = data[i + 1]
-        w = 8 if (b1 > 0x7F or b2 > 0x7F) else 1
-        score += model[(b1 << 8) | b2] * w
-        weight_sum += 255 * w
-
-    if weight_sum == 0:
-        return 0.0
-    return score / weight_sum
+    return _score_with_profile(BigramProfile(data), model)
 
 
 def score_bigrams(
@@ -105,6 +137,7 @@ def score_best_language(
     data: bytes,
     encoding: str,
     models: dict[str, bytearray],  # noqa: ARG001
+    profile: BigramProfile | None = None,
 ) -> tuple[float, str | None]:
     """Score data against all language variants of an encoding.
 
@@ -114,6 +147,9 @@ def score_best_language(
     The *models* parameter is accepted for API consistency with
     ``score_bigrams`` but the internal index (built once from the loaded
     models) is used for efficient lookup.
+
+    If *profile* is provided, it is reused instead of recomputing the bigram
+    frequency distribution from *data*.
     """
     if not data:
         return 0.0, None
@@ -123,10 +159,13 @@ def score_best_language(
     if variants is None:
         return 0.0, None
 
+    if profile is None:
+        profile = BigramProfile(data)
+
     best_score = 0.0
     best_lang: str | None = None
     for lang, model in variants:
-        s = _score_with_model(data, model)
+        s = _score_with_profile(profile, model)
         if s > best_score:
             best_score = s
             best_lang = lang
