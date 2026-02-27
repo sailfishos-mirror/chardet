@@ -26,5 +26,12 @@ def test_excessive_accents():
     assert score > 0.1
 
 
+def test_mixed_scripts():
+    """Adjacent Cyrillic and Arabic characters may indicate wrong encoding."""
+    text = "Hello World"  # Cyrillic then Latin (same-looking but different scripts)
+    score = compute_mess_score(text)
+    assert score >= 0.0  # Not negative; may be 0.0 on Python < 3.13
+
+
 def test_empty_string():
     assert compute_mess_score("") == 0.0

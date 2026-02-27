@@ -307,7 +307,10 @@ def run_pipeline(
     if not results:
         return [_FALLBACK_RESULT]
 
-    # Post-decode mess detection: penalize candidates that produce messy Unicode
+    # Post-decode mess detection: penalize candidates that produce messy Unicode.
+    # Note: this deliberately skips the structural early-return path above
+    # (Stage 2b).  CJK multi-byte encodings are decided by structural validity,
+    # not Unicode output quality.
     results = _apply_mess_penalty(data, results)
 
     # Demote iso-8859-10 if no distinguishing bytes present.
