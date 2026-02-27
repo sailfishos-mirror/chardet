@@ -47,8 +47,6 @@ _COMMON_LATIN_ENCODINGS: frozenset[str] = frozenset(
 # Computed programmatically via:
 #   {b for b in range(0x80, 0x100)
 #    if bytes([b]).decode('iso-8859-10') != bytes([b]).decode('iso-8859-1')}
-# If none of these bytes are present in the data, iso-8859-10 is
-# indistinguishable from more common Latin encodings, so we demote it.
 _ISO_8859_10_DISTINGUISHING: frozenset[int] = frozenset(
     {
         0xA1,
@@ -100,16 +98,77 @@ _ISO_8859_10_DISTINGUISHING: frozenset[int] = frozenset(
     }
 )
 
+# Bytes where iso-8859-14 decodes to a different character than iso-8859-1.
+# Computed programmatically via:
+#   {b for b in range(0x80, 0x100)
+#    if bytes([b]).decode('iso-8859-14') != bytes([b]).decode('iso-8859-1')}
+_ISO_8859_14_DISTINGUISHING: frozenset[int] = frozenset(
+    {
+        0xA1,
+        0xA2,
+        0xA4,
+        0xA5,
+        0xA6,
+        0xA8,
+        0xAA,
+        0xAB,
+        0xAC,
+        0xAF,
+        0xB0,
+        0xB1,
+        0xB2,
+        0xB3,
+        0xB4,
+        0xB5,
+        0xB7,
+        0xB8,
+        0xB9,
+        0xBA,
+        0xBB,
+        0xBC,
+        0xBD,
+        0xBE,
+        0xBF,
+        0xD0,
+        0xD7,
+        0xDE,
+        0xF0,
+        0xF7,
+        0xFE,
+    }
+)
 
-def _has_iso_8859_10_evidence(data: bytes) -> bool:
-    """Return True if data contains bytes unique to iso-8859-10.
+# Bytes where windows-1254 has Turkish-specific characters that differ from
+# windows-1252.  The C1 range (0x80-0x9F) is shared between windows-1252
+# and windows-1254 (smart quotes, dashes, etc.), so only the six Turkish
+# letter positions matter: 0xD0, 0xDD, 0xDE, 0xF0, 0xFD, 0xFE.
+_WINDOWS_1254_DISTINGUISHING: frozenset[int] = frozenset(
+    {0xD0, 0xDD, 0xDE, 0xF0, 0xFD, 0xFE}
+)
+
+# Encodings that are often false positives when their distinguishing bytes
+# are absent.  Keyed by encoding name -> frozenset of byte values where
+# that encoding differs from iso-8859-1 (or windows-1252 in the case of
+# windows-1254).
+_DEMOTION_CANDIDATES: dict[str, frozenset[int]] = {
+    "iso-8859-10": _ISO_8859_10_DISTINGUISHING,
+    "iso-8859-14": _ISO_8859_14_DISTINGUISHING,
+    "windows-1254": _WINDOWS_1254_DISTINGUISHING,
+}
+
+
+def _should_demote(encoding: str, data: bytes) -> bool:
+    """Return True if encoding is a demotion candidate with no distinguishing bytes.
 
     Checks whether any non-ASCII byte in *data* falls in the set of byte
-    values that decode differently under iso-8859-10 vs iso-8859-1.  If none
-    do, the data is equally valid under both encodings and there is no
-    byte-level evidence for preferring iso-8859-10.
+    values that decode differently under the given encoding vs iso-8859-1.
+    If none do, the data is equally valid under both encodings and there is
+    no byte-level evidence for preferring the candidate encoding.
     """
-    return any(b in _ISO_8859_10_DISTINGUISHING for b in data if b > 0x7F)
+    distinguishing = _DEMOTION_CANDIDATES.get(encoding)
+    if distinguishing is None:
+        return False
+    return not any(b in distinguishing for b in data if b > 0x7F)
 
 
 # Minimum structural score (valid multi-byte sequences / lead bytes) required
@@ -171,6 +230,63 @@ def _gate_cjk_candidates(
                 continue  # Most high bytes are orphans -> not CJK
         gated.append(enc)
     return gated, mb_scores
+
+
+def _score_structural_candidates(
+    data: bytes,
+    structural_scores: list[tuple[str, float]],
+    valid_candidates: list,
+) -> list[DetectionResult]:
+    """Score structurally-valid CJK candidates using statistical bigrams.
+
+    When multiple CJK encodings score equally high structurally, statistical
+    scoring differentiates them (e.g. euc-jp vs big5 for Japanese data).
+    Single-byte candidates are also scored and included so that the caller
+    can compare CJK vs single-byte confidence.
+    """
+    enc_lookup = {e.name: e for e in valid_candidates if e.is_multibyte}
+    valid_mb = tuple(
+        enc_lookup[name] for name, _sc in structural_scores if name in enc_lookup
+    )
+    if valid_mb:
+        results = list(score_candidates(data, valid_mb))
+    else:
+        results = [
+            DetectionResult(encoding=name, confidence=score, language=None)
+            for name, score in structural_scores
+        ]
+    single_byte = tuple(e for e in valid_candidates if not e.is_multibyte)
+    if single_byte:
+        results.extend(score_candidates(data, single_byte))
+    return _apply_mess_penalty(data, results)
+
+
+def _demote_niche_latin(
+    data: bytes,
+    results: list[DetectionResult],
+) -> list[DetectionResult]:
+    """Demote niche Latin encodings when no distinguishing bytes are present.
+
+    Some bigram models (e.g. iso-8859-10, iso-8859-14, windows-1254) can win
+    on data that contains only bytes shared with common Western Latin
+    encodings.  When there is no byte-level evidence for the winning
+    encoding, promote the first common Western Latin candidate to the top and
+    push the demoted encoding to last.
+    """
+    if (
+        len(results) > 1
+        and results[0].encoding is not None
+        and _should_demote(results[0].encoding, data)
+    ):
+        demoted_encoding = results[0].encoding
+        for r in results[1:]:
+            if r.encoding in _COMMON_LATIN_ENCODINGS:
+                others = [
+                    x for x in results if x.encoding != demoted_encoding and x is not r
+                ]
+                demoted_entries = [x for x in results if x.encoding == demoted_encoding]
+                return [r, *others, *demoted_entries]
+    return results
 
 
 def _apply_mess_penalty(
@@ -284,59 +400,21 @@ def run_pipeline(
             if score > 0.0:
                 structural_scores.append((enc.name, score))
 
-    # If a multi-byte encoding scored very high, include it prominently
+    # If a multi-byte encoding scored very high, score all candidates
+    # (CJK + single-byte) statistically and apply mess penalty.
     if structural_scores:
         structural_scores.sort(key=lambda x: x[1], reverse=True)
         _best_name, best_score = structural_scores[0]
         if best_score >= _STRUCTURAL_CONFIDENCE_THRESHOLD:
-            results = [
-                DetectionResult(encoding=name, confidence=score, language=None)
-                for name, score in structural_scores
-            ]
-            # Also score remaining single-byte candidates
-            single_byte = tuple(e for e in valid_candidates if not e.is_multibyte)
-            if single_byte:
-                stat_results = score_candidates(data, single_byte)
-                results.extend(stat_results)
-            results.sort(key=lambda r: r.confidence, reverse=True)
-            return results
+            return _score_structural_candidates(
+                data, structural_scores, valid_candidates
+            )
 
     # Stage 3: Statistical scoring for all remaining candidates
     results = score_candidates(data, tuple(valid_candidates))
-
     if not results:
         return [_FALLBACK_RESULT]
 
-    # Post-decode mess detection: penalize candidates that produce messy Unicode.
-    # Note: this deliberately skips the structural early-return path above
-    # (Stage 2b).  CJK multi-byte encodings are decided by structural validity,
-    # not Unicode output quality.
+    # Post-decode mess detection and niche Latin demotion.
     results = _apply_mess_penalty(data, results)
-
-    # Demote iso-8859-10 if no distinguishing bytes present.
-    # The iso-8859-10 bigram model can win on data that contains only bytes
-    # shared with iso-8859-1 / iso-8859-15 / windows-1252.  When there is no
-    # byte-level evidence for iso-8859-10, promote the first common Western
-    # Latin candidate to the top, keep all other results in their original
-    # confidence order, and push iso-8859-10 to last.  We restrict the
-    # promotion target to common Latin encodings to avoid accidentally
-    # promoting unrelated encodings like windows-1254.
-    #
-    # Note: this only applies to the statistical scoring path (Stage 3).
-    # The structural early-return path (Stage 2b) is unaffected because
-    # iso-8859-10 is a single-byte encoding and cannot win that path.
-    if (
-        len(results) > 1
-        and results[0].encoding == "iso-8859-10"
-        and not _has_iso_8859_10_evidence(data)
-    ):
-        for r in results[1:]:
-            if r.encoding in _COMMON_LATIN_ENCODINGS:
-                others = [
-                    x for x in results if x.encoding != "iso-8859-10" and x is not r
-                ]
-                iso_entries = [x for x in results if x.encoding == "iso-8859-10"]
-                results = [r, *others, *iso_entries]
-                break
-
-    return results
+    return _demote_niche_latin(data, results)

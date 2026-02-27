@@ -22,9 +22,11 @@ _MIN_BYTES_UTF32 = 16  # 4 full code units
 _MIN_BYTES_UTF16 = 10  # 5 full code units
 
 # Minimum fraction of null bytes in the expected position for UTF-16.
-# Real UTF-16 text always has >=15% (even for CJK-heavy content).
-# Non-UTF-16 encodings have exactly 0% null bytes.
-_UTF16_MIN_NULL_FRACTION = 0.10
+# CJK-heavy UTF-16 text (Chinese, Japanese, Korean) can have as few as
+# ~4.5% null bytes in the expected position, since CJK codepoints have
+# non-zero high bytes.  The validation step (decode + text quality check)
+# prevents false positives from binary files at this lower threshold.
+_UTF16_MIN_NULL_FRACTION = 0.03
 
 
 def detect_utf1632_patterns(data: bytes) -> DetectionResult | None:
