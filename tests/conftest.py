@@ -91,13 +91,16 @@ def _clone_test_data(local_data: Path) -> None:
 
 
 def _get_data_dir() -> Path:
-    """Get the test data directory (for use at collection time, outside fixtures)."""
+    """Get the test data directory, cloning from GitHub if needed."""
     repo_root = Path(__file__).parent.parent
     local_data = repo_root / "tests" / "data"
     if local_data.is_dir() and any(local_data.iterdir()):
+        if _cache_is_stale(local_data):
+            shutil.rmtree(local_data)
+            _clone_test_data(local_data)
         return local_data
-    pytest.skip("No test data found — run accuracy tests once to clone data")
-    return local_data  # unreachable, satisfies type checker
+    _clone_test_data(local_data)
+    return local_data
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
