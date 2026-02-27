@@ -157,6 +157,13 @@ _DEMOTION_CANDIDATES: dict[str, frozenset[int]] = {
     "windows-1254": _WINDOWS_1254_DISTINGUISHING,
 }
 
+# Bytes where KOI8-T maps to Tajik-specific Cyrillic letters but KOI8-R
+# maps to box-drawing characters.  Presence of any of these bytes is strong
+# evidence for KOI8-T over KOI8-R.
+_KOI8_T_DISTINGUISHING: frozenset[int] = frozenset(
+    {0x80, 0x81, 0x83, 0x8A, 0x8C, 0x8D, 0x8E, 0x90, 0xA1, 0xA2, 0xA5, 0xB5}
+)
+
 
 def _should_demote(encoding: str, data: bytes) -> bool:
     """Return True if encoding is a demotion candidate with no distinguishing bytes.
@@ -293,6 +300,36 @@ def _demote_niche_latin(
     return results
 
 
+def _promote_koi8t(
+    data: bytes,
+    results: list[DetectionResult],
+) -> list[DetectionResult]:
+    """Promote KOI8-T over KOI8-R when Tajik-specific bytes are present.
+
+    KOI8-T and KOI8-R share the entire 0xC0-0xFF Cyrillic letter block,
+    making statistical discrimination difficult.  However, KOI8-T maps 12
+    bytes in 0x80-0xBF to Tajik-specific Cyrillic letters where KOI8-R has
+    box-drawing characters.  If any of these bytes appear, KOI8-T is the
+    better match.
+    """
+    if not results or results[0].encoding != "koi8-r":
+        return results
+    # Check if KOI8-T is anywhere in the results
+    koi8t_idx = None
+    for i, r in enumerate(results):
+        if r.encoding == "koi8-t":
+            koi8t_idx = i
+            break
+    if koi8t_idx is None:
+        return results
+    # Check for Tajik-specific bytes
+    if any(b in _KOI8_T_DISTINGUISHING for b in data if b > 0x7F):
+        koi8t_result = results[koi8t_idx]
+        others = [r for i, r in enumerate(results) if i != koi8t_idx]
+        return [koi8t_result, *others]
+    return results
+
+
 def run_pipeline(
     data: bytes,
     encoding_era: EncodingEra,
@@ -385,4 +422,5 @@ def run_pipeline(
     if not results:
         return [_FALLBACK_RESULT]
 
-    return _demote_niche_latin(data, results)
+    results = _demote_niche_latin(data, results)
+    return _promote_koi8t(data, results)
