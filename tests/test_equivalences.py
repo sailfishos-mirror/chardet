@@ -56,3 +56,9 @@ def test_unknown_encoding_returns_false():
     """Bogus encoding name that cannot be looked up returns False."""
     data = b"Hello"
     assert is_equivalent_detection(data, "utf-8", "not-a-real-encoding") is False
+
+
+def test_non_letter_difference_returns_false():
+    """Currency sign vs euro sign at 0xA4 are different non-decomposable symbols."""
+    data = b"\xa4"
+    assert is_equivalent_detection(data, "iso-8859-1", "iso-8859-15") is False

@@ -127,8 +127,8 @@ def is_equivalent_detection(data: bytes, expected: str, detected: str | None) ->
         return True
 
     try:
-        text_exp = data.decode(expected)
-        text_det = data.decode(detected)
+        text_exp = data.decode(norm_exp)
+        text_det = data.decode(norm_det)
     except (UnicodeDecodeError, LookupError):
         return False
 
