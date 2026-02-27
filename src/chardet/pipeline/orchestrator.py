@@ -16,6 +16,7 @@ from chardet.pipeline.escape import detect_escape_encoding
 from chardet.pipeline.markup import detect_markup_charset
 from chardet.pipeline.statistical import score_candidates
 from chardet.pipeline.structural import (
+    compute_lead_byte_diversity,
     compute_multibyte_byte_coverage,
     compute_structural_score,
 )
@@ -197,6 +198,16 @@ _CJK_MIN_NON_ASCII = 6
 # The lowest true-positive coverage in the test suite is ~0.39 (a CP932 HTML
 # file with many half-width katakana).
 _CJK_MIN_BYTE_COVERAGE = 0.35
+# Minimum number of distinct lead byte values for a CJK candidate to
+# survive gating.  Genuine CJK text uses a wide range of lead bytes;
+# European false positives cluster in a narrow band.  Only applied when
+# there are enough non-ASCII bytes to expect diversity (see
+# _CJK_DIVERSITY_MIN_NON_ASCII).
+_CJK_MIN_LEAD_DIVERSITY = 4
+# Minimum non-ASCII byte count before applying the lead diversity gate.
+# Very small files (e.g. 8 non-ASCII bytes) may genuinely have low
+# diversity even for real CJK text (e.g. repeated katakana).
+_CJK_DIVERSITY_MIN_NON_ASCII = 16
 
 
 def _gate_cjk_candidates(
@@ -205,7 +216,7 @@ def _gate_cjk_candidates(
 ) -> tuple[tuple[EncodingInfo, ...], dict[str, float]]:
     """Eliminate CJK multi-byte candidates that lack genuine multi-byte structure.
 
-    Three checks are applied in order to each multi-byte candidate:
+    Four checks are applied in order to each multi-byte candidate:
 
     1. **Structural pair ratio** (valid_pairs / lead_bytes) must be
        >= ``_CJK_MIN_MB_RATIO``.  Catches files with many orphan lead bytes.
@@ -218,6 +229,11 @@ def _gate_cjk_candidates(
        total non-ASCII bytes) must be >= ``_CJK_MIN_BYTE_COVERAGE``.  Latin
        text has many high bytes that are NOT consumed by multi-byte pairs;
        genuine CJK text has nearly all high bytes accounted for.
+
+    4. **Lead byte diversity**: the number of distinct lead byte values in
+       valid pairs must be >= ``_CJK_MIN_LEAD_DIVERSITY``.  Genuine CJK text
+       draws from a wide repertoire of lead bytes; European false positives
+       cluster in a narrow band (e.g. 0xC0-0xDF for accented Latin).
 
     Returns the filtered candidate list and a dict of cached structural
     scores for reuse in Stage 2b.
@@ -238,6 +254,10 @@ def _gate_cjk_candidates(
             byte_coverage = compute_multibyte_byte_coverage(data, enc)
             if byte_coverage < _CJK_MIN_BYTE_COVERAGE:
                 continue  # Most high bytes are orphans -> not CJK
+            if non_ascii_count >= _CJK_DIVERSITY_MIN_NON_ASCII:
+                lead_diversity = compute_lead_byte_diversity(data, enc)
+                if lead_diversity < _CJK_MIN_LEAD_DIVERSITY:
+                    continue  # Too few distinct lead bytes -> not CJK
         gated.append(enc)
     return tuple(gated), mb_scores
 

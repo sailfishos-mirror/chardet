@@ -485,6 +485,171 @@ _MB_BYTE_COUNTERS: dict[str, Callable[[bytes], int]] = {
 
 
 # ---------------------------------------------------------------------------
+# Per-encoding lead byte diversity counters
+#
+# Each returns the number of *distinct* lead byte values that participate in
+# valid multi-byte sequences.  Genuine CJK text draws from a wide repertoire
+# (many distinct lead bytes); European false positives cluster in a narrow
+# band (e.g. 0xC0-0xDF for accented Latin characters).
+# ---------------------------------------------------------------------------
+
+
+def _lead_diversity_shift_jis(data: bytes) -> int:
+    """Count distinct lead bytes in valid Shift-JIS pairs."""
+    leads: set[int] = set()
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if (0x81 <= b <= 0x9F) or (0xE0 <= b <= 0xEF):
+            if i + 1 < length:
+                trail = data[i + 1]
+                if (0x40 <= trail <= 0x7E) or (0x80 <= trail <= 0xFC):
+                    leads.add(b)
+                    i += 2
+                    continue
+            i += 1
+        else:
+            i += 1
+    return len(leads)
+
+
+def _lead_diversity_euc_jp(data: bytes) -> int:
+    """Count distinct lead bytes in valid EUC-JP pairs."""
+    leads: set[int] = set()
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if b == 0x8E:
+            # SS2 sequence
+            if i + 1 < length and 0xA1 <= data[i + 1] <= 0xDF:
+                leads.add(b)
+                i += 2
+                continue
+            i += 1
+        elif b == 0x8F:
+            # SS3 sequence
+            if (
+                i + 2 < length
+                and 0xA1 <= data[i + 1] <= 0xFE
+                and 0xA1 <= data[i + 2] <= 0xFE
+            ):
+                leads.add(b)
+                i += 3
+                continue
+            i += 1
+        elif 0xA1 <= b <= 0xFE:
+            if i + 1 < length and 0xA1 <= data[i + 1] <= 0xFE:
+                leads.add(b)
+                i += 2
+                continue
+            i += 1
+        else:
+            i += 1
+    return len(leads)
+
+
+def _lead_diversity_euc_kr(data: bytes) -> int:
+    """Count distinct lead bytes in valid EUC-KR pairs."""
+    leads: set[int] = set()
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if 0xA1 <= b <= 0xFE:
+            if i + 1 < length and 0xA1 <= data[i + 1] <= 0xFE:
+                leads.add(b)
+                i += 2
+                continue
+            i += 1
+        else:
+            i += 1
+    return len(leads)
+
+
+def _lead_diversity_gb18030(data: bytes) -> int:
+    """Count distinct lead bytes in valid GB18030 pairs."""
+    leads: set[int] = set()
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if 0x81 <= b <= 0xFE:
+            # 4-byte GB18030
+            if (
+                i + 3 < length
+                and 0x30 <= data[i + 1] <= 0x39
+                and 0x81 <= data[i + 2] <= 0xFE
+                and 0x30 <= data[i + 3] <= 0x39
+            ):
+                leads.add(b)
+                i += 4
+                continue
+            # 2-byte GB2312
+            if 0xA1 <= b <= 0xF7 and i + 1 < length and 0xA1 <= data[i + 1] <= 0xFE:
+                leads.add(b)
+                i += 2
+                continue
+            i += 1
+        else:
+            i += 1
+    return len(leads)
+
+
+def _lead_diversity_big5(data: bytes) -> int:
+    """Count distinct lead bytes in valid Big5 pairs."""
+    leads: set[int] = set()
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if 0xA1 <= b <= 0xF9:
+            if i + 1 < length:
+                trail = data[i + 1]
+                if (0x40 <= trail <= 0x7E) or (0xA1 <= trail <= 0xFE):
+                    leads.add(b)
+                    i += 2
+                    continue
+            i += 1
+        else:
+            i += 1
+    return len(leads)
+
+
+def _lead_diversity_johab(data: bytes) -> int:
+    """Count distinct lead bytes in valid Johab pairs."""
+    leads: set[int] = set()
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if (0x84 <= b <= 0xD3) or (0xD8 <= b <= 0xDE) or (0xE0 <= b <= 0xF9):
+            if i + 1 < length:
+                trail = data[i + 1]
+                if (0x31 <= trail <= 0x7E) or (0x91 <= trail <= 0xFE):
+                    leads.add(b)
+                    i += 2
+                    continue
+            i += 1
+        else:
+            i += 1
+    return len(leads)
+
+
+_LEAD_BYTE_DIVERSITY_COUNTERS: dict[str, Callable[[bytes], int]] = {
+    "shift_jis": _lead_diversity_shift_jis,
+    "cp932": _lead_diversity_shift_jis,
+    "euc-jp": _lead_diversity_euc_jp,
+    "euc-kr": _lead_diversity_euc_kr,
+    "cp949": _lead_diversity_euc_kr,
+    "gb18030": _lead_diversity_gb18030,
+    "big5": _lead_diversity_big5,
+    "johab": _lead_diversity_johab,
+}
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -533,3 +698,19 @@ def compute_multibyte_byte_coverage(data: bytes, encoding_info: EncodingInfo) ->
 
     mb_bytes = counter(data)
     return mb_bytes / non_ascii
+
+
+def compute_lead_byte_diversity(data: bytes, encoding_info: EncodingInfo) -> int:
+    """Count distinct lead byte values in valid multi-byte pairs.
+
+    Genuine CJK text uses lead bytes from across the encoding's full
+    repertoire.  European text falsely matching a CJK structural scorer
+    clusters lead bytes in a narrow band (e.g. 0xC0-0xDF for accented
+    Latin characters).
+    """
+    if not data or not encoding_info.is_multibyte:
+        return 0
+    counter = _LEAD_BYTE_DIVERSITY_COUNTERS.get(encoding_info.name)
+    if counter is None:
+        return 256  # Unknown encoding -- don't gate
+    return counter(data)

@@ -1,18 +1,30 @@
 """Tests for CJK multi-byte gating in the pipeline."""
 
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+import chardet
 from chardet.enums import EncodingEra
 from chardet.pipeline.orchestrator import run_pipeline
 
-_CJK_ENCODINGS = {
-    "gb18030",
-    "big5",
-    "cp932",
-    "cp949",
-    "euc-jp",
-    "euc-kr",
-    "shift_jis",
-    "johab",
-}
+_CJK_ENCODINGS = frozenset(
+    {
+        "gb18030",
+        "big5",
+        "cp932",
+        "cp949",
+        "euc-jp",
+        "euc-kr",
+        "shift_jis",
+        "johab",
+        "hz-gb-2312",
+        "iso-2022-jp",
+        "iso-2022-kr",
+    }
+)
 
 
 def test_ebcdic_not_detected_as_gb18030():
@@ -53,3 +65,15 @@ def test_real_korean_still_detected():
     # The gate should not eliminate CJK candidates when data has real multi-byte
     # sequences.  Exact CJK differentiation is a separate concern.
     assert result[0].encoding in _CJK_ENCODINGS
+
+
+def test_german_macroman_not_detected_as_cjk() -> None:
+    """German mac-roman text must not be detected as cp932."""
+    test_file = Path("tests/data/macroman-german/culturax_mC4_83756.txt")
+    if not test_file.exists():
+        pytest.skip("Test data not available")
+    data = test_file.read_bytes()
+    result = chardet.detect(data, encoding_era=EncodingEra.ALL)
+    assert result["encoding"] not in _CJK_ENCODINGS, (
+        f"European text falsely detected as {result['encoding']}"
+    )
