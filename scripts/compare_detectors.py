@@ -24,6 +24,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from utils import collect_test_files
+from utils import format_bytes as _format_bytes
 
 from chardet.equivalences import (
     BIDIRECTIONAL_GROUPS,
@@ -158,15 +159,6 @@ def _run_timing_subprocess(
 # ---------------------------------------------------------------------------
 # Subprocess-isolated measurement (memory + import time)
 # ---------------------------------------------------------------------------
-
-
-def _format_bytes(n: int) -> str:
-    """Format byte count as human-readable string."""
-    if n >= 1 << 20:
-        return f"{n / (1 << 20):.1f} MiB"
-    if n >= 1 << 10:
-        return f"{n / (1 << 10):.1f} KiB"
-    return f"{n} B"
 
 
 def _measure_memory_subprocess(

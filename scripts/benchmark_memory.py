@@ -17,17 +17,10 @@ import sys
 import tracemalloc
 from pathlib import Path
 
+from utils import format_bytes as _format_bytes
+
 # Start tracemalloc as early as possible to capture baseline accurately.
 tracemalloc.start()
-
-
-def _format_bytes(n: int) -> str:
-    """Format byte count as human-readable string."""
-    if n >= 1 << 20:
-        return f"{n / (1 << 20):.1f} MiB"
-    if n >= 1 << 10:
-        return f"{n / (1 << 10):.1f} KiB"
-    return f"{n} B"
 
 
 def main() -> None:

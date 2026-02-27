@@ -9,7 +9,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-import pytest
+import pytest  # noqa: TC002 — runtime use in pytest_generate_tests hook
 
 _TEST_DATA_REPO = "https://github.com/chardet/test-data.git"
 _COMMIT_HASH_FILE = ".commit-hash"
@@ -18,25 +18,6 @@ _COMMIT_HASH_FILE = ".commit-hash"
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
 from utils import collect_test_files  # noqa: E402
-
-
-@pytest.fixture(scope="session")
-def chardet_test_data_dir() -> Path:
-    """Resolve chardet test data directory.
-
-    1. If tests/data/ exists in repo, use it (post-merge scenario).
-    2. Otherwise, clone from GitHub and cache locally.
-    """
-    repo_root = Path(__file__).parent.parent
-    local_data = repo_root / "tests" / "data"
-    if local_data.is_dir() and any(local_data.iterdir()):
-        if _cache_is_stale(local_data):
-            shutil.rmtree(local_data)
-            _clone_test_data(local_data)
-        return local_data
-
-    _clone_test_data(local_data)
-    return local_data
 
 
 def _cache_is_stale(local_data: Path) -> bool:

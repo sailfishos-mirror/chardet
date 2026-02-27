@@ -10,8 +10,6 @@ _BINARY_THRESHOLD = 0.01
 # everything else.  len(data) - len(translated) gives the count in one
 # C-level pass.
 _BINARY_DELETE = bytes(range(0x09)) + bytes(range(0x0E, 0x20))
-_BINARY_TABLE = bytes.maketrans(b"", b"")
-_BINARY_TABLE_DEL = _BINARY_DELETE
 
 
 def is_binary(data: bytes, max_bytes: int = 200_000) -> bool:
@@ -20,6 +18,6 @@ def is_binary(data: bytes, max_bytes: int = 200_000) -> bool:
     if not data:
         return False
 
-    clean = data.translate(_BINARY_TABLE, _BINARY_TABLE_DEL)
+    clean = data.translate(None, _BINARY_DELETE)
     binary_count = len(data) - len(clean)
     return binary_count / len(data) > _BINARY_THRESHOLD

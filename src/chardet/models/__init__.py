@@ -115,11 +115,6 @@ def _score_with_profile(profile: BigramProfile, model: bytearray) -> float:
     return score / (255 * profile.weight_sum)
 
 
-def _score_with_model(data: bytes, model: bytearray) -> float:
-    """Score data against a single model bytearray."""
-    return _score_with_profile(BigramProfile(data), model)
-
-
 def score_bigrams(
     data: bytes,
     encoding: str,

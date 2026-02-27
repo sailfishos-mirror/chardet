@@ -431,7 +431,7 @@ def run_pipeline(
     # (CJK + single-byte) statistically.
     if structural_scores:
         structural_scores.sort(key=lambda x: x[1], reverse=True)
-        _best_name, best_score = structural_scores[0]
+        _, best_score = structural_scores[0]
         if best_score >= _STRUCTURAL_CONFIDENCE_THRESHOLD:
             return _score_structural_candidates(
                 data, structural_scores, valid_candidates

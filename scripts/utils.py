@@ -8,6 +8,15 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+def format_bytes(n: int) -> str:
+    """Format byte count as human-readable string."""
+    if n >= 1 << 20:
+        return f"{n / (1 << 20):.1f} MiB"
+    if n >= 1 << 10:
+        return f"{n / (1 << 10):.1f} KiB"
+    return f"{n} B"
+
+
 def collect_test_files(data_dir: Path) -> list[tuple[str, str, Path]]:
     """Collect (encoding, language, filepath) tuples from test data.
 
