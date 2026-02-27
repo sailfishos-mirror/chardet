@@ -34,6 +34,31 @@ exclude = ["tests/data/", "data/"]
 [tool.hatch.build.targets.wheel]
 packages = ["src/chardet"]
 
+[tool.hatch.build.targets.wheel.hooks.mypyc]
+enable-by-default = false
+dependencies = ["hatch-mypyc>=0.16.0", "mypy>=1.15"]
+require-runtime-dependencies = false
+exclude = [
+    "/src/chardet/__init__.py",
+    "/src/chardet/__main__.py",
+    "/src/chardet/cli.py",
+    "/src/chardet/detector.py",
+    "/src/chardet/enums.py",
+    "/src/chardet/equivalences.py",
+    "/src/chardet/registry.py",
+    "/src/chardet/pipeline/__init__.py",
+    "/src/chardet/pipeline/ascii.py",
+    "/src/chardet/pipeline/binary.py",
+    "/src/chardet/pipeline/bom.py",
+    "/src/chardet/pipeline/escape.py",
+    "/src/chardet/pipeline/markup.py",
+    "/src/chardet/pipeline/orchestrator.py",
+    "/src/chardet/pipeline/utf1632.py",
+    "/src/chardet/pipeline/utf8.py",
+]
+mypy-args = ["--ignore-missing-imports"]
+options = { debug_level = "0" }
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
