@@ -275,17 +275,27 @@ def run_pipeline(
     # Demote iso-8859-10 if no distinguishing bytes present.
     # The iso-8859-10 bigram model can win on data that contains only bytes
     # shared with iso-8859-1 / iso-8859-15 / windows-1252.  When there is no
-    # byte-level evidence for iso-8859-10, swap it with the first common
-    # Western Latin candidate so we prefer iso-8859-1 et al. without
-    # accidentally promoting an unrelated encoding like windows-1254.
+    # byte-level evidence for iso-8859-10, promote the first common Western
+    # Latin candidate to the top, keep all other results in their original
+    # confidence order, and push iso-8859-10 to last.  We restrict the
+    # promotion target to common Latin encodings to avoid accidentally
+    # promoting unrelated encodings like windows-1254.
+    #
+    # Note: this only applies to the statistical scoring path (Stage 3).
+    # The structural early-return path (Stage 2b) is unaffected because
+    # iso-8859-10 is a single-byte encoding and cannot win that path.
     if (
         len(results) > 1
         and results[0].encoding == "iso-8859-10"
         and not _has_iso_8859_10_evidence(data)
     ):
-        for i, r in enumerate(results[1:], 1):
+        for r in results[1:]:
             if r.encoding in _COMMON_LATIN_ENCODINGS:
-                results[0], results[i] = results[i], results[0]
+                others = [
+                    x for x in results if x.encoding != "iso-8859-10" and x is not r
+                ]
+                iso_entries = [x for x in results if x.encoding == "iso-8859-10"]
+                results = [r, *others, *iso_entries]
                 break
 
     return results
