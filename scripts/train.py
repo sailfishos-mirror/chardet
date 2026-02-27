@@ -6,8 +6,8 @@ encodes text into target encodings, computes byte-pair bigram frequencies, and
 serializes the results into models.bin.
 
 Usage:
-    uv run python scripts/train.py --max-samples 5000
-    uv run python scripts/train.py --max-samples 15000 --encodings koi8-r cp866
+    uv run python scripts/train.py
+    uv run python scripts/train.py --max-samples 50000 --encodings koi8-r cp866
 """
 
 from __future__ import annotations
@@ -749,7 +749,7 @@ def main() -> None:
     parser.add_argument(
         "--max-samples",
         type=int,
-        default=1000,
+        default=25000,
         help="Maximum number of text samples per language",
     )
     parser.add_argument(
