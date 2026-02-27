@@ -26,6 +26,8 @@ import signal
 import struct
 import time
 import unicodedata
+from datetime import datetime, timezone
+from pathlib import Path
 
 print = functools.partial(print, flush=True)  # noqa: A001
 
@@ -666,6 +668,62 @@ def verify_codec(codec_name: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Training metadata
+# ---------------------------------------------------------------------------
+
+
+def _count_cached_texts(cache_dir: str, lang: str) -> int:
+    """Count the number of cached text files for a language."""
+    d = Path(_article_cache_dir(cache_dir, lang))
+    if not d.is_dir():
+        return 0
+    return sum(1 for f in d.iterdir() if f.suffix == ".txt")
+
+
+def _write_training_metadata(
+    path: Path,
+    models: dict[str, dict[tuple[int, int], int]],
+    max_samples: int,
+    cache_dir: str,
+) -> None:
+    """Write training metadata YAML alongside models.bin.
+
+    The YAML is written manually (no PyYAML dependency) since the structure
+    is flat enough to emit directly.
+    """
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    lines: list[str] = [
+        f'training_date: "{timestamp}"',
+        f"max_samples: {max_samples}",
+        "models:",
+    ]
+
+    for model_key in sorted(models):
+        bigram_count = len(models[model_key])
+        # Model keys use "lang/encoding" format
+        parts = model_key.split("/", 1)
+        if len(parts) == 2:
+            lang, encoding = parts
+        else:
+            # Fallback for old flat-format keys (just encoding name)
+            lang = "unknown"
+            encoding = parts[0]
+
+        samples_used = _count_cached_texts(cache_dir, lang)
+
+        lines.append(f"  {model_key}:")
+        lines.append(f"    language: {lang}")
+        lines.append(f"    encoding: {encoding}")
+        lines.append(f"    samples_used: {samples_used}")
+        lines.append(f"    bigram_entries: {bigram_count}")
+        lines.append("    source: culturax")
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -844,6 +902,10 @@ def main() -> None:
     # Serialize
     print("=== Serializing models ===")
     file_size = serialize_models(models, args.output)
+
+    metadata_path = Path(args.output).with_name("training_metadata.yaml")
+    _write_training_metadata(metadata_path, models, args.max_samples, args.cache_dir)
+    print(f"Metadata written: {metadata_path}")
 
     elapsed = time.time() - start_time
 
