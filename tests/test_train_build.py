@@ -24,7 +24,7 @@ def test_build_one_model_returns_tuple(tmp_path: Path) -> None:
     )
     assert isinstance(result, tuple)
     assert len(result) == 4
-    key, bigrams, samples, total_bytes = result
+    key, bigrams, _samples, _total_bytes = result
     assert key == "xx/utf-8"
     # No cached texts for "xx", so bigrams should be None
     assert bigrams is None

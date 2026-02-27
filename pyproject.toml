@@ -126,6 +126,11 @@ ignore = [
 "src/chardet/cli.py" = [
     "T201",    # CLI prints output to stdout
 ]
+# mypyc-compiled modules cannot use `from __future__ import annotations`
+"src/chardet/models/__init__.py" = ["FA100"]
+"src/chardet/pipeline/structural.py" = ["FA100"]
+"src/chardet/pipeline/validity.py" = ["FA100"]
+"src/chardet/pipeline/statistical.py" = ["FA100"]
 
 [tool.ruff.format]
 quote-style = "double"
