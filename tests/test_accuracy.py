@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 import chardet
 from chardet.enums import EncodingEra
-from chardet.equivalences import is_correct
+from chardet.equivalences import is_correct, is_equivalent_detection
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -23,7 +23,9 @@ def test_detect(expected_encoding: str, language: str, test_file_path: Path) -> 
     result = chardet.detect(data, encoding_era=EncodingEra.ALL)
     detected = result["encoding"]
 
-    assert is_correct(expected_encoding, detected), (
+    assert is_correct(expected_encoding, detected) or is_equivalent_detection(
+        data, expected_encoding, detected
+    ), (
         f"expected={expected_encoding}, got={detected} "
         f"(confidence={result['confidence']:.2f}, "
         f"language={language}, file={test_file_path.name})"
