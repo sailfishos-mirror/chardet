@@ -25,7 +25,12 @@ from pathlib import Path
 
 from utils import collect_test_files
 
-from chardet.equivalences import BIDIRECTIONAL_GROUPS, SUPERSETS, is_correct
+from chardet.equivalences import (
+    BIDIRECTIONAL_GROUPS,
+    SUPERSETS,
+    is_correct,
+    is_equivalent_detection,
+)
 
 # ---------------------------------------------------------------------------
 # Venv management for isolated detectors
@@ -213,7 +218,10 @@ def _record_result(
     """Update a detector's stats dict with one detection result."""
     detector_stats["total"] += 1
     detector_stats["per_enc"][expected_encoding]["total"] += 1
-    if is_correct(expected_encoding, detected):
+    if is_correct(expected_encoding, detected) or (
+        detected is not None
+        and is_equivalent_detection(filepath.read_bytes(), expected_encoding, detected)
+    ):
         detector_stats["correct"] += 1
         detector_stats["per_enc"][expected_encoding]["correct"] += 1
     else:
@@ -252,13 +260,15 @@ def run_comparison(
     print(f"Found {len(test_files)} test files")
     print(f"Detectors: {', '.join(detector_labels)}")
     print()
-    print("Directional equivalences used:")
+    print("Equivalences used:")
     print("  Superset relationships (detected superset of expected is correct):")
     for subset, supersets in SUPERSETS.items():
         print(f"    {subset} -> {', '.join(sorted(supersets))}")
     print("  Bidirectional groups (byte-order variants):")
     for group in BIDIRECTIONAL_GROUPS:
         print(f"    {' = '.join(group)}")
+    print("  Decoded-output equivalence (base-letter matching after NFKD")
+    print("    normalization and currency/euro symbol equivalence)")
     print()
 
     # Initialize per-detector stats
@@ -527,6 +537,9 @@ if __name__ == "__main__":
         help="Include charset-normalizer pure-Python subprocess variant",
     )
     args = parser.parse_args()
+
+    # Force line-buffered stdout so progress is visible when piped (e.g. tee).
+    sys.stdout.reconfigure(line_buffering=True)
 
     data_dir = Path(__file__).resolve().parent.parent / "tests" / "data"
     if not data_dir.is_dir():
