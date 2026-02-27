@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from chardet.models import load_models, score_bigrams
+from chardet.models import load_models, score_best_language
 from chardet.pipeline import DetectionResult
 
 if TYPE_CHECKING:
@@ -19,11 +19,11 @@ def score_candidates(
         return []
 
     models = load_models()
-    scores: list[tuple[str, float]] = []
+    scores: list[tuple[str, float, str | None]] = []
 
     for enc in candidates:
-        s = score_bigrams(data, enc.name, models)
-        scores.append((enc.name, s))
+        s, lang = score_best_language(data, enc.name, models)
+        scores.append((enc.name, s, lang))
 
     # Sort by score descending
     scores.sort(key=lambda x: x[1], reverse=True)
@@ -31,12 +31,12 @@ def score_candidates(
     # Normalize to confidence values
     max_score = scores[0][1] if scores else 0.0
     results = []
-    for name, s in scores:
+    for name, s, lang in scores:
         if s <= 0.0:
             continue
         confidence = s / max_score if max_score > 0 else 0.0
         results.append(
-            DetectionResult(encoding=name, confidence=confidence, language=None)
+            DetectionResult(encoding=name, confidence=confidence, language=lang)
         )
 
     return results

@@ -777,52 +777,48 @@ def main() -> None:
             skipped.append(enc_name)
             continue
 
-        # Gather text from all mapped languages
-        all_texts: list[str] = []
+        # Train a separate model per language-encoding pair
         for lang in langs:
-            all_texts.extend(get_texts(lang, args.max_samples, args.cache_dir))
+            model_key = f"{lang}/{enc_name}"
+            texts = get_texts(lang, args.max_samples, args.cache_dir)
+            if not texts:
+                print(f"  SKIP {model_key}: no text available")
+                continue
 
-        if not all_texts:
-            print(f"  SKIP {enc_name}: no text available")
-            skipped.append(enc_name)
-            continue
+            # Add HTML-wrapped samples
+            html_samples = add_html_samples(texts)
+            all_texts = list(texts) + html_samples
 
-        # Add HTML-wrapped samples
-        html_samples = add_html_samples(all_texts)
-        all_texts.extend(html_samples)
+            # Prepare substitutions for this encoding
+            subs = get_substitutions(enc_name, [lang])
 
-        # Prepare substitutions for this encoding
-        subs = get_substitutions(enc_name, langs)
+            # Normalize, substitute, and encode all texts
+            encoded: list[bytes] = []
+            for text in all_texts:
+                text = normalize_text(text, enc_name)
+                text = apply_substitutions(text, subs)
+                result = encode_text(text, codec)
+                if result is not None:
+                    encoded.append(result)
 
-        # Normalize, substitute, and encode all texts
-        encoded: list[bytes] = []
-        for text in all_texts:
-            text = normalize_text(text, enc_name)
-            text = apply_substitutions(text, subs)
-            result = encode_text(text, codec)
-            if result is not None:
-                encoded.append(result)
+            if not encoded:
+                print(f"  SKIP {model_key}: no encodable text")
+                continue
 
-        if not encoded:
-            print(f"  SKIP {enc_name}: no encodable text")
-            skipped.append(enc_name)
-            continue
+            # Compute bigram frequencies
+            freqs = compute_bigram_frequencies(encoded)
+            bigrams = normalize_and_prune(freqs, args.min_weight)
 
-        # Compute bigram frequencies
-        freqs = compute_bigram_frequencies(encoded)
-        bigrams = normalize_and_prune(freqs, args.min_weight)
+            if not bigrams:
+                print(f"  SKIP {model_key}: no bigrams above threshold")
+                continue
 
-        if not bigrams:
-            print(f"  SKIP {enc_name}: no bigrams above threshold")
-            skipped.append(enc_name)
-            continue
-
-        models[enc_name] = bigrams
-        total_bytes = sum(len(e) for e in encoded)
-        print(
-            f"  {enc_name}: {len(bigrams)} bigrams from "
-            f"{len(encoded)} samples ({total_bytes:,} bytes)"
-        )
+            models[model_key] = bigrams
+            total_bytes = sum(len(e) for e in encoded)
+            print(
+                f"  {model_key}: {len(bigrams)} bigrams from "
+                f"{len(encoded)} samples ({total_bytes:,} bytes)"
+            )
 
     print()
 
@@ -830,6 +826,12 @@ def main() -> None:
     if args.encodings:
         print("=== Merging with existing models ===")
         existing = deserialize_models(args.output)
+        # Remove old models for retrained encodings (both formats)
+        for enc in args.encodings:
+            existing.pop(enc, None)  # old flat format
+            to_remove = [k for k in existing if k.endswith(f"/{enc}")]
+            for k in to_remove:
+                del existing[k]
         existing.update(models)
         models = existing
         print(f"  Merged {len(models)} total models ({len(args.encodings)} retrained)")
