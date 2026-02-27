@@ -316,6 +316,178 @@ _SCORERS: dict[str, object] = {
 
 
 # ---------------------------------------------------------------------------
+# Per-encoding multi-byte byte counters
+#
+# Each returns the number of non-ASCII bytes (> 0x7F) that participate in
+# valid multi-byte sequences.  This is a different metric from the pair-based
+# structural score: it measures what *fraction of all high bytes* are
+# accounted for by the encoding's multi-byte structure.
+# ---------------------------------------------------------------------------
+
+
+def _mb_bytes_shift_jis(data: bytes) -> int:
+    """Count non-ASCII bytes in valid Shift_JIS / CP932 multi-byte pairs."""
+    mb = 0
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if (0x81 <= b <= 0x9F) or (0xE0 <= b <= 0xEF):
+            if i + 1 < length:
+                trail = data[i + 1]
+                if (0x40 <= trail <= 0x7E) or (0x80 <= trail <= 0xFC):
+                    # Lead is always > 0x7F; trail may or may not be
+                    mb += 1
+                    if trail > 0x7F:
+                        mb += 1
+                    i += 2
+                    continue
+            i += 1
+        else:
+            i += 1
+    return mb
+
+
+def _mb_bytes_euc_jp(data: bytes) -> int:
+    """Count non-ASCII bytes in valid EUC-JP multi-byte sequences."""
+    mb = 0
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if b == 0x8E:
+            if i + 1 < length and 0xA1 <= data[i + 1] <= 0xDF:
+                mb += 2
+                i += 2
+                continue
+            i += 1
+        elif b == 0x8F:
+            if (
+                i + 2 < length
+                and 0xA1 <= data[i + 1] <= 0xFE
+                and 0xA1 <= data[i + 2] <= 0xFE
+            ):
+                mb += 3
+                i += 3
+                continue
+            i += 1
+        elif 0xA1 <= b <= 0xFE:
+            if i + 1 < length and 0xA1 <= data[i + 1] <= 0xFE:
+                mb += 2
+                i += 2
+                continue
+            i += 1
+        else:
+            i += 1
+    return mb
+
+
+def _mb_bytes_euc_kr(data: bytes) -> int:
+    """Count non-ASCII bytes in valid EUC-KR / CP949 multi-byte pairs."""
+    mb = 0
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if 0xA1 <= b <= 0xFE:
+            if i + 1 < length and 0xA1 <= data[i + 1] <= 0xFE:
+                mb += 2
+                i += 2
+                continue
+            i += 1
+        else:
+            i += 1
+    return mb
+
+
+def _mb_bytes_gb18030(data: bytes) -> int:
+    """Count non-ASCII bytes in valid GB18030 / GB2312 multi-byte sequences."""
+    mb = 0
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if 0x81 <= b <= 0xFE:
+            # 4-byte GB18030: bytes 0 and 2 are > 0x7F
+            if (
+                i + 3 < length
+                and 0x30 <= data[i + 1] <= 0x39
+                and 0x81 <= data[i + 2] <= 0xFE
+                and 0x30 <= data[i + 3] <= 0x39
+            ):
+                mb += 2  # bytes 0 and 2 are non-ASCII
+                i += 4
+                continue
+            # 2-byte GB2312: both bytes are > 0x7F
+            if 0xA1 <= b <= 0xF7 and i + 1 < length and 0xA1 <= data[i + 1] <= 0xFE:
+                mb += 2
+                i += 2
+                continue
+            i += 1
+        else:
+            i += 1
+    return mb
+
+
+def _mb_bytes_big5(data: bytes) -> int:
+    """Count non-ASCII bytes in valid Big5 multi-byte pairs."""
+    mb = 0
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if 0xA1 <= b <= 0xF9:
+            if i + 1 < length:
+                trail = data[i + 1]
+                if (0x40 <= trail <= 0x7E) or (0xA1 <= trail <= 0xFE):
+                    # Lead is always > 0x7F; trail may or may not be
+                    mb += 1
+                    if trail > 0x7F:
+                        mb += 1
+                    i += 2
+                    continue
+            i += 1
+        else:
+            i += 1
+    return mb
+
+
+def _mb_bytes_johab(data: bytes) -> int:
+    """Count non-ASCII bytes in valid Johab multi-byte pairs."""
+    mb = 0
+    i = 0
+    length = len(data)
+    while i < length:
+        b = data[i]
+        if (0x84 <= b <= 0xD3) or (0xD8 <= b <= 0xDE) or (0xE0 <= b <= 0xF9):
+            if i + 1 < length:
+                trail = data[i + 1]
+                if (0x31 <= trail <= 0x7E) or (0x91 <= trail <= 0xFE):
+                    if b > 0x7F:
+                        mb += 1
+                    if trail > 0x7F:
+                        mb += 1
+                    i += 2
+                    continue
+            i += 1
+        else:
+            i += 1
+    return mb
+
+
+_MB_BYTE_COUNTERS: dict[str, object] = {
+    "shift_jis": _mb_bytes_shift_jis,
+    "cp932": _mb_bytes_shift_jis,
+    "euc-jp": _mb_bytes_euc_jp,
+    "euc-kr": _mb_bytes_euc_kr,
+    "cp949": _mb_bytes_euc_kr,
+    "gb18030": _mb_bytes_gb18030,
+    "big5": _mb_bytes_big5,
+    "johab": _mb_bytes_johab,
+}
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -334,3 +506,33 @@ def compute_structural_score(data: bytes, encoding_info: EncodingInfo) -> float:
         return 0.0
 
     return scorer(data)
+
+
+def compute_multibyte_byte_coverage(data: bytes, encoding_info: EncodingInfo) -> float:
+    """Ratio of non-ASCII bytes that participate in valid multi-byte sequences.
+
+    Genuine CJK text has nearly all non-ASCII bytes paired into valid
+    multi-byte sequences (coverage close to 1.0), while Latin text with
+    scattered high bytes has many "orphan" bytes that don't form valid pairs
+    (coverage well below 1.0).
+
+    Returns 0.0 for single-byte encodings, empty data, or data with no
+    non-ASCII bytes.
+    """
+    if not data or not encoding_info.is_multibyte:
+        return 0.0
+
+    counter = _MB_BYTE_COUNTERS.get(encoding_info.name)
+    if counter is None:
+        return 0.0
+
+    non_ascii = 0
+    for b in data:
+        if b > 0x7F:
+            non_ascii += 1
+
+    if non_ascii == 0:
+        return 0.0
+
+    mb_bytes = counter(data)
+    return mb_bytes / non_ascii
