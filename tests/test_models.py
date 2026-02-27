@@ -28,11 +28,11 @@ def test_model_keys_are_strings() -> None:
 
 
 def test_score_bigrams_returns_float() -> None:
+    """score_bigrams should work with plain encoding names (not lang/enc keys)."""
     models = load_models()
-    encoding = next(iter(models))
-    score = score_bigrams(b"Hello world this is a test", encoding, models)
+    score = score_bigrams(b"Hello world this is a test", "windows-1252", models)
     assert isinstance(score, float)
-    assert 0.0 <= score <= 1.0
+    assert 0.0 < score <= 1.0
 
 
 def test_score_bigrams_unknown_encoding() -> None:
