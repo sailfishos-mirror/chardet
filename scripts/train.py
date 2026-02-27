@@ -17,12 +17,17 @@ import atexit
 import codecs
 import collections
 import concurrent.futures
+
+# Ensure progress output is visible when piped through tee.
+import functools
 import os
 import re
 import signal
 import struct
 import time
 import unicodedata
+
+print = functools.partial(print, flush=True)  # noqa: A001
 
 # ---------------------------------------------------------------------------
 # Encoding -> language mapping
