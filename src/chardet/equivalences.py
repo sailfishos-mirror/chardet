@@ -20,6 +20,7 @@ Two kinds of acceptable mismatch:
 from __future__ import annotations
 
 import codecs
+import unicodedata
 
 
 def normalize_encoding_name(name: str) -> str:
@@ -94,3 +95,44 @@ def is_correct(expected: str, detected: str | None) -> bool:
         norm_exp in _NORMALIZED_SUPERSETS
         and norm_det in _NORMALIZED_SUPERSETS[norm_exp]
     )
+
+
+def _strip_combining(text: str) -> str:
+    """NFKD-normalize *text* and strip all combining marks."""
+    nfkd = unicodedata.normalize("NFKD", text)
+    return "".join(c for c in nfkd if not unicodedata.combining(c))
+
+
+def is_equivalent_detection(data: bytes, expected: str, detected: str | None) -> bool:
+    """Check whether *detected* produces functionally identical text to *expected*.
+
+    Returns ``True`` when:
+    1. *detected* is not ``None`` and both encoding names normalize to the same
+       codec, OR
+    2. Decoding *data* with both encodings yields identical strings, OR
+    3. After NFKD normalization and stripping combining marks, the decoded
+       strings are identical (all differing code points share the same base
+       letter).
+
+    Returns ``False`` if *detected* is ``None``, either encoding is unknown,
+    or either encoding cannot decode *data*.
+    """
+    if detected is None:
+        return False
+
+    norm_exp = normalize_encoding_name(expected)
+    norm_det = normalize_encoding_name(detected)
+
+    if norm_exp == norm_det:
+        return True
+
+    try:
+        text_exp = data.decode(expected)
+        text_det = data.decode(detected)
+    except (UnicodeDecodeError, LookupError):
+        return False
+
+    if text_exp == text_det:
+        return True
+
+    return _strip_combining(text_exp) == _strip_combining(text_det)
