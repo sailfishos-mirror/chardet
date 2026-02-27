@@ -215,7 +215,7 @@ def _gate_cjk_candidates(
     Returns the filtered candidate list and a dict of cached structural
     scores for reuse in Stage 2b.
     """
-    non_ascii_count = sum(1 for b in data if b > 0x7F)
+    non_ascii_count = -1  # Lazy; computed only when needed
     mb_scores: dict[str, float] = {}
     gated: list[EncodingInfo] = []
     for enc in valid_candidates:
@@ -224,6 +224,8 @@ def _gate_cjk_candidates(
             mb_scores[enc.name] = mb_score
             if mb_score < _CJK_MIN_MB_RATIO:
                 continue  # No multi-byte structure -> eliminate
+            if non_ascii_count < 0:
+                non_ascii_count = sum(1 for b in data if b > 0x7F)
             if non_ascii_count < _CJK_MIN_NON_ASCII:
                 continue  # Too few high bytes to trust the score
             byte_coverage = compute_multibyte_byte_coverage(data, enc)

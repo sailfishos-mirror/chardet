@@ -74,33 +74,36 @@ class BigramProfile:
 
     Computing this once and reusing it across all models reduces per-model
     scoring from O(n) to O(distinct_bigrams).
+
+    Stores a single ``weighted_freq`` dict mapping bigram index to
+    *count * weight* (weight is 8 for non-ASCII bigrams, 1 otherwise).
+    This pre-multiplies the weight during construction so the scoring
+    inner loop only needs a single dict traversal with no branching.
     """
 
-    __slots__ = ("high_freq", "low_freq", "weight_sum")
+    __slots__ = ("weight_sum", "weighted_freq")
 
     def __init__(self, data: bytes) -> None:
         total_bigrams = len(data) - 1
         if total_bigrams <= 0:
-            self.low_freq: dict[int, int] = {}
-            self.high_freq: dict[int, int] = {}
+            self.weighted_freq: dict[int, int] = {}
             self.weight_sum: int = 0
             return
 
-        low: dict[int, int] = {}
-        high: dict[int, int] = {}
+        freq: dict[int, int] = {}
         w_sum = 0
+        _get = freq.get
         for i in range(total_bigrams):
             b1 = data[i]
             b2 = data[i + 1]
             idx = (b1 << 8) | b2
             if b1 > 0x7F or b2 > 0x7F:
-                high[idx] = high.get(idx, 0) + 1
+                freq[idx] = _get(idx, 0) + 8
                 w_sum += 8
             else:
-                low[idx] = low.get(idx, 0) + 1
+                freq[idx] = _get(idx, 0) + 1
                 w_sum += 1
-        self.low_freq = low
-        self.high_freq = high
+        self.weighted_freq = freq
         self.weight_sum = w_sum
 
 
@@ -109,10 +112,8 @@ def _score_with_profile(profile: BigramProfile, model: bytearray) -> float:
     if profile.weight_sum == 0:
         return 0.0
     score = 0
-    for idx, count in profile.low_freq.items():
-        score += model[idx] * count
-    for idx, count in profile.high_freq.items():
-        score += model[idx] * count * 8
+    for idx, wcount in profile.weighted_freq.items():
+        score += model[idx] * wcount
     return score / (255 * profile.weight_sum)
 
 

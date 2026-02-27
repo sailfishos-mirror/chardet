@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
-# Control chars that indicate binary (excluding tab, newline, carriage return)
-_BINARY_CONTROL_BYTES = frozenset(range(0x09)) | frozenset(range(0x0E, 0x20))
-
 # Threshold: if more than this fraction of bytes are binary indicators, it's binary
 _BINARY_THRESHOLD = 0.01
+
+# Translation table that maps binary-indicator control bytes (0x00-0x08,
+# 0x0E-0x1F — excludes \t \n \r) to None (deleting them) and keeps
+# everything else.  len(data) - len(translated) gives the count in one
+# C-level pass.
+_BINARY_DELETE = bytes(range(0x09)) + bytes(range(0x0E, 0x20))
+_BINARY_TABLE = bytes.maketrans(b"", b"")
+_BINARY_TABLE_DEL = _BINARY_DELETE
 
 
 def is_binary(data: bytes, max_bytes: int = 200_000) -> bool:
@@ -15,5 +20,6 @@ def is_binary(data: bytes, max_bytes: int = 200_000) -> bool:
     if not data:
         return False
 
-    binary_count = sum(1 for b in data if b in _BINARY_CONTROL_BYTES)
+    clean = data.translate(_BINARY_TABLE, _BINARY_TABLE_DEL)
+    binary_count = len(data) - len(clean)
     return binary_count / len(data) > _BINARY_THRESHOLD

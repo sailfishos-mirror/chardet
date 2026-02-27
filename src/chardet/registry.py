@@ -18,9 +18,17 @@ class EncodingInfo:
     python_codec: str
 
 
+_CANDIDATES_CACHE: dict[int, tuple[EncodingInfo, ...]] = {}
+
+
 def get_candidates(era: EncodingEra) -> tuple[EncodingInfo, ...]:
     """Return registry entries matching the given era filter."""
-    return tuple(enc for enc in REGISTRY if enc.era & era)
+    key = int(era)
+    result = _CANDIDATES_CACHE.get(key)
+    if result is None:
+        result = tuple(enc for enc in REGISTRY if enc.era & era)
+        _CANDIDATES_CACHE[key] = result
+    return result
 
 
 # Era assignments match chardet 6.0.0's chardet/metadata/charsets.py
