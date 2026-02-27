@@ -724,6 +724,72 @@ def _write_training_metadata(
 
 
 # ---------------------------------------------------------------------------
+# Parallel model building
+# ---------------------------------------------------------------------------
+
+# Per-worker text cache. Each worker process lazily loads language texts from
+# the disk cache (populated by the download phase) and caches them here to
+# avoid redundant disk reads when the same language is used across multiple
+# encodings.
+_worker_text_cache: dict[str, list[str]] = {}
+
+
+def _build_one_model(  # noqa: PLR0913
+    lang: str,
+    enc_name: str,
+    codec: str,
+    cache_dir: str,
+    max_samples: int,
+    min_weight: int,
+) -> tuple[str, dict[tuple[int, int], int] | None, int, int]:
+    """Build a single bigram model in a (possibly forked) worker process.
+
+    Returns
+    -------
+    tuple of (model_key, bigrams_or_None, sample_count, total_encoded_bytes)
+
+    """
+    model_key = f"{lang}/{enc_name}"
+
+    # Load texts from disk cache (lazy, cached per worker)
+    if lang not in _worker_text_cache:
+        _worker_text_cache[lang] = get_texts(lang, max_samples, cache_dir)
+    texts = _worker_text_cache[lang]
+
+    if not texts:
+        return (model_key, None, 0, 0)
+
+    # Add HTML-wrapped samples
+    html_samples = add_html_samples(texts)
+    all_texts = list(texts) + html_samples
+
+    # Prepare substitutions for this encoding
+    subs = get_substitutions(enc_name, [lang])
+
+    # Normalize, substitute, and encode all texts
+    encoded: list[bytes] = []
+    for text in all_texts:
+        text = normalize_text(text, enc_name)
+        text = apply_substitutions(text, subs)
+        result = encode_text(text, codec)
+        if result is not None:
+            encoded.append(result)
+
+    if not encoded:
+        return (model_key, None, len(all_texts), 0)
+
+    # Compute bigram frequencies
+    freqs = compute_bigram_frequencies(encoded)
+    bigrams = normalize_and_prune(freqs, min_weight)
+
+    if not bigrams:
+        return (model_key, None, len(encoded), sum(len(e) for e in encoded))
+
+    total_bytes = sum(len(e) for e in encoded)
+    return (model_key, bigrams, len(encoded), total_bytes)
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 

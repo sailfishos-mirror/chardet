@@ -1,0 +1,60 @@
+"""Test the extracted _build_one_model function."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+# Add scripts directory to path so we can import train
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+
+from train import _build_one_model, _worker_text_cache
+
+
+def test_build_one_model_returns_tuple(tmp_path: Path) -> None:
+    """_build_one_model returns a 4-tuple even with no cached texts."""
+    _worker_text_cache.clear()
+    result = _build_one_model(
+        lang="xx",  # non-existent language
+        enc_name="utf-8",
+        codec="utf-8",
+        cache_dir=str(tmp_path / "nonexistent_cache"),
+        max_samples=10,
+        min_weight=1,
+    )
+    assert isinstance(result, tuple)
+    assert len(result) == 4
+    key, bigrams, samples, total_bytes = result
+    assert key == "xx/utf-8"
+    # No cached texts for "xx", so bigrams should be None
+    assert bigrams is None
+
+
+def test_build_one_model_with_real_texts(tmp_path: Path) -> None:
+    """_build_one_model produces bigrams from actual text."""
+    _worker_text_cache.clear()
+    # Create a fake cache directory with some text files
+    # get_texts uses _article_cache_dir which builds: {cache_dir}/culturax/{lang}/
+    lang_dir = tmp_path / "culturax" / "fr"
+    lang_dir.mkdir(parents=True)
+    for i in range(50):
+        (lang_dir / f"{i:06d}.txt").write_text(
+            "Le président de la République française a prononcé un discours "
+            "devant l'Assemblée nationale sur les questions économiques.",
+            encoding="utf-8",
+        )
+
+    result = _build_one_model(
+        lang="fr",
+        enc_name="iso-8859-1",
+        codec="iso-8859-1",
+        cache_dir=str(tmp_path),
+        max_samples=100,
+        min_weight=1,
+    )
+    key, bigrams, samples, total_bytes = result
+    assert key == "fr/iso-8859-1"
+    assert bigrams is not None
+    assert len(bigrams) > 0
+    assert samples > 0
+    assert total_bytes > 0
