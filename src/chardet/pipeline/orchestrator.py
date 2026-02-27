@@ -13,6 +13,7 @@ from chardet.pipeline.binary import is_binary
 from chardet.pipeline.bom import detect_bom
 from chardet.pipeline.escape import detect_escape_encoding
 from chardet.pipeline.markup import detect_markup_charset
+from chardet.pipeline.mess import compute_mess_score
 from chardet.pipeline.statistical import score_candidates
 from chardet.pipeline.structural import (
     compute_multibyte_byte_coverage,
@@ -172,6 +173,40 @@ def _gate_cjk_candidates(
     return gated, mb_scores
 
 
+def _apply_mess_penalty(
+    data: bytes, results: list[DetectionResult]
+) -> list[DetectionResult]:
+    """Penalize candidates that produce messy Unicode when decoded.
+
+    Decodes *data* with each candidate encoding and computes a mess score.
+    Confidence is reduced proportionally to the mess score.  Results are
+    re-sorted by adjusted confidence.
+    """
+    if len(results) <= 1:
+        return results
+
+    scored_results: list[DetectionResult] = []
+    for r in results:
+        if r.encoding is None:
+            scored_results.append(r)
+            continue
+        try:
+            decoded = data.decode(r.encoding)
+            mess = compute_mess_score(decoded)
+        except (UnicodeDecodeError, LookupError):
+            mess = 1.0
+        adjusted_confidence = r.confidence * (1.0 - mess)
+        scored_results.append(
+            DetectionResult(
+                encoding=r.encoding,
+                confidence=max(adjusted_confidence, 0.01),
+                language=r.language,
+            )
+        )
+    scored_results.sort(key=lambda r: r.confidence, reverse=True)
+    return scored_results
+
+
 def run_pipeline(
     data: bytes,
     encoding_era: EncodingEra,
@@ -271,6 +306,9 @@ def run_pipeline(
 
     if not results:
         return [_FALLBACK_RESULT]
+
+    # Post-decode mess detection: penalize candidates that produce messy Unicode
+    results = _apply_mess_penalty(data, results)
 
     # Demote iso-8859-10 if no distinguishing bytes present.
     # The iso-8859-10 bigram model can win on data that contains only bytes
