@@ -7,11 +7,15 @@ detectors are evaluated with the same directional equivalence rules (superset
 and bidirectional groups), plus decoded-output equivalence (base-letter
 matching after NFKD normalization and currency/euro symbol equivalence).
 
+Rewrite numbers updated 2026-02-27 after performance optimization (mess
+detection removal, BigramProfile merged weighted_freq dict, binary detection
+translate trick, registry caching, lazy non-ASCII counting).
+
 ## Overall Accuracy
 
 | Detector | Correct | Accuracy | Detection Time |
 |---|---|---|---|
-| **chardet-rewrite** | **2062/2161** | **95.4%** | 13.11s* |
+| **chardet-rewrite** | **2052/2161** | **95.0%** | 5.14s |
 | chardet 6.0.0 | 1748/2161 | **80.9%** | 173.15s |
 | charset-normalizer | 1650/2161 | **76.4%** | 32.51s |
 | charset-normalizer (mypyc) | 1650/2161 | **76.4%** | 32.93s |
@@ -19,17 +23,14 @@ matching after NFKD normalization and currency/euro symbol equivalence).
 | chardet 5.2.0 | 1241/2161 | **57.4%** | 33.01s |
 | cchardet | 1061/2161 | **49.1%** | 0.79s |
 
-*Detection time for the rewrite may differ from the original benchmark due to
-the addition of per-language models, mess detection, and encoding demotion.
-
-The rewrite is now **14.5 percentage points ahead** of chardet 6.0.0, and
-ahead of charset-normalizer (+19.0pp) and chardet 5.2.0 (+38.0pp). Speed-wise,
-the rewrite is **13.2x faster** than chardet 6.0.0, **2.5x faster** than
-charset-normalizer (in-process), and **3.8x faster** than charset-normalizer
+The rewrite is now **14.1 percentage points ahead** of chardet 6.0.0, and
+ahead of charset-normalizer (+18.6pp) and chardet 5.2.0 (+37.6pp). Speed-wise,
+the rewrite is **33.7x faster** than chardet 6.0.0, **6.3x faster** than
+charset-normalizer (in-process), and **9.6x faster** than charset-normalizer
 (pure Python).
 
 cchardet (C/C++ uchardet engine via faust-cchardet) is the fastest at 0.79s
-but has the lowest accuracy at 49.1% -- nearly 30pp behind the rewrite. It
+but has the lowest accuracy at 49.1% -- nearly 46pp behind the rewrite. It
 lacks support for many encodings the rewrite handles (EBCDIC, Mac encodings,
 Baltic, etc.).
 
@@ -43,16 +44,16 @@ variant is 1.5x slower (49.43s).
 | Detector | Total | Mean | Median | p90 | p95 |
 |---|---|---|---|---|---|
 | cchardet | 704ms | 0.33ms | 0.07ms | 0.62ms | 0.91ms |
-| chardet-rewrite | 12,968ms | 6.00ms | 0.32ms | 17.23ms | 19.41ms |
+| chardet-rewrite | 5,140ms | 2.38ms | 0.28ms | 5.20ms | 5.92ms |
 | charset-normalizer | 32,315ms | 14.95ms | 4.68ms | 48.84ms | 69.42ms |
 | charset-normalizer (mypyc) | 32,730ms | 15.15ms | 4.66ms | 49.36ms | 70.34ms |
 | chardet 5.2.0 | 32,858ms | 15.21ms | 2.82ms | 11.83ms | 22.00ms |
 | charset-normalizer (pure) | 49,207ms | 22.77ms | 7.20ms | 75.65ms | 104.55ms |
 | chardet 6.0.0 | 172,926ms | 80.02ms | 15.98ms | 119.09ms | 314.90ms |
 
-The rewrite has the lowest median latency (0.32ms) among all pure-Python
+The rewrite has the lowest median latency (0.28ms) among all pure-Python
 detectors, matching cchardet's order of magnitude despite being pure Python.
-Its p95 (19.41ms) is well below charset-normalizer's (69-70ms) and chardet
+Its p95 (5.92ms) is well below charset-normalizer's (69-70ms) and chardet
 6.0.0's (314.90ms).
 
 ## Startup & Memory
@@ -153,9 +154,9 @@ identical peak memory (~101.7 MiB traced, ~265 MiB RSS).
 
 ## Key Takeaways
 
-1. **The rewrite achieves 95.4% accuracy with dramatic speed/memory gains**
-   vs chardet 6.0.0. It detects in ~13s what 6.0.0 takes 173s for, imports
-   100x faster, and uses 8.5x less import memory — while being 14.5pp more
+1. **The rewrite achieves 95.0% accuracy with dramatic speed/memory gains**
+   vs chardet 6.0.0. It detects in ~5s what 6.0.0 takes 173s for, imports
+   100x faster, and uses 8.5x less import memory — while being 14.1pp more
    accurate.
 
 2. **Remaining accuracy gaps**: EBCDIC confusion (cp037/cp500/cp1026, ~24
@@ -164,8 +165,8 @@ identical peak memory (~101.7 MiB traced, ~265 MiB RSS).
    retraining with more data or encoding-specific structural probes.
 
 3. **The rewrite beats all competitors** on accuracy, speed, and memory
-   among pure-Python detectors. It leads chardet 6.0.0 by +14.5pp,
-   charset-normalizer by +19.0pp, and chardet 5.2.0 by +38.0pp.
+   among pure-Python detectors. It leads chardet 6.0.0 by +14.1pp,
+   charset-normalizer by +18.6pp, and chardet 5.2.0 by +37.6pp.
 
 4. **charset-normalizer is slowest on peak memory** (101.7 MiB traced peak,
    266 MiB RSS) despite moderate accuracy. The rewrite beats it on both
