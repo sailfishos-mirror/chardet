@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import warnings
+
 from chardet.detector import UniversalDetector
 from chardet.enums import EncodingEra, LanguageFilter
 from chardet.equivalences import apply_legacy_rename
@@ -29,7 +31,7 @@ def detect(
     byte_str: bytes | bytearray,
     should_rename_legacy: bool | None = None,
     encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
-    chunk_size: int = 65_536,  # noqa: ARG001 — API compat, our pipeline doesn't chunk
+    chunk_size: int = 65_536,
     max_bytes: int = 200_000,
 ) -> dict[str, str | float | None]:
     """Detect the encoding of the given byte string.
@@ -37,6 +39,12 @@ def detect(
     Parameters match chardet 6.x for backward compatibility.
     *chunk_size* is accepted but has no effect.
     """
+    if chunk_size != 65_536:
+        warnings.warn(
+            "chunk_size is not used in this version of chardet and will be ignored",
+            DeprecationWarning,
+            stacklevel=2,
+        )
     results = run_pipeline(bytes(byte_str), encoding_era, max_bytes=max_bytes)
     result = results[0].to_dict()
     if _resolve_rename(should_rename_legacy, encoding_era):
@@ -46,10 +54,10 @@ def detect(
 
 def detect_all(  # noqa: PLR0913
     byte_str: bytes | bytearray,
-    ignore_threshold: bool = False,  # noqa: FBT001, FBT002
+    ignore_threshold: bool = False,
     should_rename_legacy: bool | None = None,
     encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
-    chunk_size: int = 65_536,  # noqa: ARG001 — API compat, our pipeline doesn't chunk
+    chunk_size: int = 65_536,
     max_bytes: int = 200_000,
 ) -> list[dict[str, str | float | None]]:
     """Detect all possible encodings of the given byte string.
@@ -57,6 +65,12 @@ def detect_all(  # noqa: PLR0913
     Parameters match chardet 6.x for backward compatibility.
     *chunk_size* is accepted but has no effect.
     """
+    if chunk_size != 65_536:
+        warnings.warn(
+            "chunk_size is not used in this version of chardet and will be ignored",
+            DeprecationWarning,
+            stacklevel=2,
+        )
     results = run_pipeline(bytes(byte_str), encoding_era, max_bytes=max_bytes)
     rename = _resolve_rename(should_rename_legacy, encoding_era)
     dicts = [r.to_dict() for r in results]

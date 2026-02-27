@@ -123,6 +123,10 @@ ignore = [
     "PLR0915", # too many statements
     "FURB122", # f.write in loop (binary packing)
 ]
+"src/chardet/__init__.py" = [
+    "FBT001",  # bool params match chardet 6.x public API for backward compat
+    "FBT002",  # bool param defaults match chardet 6.x public API
+]
 "src/chardet/cli.py" = [
     "T201",    # CLI prints output to stdout
 ]
