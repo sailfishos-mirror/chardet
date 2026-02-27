@@ -11,6 +11,9 @@ Rewrite numbers updated 2026-02-27 after performance optimization (mess
 detection removal, BigramProfile merged weighted_freq dict, binary detection
 translate trick, registry caching, lazy non-ASCII counting).
 
+Optional mypyc compilation added 2026-02-27 for an additional 1.7x speedup
+on CPython (see "mypyc Compilation" section below).
+
 ## Overall Accuracy
 
 | Detector | Correct | Accuracy | Detection Time |
@@ -151,6 +154,35 @@ venv) produce **identical accuracy** (1650/2161 = 76.4%). The mypyc build
 shows no significant speed advantage in subprocess measurement (~32.7s vs
 ~32.5s). The pure-Python build is 1.5x slower (49.2s). All three have
 identical peak memory (~101.7 MiB traced, ~265 MiB RSS).
+
+## mypyc Compilation
+
+The rewrite supports optional mypyc compilation for an additional speedup on
+CPython. When built with `HATCH_BUILD_HOOKS_ENABLE=1`, four hot-path modules
+are compiled to C extensions: `models/__init__.py` (bigram profiling and
+scoring), `pipeline/structural.py` (CJK byte-scanning), `pipeline/validity.py`
+(decode filtering), and `pipeline/statistical.py` (scoring orchestration).
+
+In-process timing (best of 3 runs, 2179 files, pre-loaded into memory):
+
+| Build | Total | Per-file mean | Speedup |
+|---|---|---|---|
+| Pure Python | 1,640ms | 0.76ms | baseline |
+| mypyc compiled | 964ms | 0.45ms | **1.70x** |
+
+The 1.70x speedup comes primarily from the bigram scoring inner loop
+(`BigramProfile.__init__` and `_score_with_profile`), which accounts for
+~64% of detection runtime. mypyc converts the Python dict iteration and
+integer arithmetic to native C operations.
+
+The speedup is modest compared to the theoretical maximum because:
+
+- Deterministic stages (BOM, ASCII, UTF-8, escape) are already near-instant
+- `filter_by_validity` delegates to CPython's built-in `.decode()` (already C)
+- Model loading uses `struct.unpack_from` (already C)
+
+Pure Python wheels are published alongside mypyc wheels for PyPy and
+platforms without prebuilt binaries. No runtime dependencies are added.
 
 ## Key Takeaways
 

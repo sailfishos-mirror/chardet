@@ -85,15 +85,20 @@ mypyc compiles the existing Python code to C extensions. The algorithms
 remain identical — the speedup comes from native integer arithmetic,
 optimized dict/bytearray operations, and elimination of interpreter overhead.
 
-## Expected Results
+## Actual Results
 
-- **Speedup:** 2-5x overall on CPython (scoring loop goes from interpreted
-  Python to native C; structural byte-scanning loops similarly benefit)
+Measured on macOS (Apple Silicon), CPython 3.12, 2179 test files:
+
+- **Speedup:** 1.70x overall (pure Python 1,640ms → mypyc 964ms)
 - **Accuracy:** Identical (95.0%) — mypyc is semantically transparent
 - **Pure Python fallback:** Identical behavior for PyPy and platforms
   without prebuilt wheels
-- **Import time / memory:** Unchanged (mypyc doesn't affect import-time model
-  loading or memory allocation patterns)
+- **Import time / memory:** Unchanged
+
+The 1.70x speedup (vs hoped-for 2-5x) is because much of the pipeline
+delegates to C-level operations (`bytes.decode()`, `struct.unpack_from`)
+that mypyc cannot further optimize. The bigram scoring inner loop sees
+the largest improvement.
 
 ## Testing
 
