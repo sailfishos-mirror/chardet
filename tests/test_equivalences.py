@@ -58,7 +58,14 @@ def test_unknown_encoding_returns_false():
     assert is_equivalent_detection(data, "utf-8", "not-a-real-encoding") is False
 
 
-def test_non_letter_difference_returns_false():
-    """Currency sign vs euro sign at 0xA4 are different non-decomposable symbols."""
+def test_currency_vs_euro_sign_accepted():
+    """¤ (currency sign) vs € (euro sign) is an accepted symbol equivalence."""
     data = b"\xa4"
-    assert is_equivalent_detection(data, "iso-8859-1", "iso-8859-15") is False
+    assert is_equivalent_detection(data, "iso-8859-1", "iso-8859-15") is True
+
+
+def test_symbol_vs_letter_difference_returns_false():
+    """Symbol in one encoding vs letter in another should fail."""
+    # 0xD7 = multiplication sign in iso-8859-1, Cyrillic letter in iso-8859-5
+    data = b"\xd7"
+    assert is_equivalent_detection(data, "iso-8859-1", "iso-8859-5") is False

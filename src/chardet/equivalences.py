@@ -103,6 +103,33 @@ def _strip_combining(text: str) -> str:
     return "".join(c for c in nfkd if not unicodedata.combining(c))
 
 
+# Specific symbol pairs that should be treated as equivalent.
+# The generic currency sign (¤) was replaced by the euro sign (€) in later
+# encoding revisions (e.g. iso-8859-15 vs iso-8859-1).  Detecting the euro
+# encoding is always acceptable.
+_EQUIVALENT_SYMBOLS: frozenset[frozenset[str]] = frozenset(
+    {
+        frozenset({"¤", "€"}),
+    }
+)
+
+
+def _chars_equivalent(a: str, b: str) -> bool:
+    """Return True if characters *a* and *b* are functionally equivalent.
+
+    Equivalent means:
+    - Same character, OR
+    - Same base letter after stripping combining marks, OR
+    - An explicitly listed symbol equivalence (e.g. ¤ ↔ €)
+    """
+    if a == b:
+        return True
+    if frozenset({a, b}) in _EQUIVALENT_SYMBOLS:
+        return True
+    # Compare base letters after stripping combining marks.
+    return _strip_combining(a) == _strip_combining(b)
+
+
 def is_equivalent_detection(data: bytes, expected: str, detected: str | None) -> bool:
     """Check whether *detected* produces functionally identical text to *expected*.
 
@@ -110,9 +137,9 @@ def is_equivalent_detection(data: bytes, expected: str, detected: str | None) ->
     1. *detected* is not ``None`` and both encoding names normalize to the same
        codec, OR
     2. Decoding *data* with both encodings yields identical strings, OR
-    3. After NFKD normalization and stripping combining marks, the decoded
-       strings are identical (all differing code points share the same base
-       letter).
+    3. Every differing character pair is functionally equivalent: same base
+       letter after stripping combining marks, or an explicitly listed symbol
+       equivalence (e.g. ¤ ↔ €).
 
     Returns ``False`` if *detected* is ``None``, either encoding is unknown,
     or either encoding cannot decode *data*.
@@ -135,4 +162,9 @@ def is_equivalent_detection(data: bytes, expected: str, detected: str | None) ->
     if text_exp == text_det:
         return True
 
-    return _strip_combining(text_exp) == _strip_combining(text_det)
+    if len(text_exp) != len(text_det):
+        return False
+
+    return all(
+        _chars_equivalent(a, b) for a, b in zip(text_exp, text_det, strict=False)
+    )
