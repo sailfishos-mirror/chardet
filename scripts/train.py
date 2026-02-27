@@ -891,12 +891,13 @@ def main() -> None:
         print()
 
     # Build models for each encoding
-    print("=== Building bigram models ===")
+    print(f"=== Building bigram models ({args.build_workers} workers) ===")
     models: dict[str, dict[tuple[int, int], int]] = {}
     skipped = []
 
+    # Pre-verify codecs and collect work items
+    work_items: list[tuple[str, str, str, str, int, int]] = []
     for enc_name, langs in sorted(encoding_map.items()):
-        # Look up the Python codec name
         codec = None
         codec_candidates = [enc_name]
         normalized = enc_name.replace("-", "").replace("_", "").lower()
@@ -912,48 +913,47 @@ def main() -> None:
             skipped.append(enc_name)
             continue
 
-        # Train a separate model per language-encoding pair
-        for lang in langs:
-            model_key = f"{lang}/{enc_name}"
-            texts = get_texts(lang, args.max_samples, args.cache_dir)
-            if not texts:
-                print(f"  SKIP {model_key}: no text available")
-                continue
+        work_items.extend(
+            (lang, enc_name, codec, args.cache_dir, args.max_samples, args.min_weight)
+            for lang in langs
+        )
 
-            # Add HTML-wrapped samples
-            html_samples = add_html_samples(texts)
-            all_texts = list(texts) + html_samples
-
-            # Prepare substitutions for this encoding
-            subs = get_substitutions(enc_name, [lang])
-
-            # Normalize, substitute, and encode all texts
-            encoded: list[bytes] = []
-            for text in all_texts:
-                text = normalize_text(text, enc_name)
-                text = apply_substitutions(text, subs)
-                result = encode_text(text, codec)
-                if result is not None:
-                    encoded.append(result)
-
-            if not encoded:
-                print(f"  SKIP {model_key}: no encodable text")
-                continue
-
-            # Compute bigram frequencies
-            freqs = compute_bigram_frequencies(encoded)
-            bigrams = normalize_and_prune(freqs, args.min_weight)
-
-            if not bigrams:
-                print(f"  SKIP {model_key}: no bigrams above threshold")
-                continue
-
-            models[model_key] = bigrams
-            total_bytes = sum(len(e) for e in encoded)
-            print(
-                f"  {model_key}: {len(bigrams)} bigrams from "
-                f"{len(encoded)} samples ({total_bytes:,} bytes)"
-            )
+    if args.build_workers == 1:
+        # Sequential mode (useful for debugging)
+        for item in work_items:
+            key, bigrams, samples, total_bytes = _build_one_model(*item)
+            if bigrams:
+                models[key] = bigrams
+                print(
+                    f"  {key}: {len(bigrams)} bigrams from "
+                    f"{samples} samples ({total_bytes:,} bytes)"
+                )
+            else:
+                print(f"  SKIP {key}: no usable bigrams")
+    else:
+        # Parallel mode
+        with concurrent.futures.ProcessPoolExecutor(
+            max_workers=args.build_workers,
+        ) as pool:
+            futures = {
+                pool.submit(_build_one_model, *item): item[1]  # enc_name for error msg
+                for item in work_items
+            }
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    key, bigrams, samples, total_bytes = future.result()
+                except Exception as exc:
+                    enc = futures[future]
+                    print(f"  ERROR {enc}: {exc}")
+                    continue
+                if bigrams:
+                    models[key] = bigrams
+                    print(
+                        f"  {key}: {len(bigrams)} bigrams from "
+                        f"{samples} samples ({total_bytes:,} bytes)"
+                    )
+                else:
+                    print(f"  SKIP {key}: no usable bigrams")
 
     print()
 
