@@ -5,14 +5,9 @@ structure for a given encoding.  Used after byte-validity filtering (Stage 2a)
 to further rank multi-byte encoding candidates.
 """
 
-from __future__ import annotations
+from collections.abc import Callable
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from chardet.registry import EncodingInfo
+from chardet.registry import EncodingInfo
 
 # ---------------------------------------------------------------------------
 # Per-encoding structural scorers
