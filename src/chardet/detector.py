@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import warnings
+from typing import ClassVar
+
 from chardet.enums import EncodingEra, LanguageFilter
+from chardet.equivalences import PREFERRED_SUPERSET, apply_legacy_rename
 from chardet.pipeline.ascii import detect_ascii
 from chardet.pipeline.bom import detect_bom
 from chardet.pipeline.escape import detect_escape_encoding
@@ -21,13 +25,27 @@ _MIN_INCREMENTAL_CHECK = 64
 
 
 class UniversalDetector:
+    MINIMUM_THRESHOLD = 0.20
+    LEGACY_MAP: ClassVar[dict[str, str]] = dict(PREFERRED_SUPERSET)
+
     def __init__(
         self,
-        lang_filter: LanguageFilter = LanguageFilter.ALL,  # noqa: ARG002
-        should_rename_legacy: bool | None = None,  # noqa: ARG002
+        lang_filter: LanguageFilter = LanguageFilter.ALL,
+        should_rename_legacy: bool | None = None,
         encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
         max_bytes: int = 200_000,
     ) -> None:
+        if lang_filter != LanguageFilter.ALL:
+            warnings.warn(
+                "lang_filter is not implemented in this version of chardet "
+                "and will be ignored",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        if should_rename_legacy is None:
+            self._rename_legacy = encoding_era == EncodingEra.MODERN_WEB
+        else:
+            self._rename_legacy = should_rename_legacy
         self._encoding_era = encoding_era
         self._max_bytes = max_bytes
         self._buffer = bytearray()
@@ -108,6 +126,8 @@ class UniversalDetector:
                 )
                 self._result = results[0].to_dict()
                 self._done = True
+            if self._rename_legacy and self._result is not None:
+                apply_legacy_rename(self._result)
         return self.result
 
     def reset(self) -> None:

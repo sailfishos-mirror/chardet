@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from chardet.detector import UniversalDetector
 from chardet.enums import EncodingEra, LanguageFilter
+from chardet.equivalences import apply_legacy_rename
 from chardet.pipeline.orchestrator import run_pipeline
 
 __version__ = "6.1.0"
@@ -16,35 +17,58 @@ __all__ = [
 ]
 
 
+def _resolve_rename(
+    should_rename_legacy: bool | None, encoding_era: EncodingEra
+) -> bool:
+    if should_rename_legacy is None:
+        return encoding_era == EncodingEra.MODERN_WEB
+    return should_rename_legacy
+
+
 def detect(
     byte_str: bytes | bytearray,
-    should_rename_legacy: bool | None = None,  # noqa: ARG001
+    should_rename_legacy: bool | None = None,
     encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
-    chunk_size: int = 65_536,  # noqa: ARG001
+    chunk_size: int = 65_536,  # noqa: ARG001 — API compat, our pipeline doesn't chunk
     max_bytes: int = 200_000,
 ) -> dict[str, str | float | None]:
     """Detect the encoding of the given byte string.
 
     Parameters match chardet 6.x for backward compatibility.
-    *should_rename_legacy* and *chunk_size* are accepted but not used.
+    *chunk_size* is accepted but has no effect.
     """
     results = run_pipeline(bytes(byte_str), encoding_era, max_bytes=max_bytes)
-    return results[0].to_dict()
+    result = results[0].to_dict()
+    if _resolve_rename(should_rename_legacy, encoding_era):
+        apply_legacy_rename(result)
+    return result
 
 
 def detect_all(  # noqa: PLR0913
     byte_str: bytes | bytearray,
-    ignore_threshold: bool = False,  # noqa: ARG001, FBT001, FBT002
-    should_rename_legacy: bool | None = None,  # noqa: ARG001
+    ignore_threshold: bool = False,  # noqa: FBT001, FBT002
+    should_rename_legacy: bool | None = None,
     encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
-    chunk_size: int = 65_536,  # noqa: ARG001
+    chunk_size: int = 65_536,  # noqa: ARG001 — API compat, our pipeline doesn't chunk
     max_bytes: int = 200_000,
 ) -> list[dict[str, str | float | None]]:
     """Detect all possible encodings of the given byte string.
 
     Parameters match chardet 6.x for backward compatibility.
-    *ignore_threshold*, *should_rename_legacy*, and *chunk_size* are accepted
-    but not used.
+    *chunk_size* is accepted but has no effect.
     """
     results = run_pipeline(bytes(byte_str), encoding_era, max_bytes=max_bytes)
-    return [r.to_dict() for r in results]
+    rename = _resolve_rename(should_rename_legacy, encoding_era)
+    dicts = [r.to_dict() for r in results]
+    if not ignore_threshold:
+        filtered = [
+            d
+            for d in dicts
+            if (d.get("confidence") or 0) > UniversalDetector.MINIMUM_THRESHOLD
+        ]
+        if filtered:
+            dicts = filtered
+    if rename:
+        for d in dicts:
+            apply_legacy_rename(d)
+    return sorted(dicts, key=lambda d: -(d.get("confidence") or 0))

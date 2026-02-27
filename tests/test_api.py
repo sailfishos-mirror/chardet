@@ -1,6 +1,8 @@
 # tests/test_api.py
+import warnings
+
 import chardet
-from chardet.enums import EncodingEra
+from chardet.enums import EncodingEra, LanguageFilter
 
 
 def test_detect_returns_dict():
@@ -13,7 +15,9 @@ def test_detect_returns_dict():
 
 def test_detect_ascii():
     result = chardet.detect(b"Hello world")
-    assert result["encoding"] == "ascii"
+    # Default encoding_era=MODERN_WEB resolves should_rename_legacy to True,
+    # so ascii is reported as its superset Windows-1252.
+    assert result["encoding"] == "Windows-1252"
     assert result["confidence"] == 1.0
 
 
@@ -71,3 +75,112 @@ def test_version_exists():
     assert hasattr(chardet, "__version__")
     assert isinstance(chardet.__version__, str)
     assert chardet.__version__ == "6.1.0"
+
+
+# --- should_rename_legacy tests ---
+
+
+def test_rename_legacy_default_modern_web():
+    """Default (None) with MODERN_WEB era renames ascii to Windows-1252."""
+    result = chardet.detect(b"Hello world")
+    assert result["encoding"] == "Windows-1252"
+
+
+def test_rename_legacy_false():
+    """Explicit False returns the raw encoding name."""
+    result = chardet.detect(b"Hello world", should_rename_legacy=False)
+    assert result["encoding"] == "ascii"
+
+
+def test_rename_legacy_true():
+    """Explicit True renames regardless of era."""
+    result = chardet.detect(
+        b"Hello world",
+        should_rename_legacy=True,
+        encoding_era=EncodingEra.ALL,
+    )
+    assert result["encoding"] == "Windows-1252"
+
+
+def test_rename_legacy_none_non_modern_era():
+    """None with non-MODERN_WEB era does not rename."""
+    result = chardet.detect(b"Hello world", encoding_era=EncodingEra.ALL)
+    assert result["encoding"] == "ascii"
+
+
+def test_rename_legacy_detect_all():
+    """should_rename_legacy applies to detect_all() results too."""
+    results = chardet.detect_all(b"Hello world", should_rename_legacy=True)
+    assert results[0]["encoding"] == "Windows-1252"
+
+
+def test_rename_legacy_detector():
+    """UniversalDetector applies rename on close()."""
+    from chardet.detector import UniversalDetector
+
+    det = UniversalDetector(should_rename_legacy=True)
+    det.feed(b"Hello world, this is enough ASCII data for detection. " * 2)
+    det.close()
+    assert det.result["encoding"] == "Windows-1252"
+
+
+def test_rename_legacy_detector_false():
+    """UniversalDetector with False returns raw name."""
+    from chardet.detector import UniversalDetector
+
+    det = UniversalDetector(should_rename_legacy=False)
+    det.feed(b"Hello world, this is enough ASCII data for detection. " * 2)
+    det.close()
+    assert det.result["encoding"] == "ascii"
+
+
+# --- ignore_threshold tests ---
+
+
+def test_ignore_threshold_false_filters():
+    """Default ignore_threshold=False filters low-confidence results."""
+    data = "Héllo wörld café résumé".encode()
+    results_all = chardet.detect_all(data, ignore_threshold=True)
+    results_filtered = chardet.detect_all(data, ignore_threshold=False)
+    assert len(results_filtered) <= len(results_all)
+    for r in results_filtered:
+        assert r["confidence"] > 0.20
+
+
+def test_ignore_threshold_true_returns_all():
+    """ignore_threshold=True returns all candidates."""
+    data = "Héllo wörld café résumé".encode()
+    results = chardet.detect_all(data, ignore_threshold=True)
+    assert len(results) >= 1
+
+
+def test_ignore_threshold_fallback():
+    """If all results filtered, fall back to top result."""
+    results = chardet.detect_all(b"", ignore_threshold=False)
+    assert len(results) >= 1
+
+
+# --- lang_filter DeprecationWarning test ---
+
+
+def test_lang_filter_warning():
+    """Non-ALL lang_filter emits DeprecationWarning."""
+    from chardet.detector import UniversalDetector
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        UniversalDetector(lang_filter=LanguageFilter.CJK)
+        assert len(w) == 1
+        assert issubclass(w[0].category, DeprecationWarning)
+        assert "lang_filter" in str(w[0].message)
+
+
+def test_lang_filter_all_no_warning():
+    """ALL lang_filter does not warn."""
+    from chardet.detector import UniversalDetector
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        UniversalDetector(lang_filter=LanguageFilter.ALL)
+        dep_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
+        assert len(dep_warnings) == 0

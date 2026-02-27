@@ -1,20 +1,18 @@
-"""Directional encoding equivalences for accuracy evaluation.
+"""Encoding equivalences and legacy name remapping.
 
-This module defines the single source of truth for which encoding detections
-count as "correct" when compared against expected encodings. It is used by
-the test framework and diagnostic scripts.
+This module defines:
 
-Two kinds of acceptable mismatch:
-
-1. **Directional supersets**: detecting a superset encoding when the expected
-   encoding is a subset is correct (e.g., detecting utf-8 when expected is
-   ascii), but not the reverse. Each superset must map every
-   alphanumeric/punctuation/currency byte in the subset to the identical
-   character, with only additional such characters in the superset.
+1. **Directional supersets** for accuracy evaluation: detecting a superset
+   encoding when the expected encoding is a subset is correct (e.g., detecting
+   utf-8 when expected is ascii), but not the reverse.
 
 2. **Bidirectional equivalents**: encodings that are byte-for-byte identical
    for all alphanumeric/punctuation/currency characters (currently only
    UTF-16/UTF-32 endian variants).
+
+3. **Preferred superset mapping** for the ``should_rename_legacy`` API option:
+   replaces detected ISO/subset encoding names with their Windows/CP superset
+   equivalents that modern software actually uses.
 """
 
 from __future__ import annotations
@@ -36,17 +34,56 @@ def normalize_encoding_name(name: str) -> str:
 # E.g., expected=ascii, detected=utf-8 -> correct (utf-8 ⊃ ascii).
 # But expected=utf-8, detected=ascii -> wrong (ascii ⊄ utf-8).
 SUPERSETS: dict[str, frozenset[str]] = {
-    "ascii": frozenset({"utf-8"}),
+    "ascii": frozenset({"utf-8", "windows-1252"}),
     "tis-620": frozenset({"iso-8859-11", "cp874"}),
     "iso-8859-11": frozenset({"cp874"}),
     "gb2312": frozenset({"gb18030"}),
     "shift_jis": frozenset({"cp932"}),
     "euc-kr": frozenset({"cp949"}),
-    # windows-1252 ⊃ iso-8859-1 (fills C1 control range 0x80-0x9F with 27 printable chars)
+    # Each Windows code page fills the C1 control range (0x80-0x9F) with
+    # printable characters, making it a strict superset of its ISO counterpart.
     "iso-8859-1": frozenset({"windows-1252"}),
-    # windows-1254 ⊃ iso-8859-9 (fills C1 control range 0x80-0x9F with 25 printable chars)
+    "iso-8859-2": frozenset({"windows-1250"}),
+    "iso-8859-5": frozenset({"windows-1251"}),
+    "iso-8859-6": frozenset({"windows-1256"}),
+    "iso-8859-7": frozenset({"windows-1253"}),
+    "iso-8859-8": frozenset({"windows-1255"}),
     "iso-8859-9": frozenset({"windows-1254"}),
+    "iso-8859-13": frozenset({"windows-1257"}),
 }
+
+# Preferred superset name for each encoding, used by the ``should_rename_legacy``
+# API option.  When enabled, detected encoding names are replaced with the
+# Windows/CP superset that modern software actually uses (browsers, editors,
+# etc. treat these ISO subsets as their Windows counterparts).
+PREFERRED_SUPERSET: dict[str, str] = {
+    "ascii": "Windows-1252",
+    "euc-kr": "CP949",
+    "iso-8859-1": "Windows-1252",
+    "iso-8859-2": "Windows-1250",
+    "iso-8859-5": "Windows-1251",
+    "iso-8859-6": "Windows-1256",
+    "iso-8859-7": "Windows-1253",
+    "iso-8859-8": "Windows-1255",
+    "iso-8859-9": "Windows-1254",
+    "iso-8859-11": "CP874",
+    "iso-8859-13": "Windows-1257",
+    "tis-620": "CP874",
+}
+
+
+def apply_legacy_rename(
+    result: dict[str, str | float | None],
+) -> dict[str, str | float | None]:
+    """Replace the encoding name with its preferred Windows/CP superset.
+
+    Modifies the ``"encoding"`` value in *result* in-place and returns it.
+    """
+    enc = result.get("encoding")
+    if isinstance(enc, str):
+        result["encoding"] = PREFERRED_SUPERSET.get(enc.lower(), enc)
+    return result
+
 
 # Bidirectional equivalents -- byte-order variants only.
 BIDIRECTIONAL_GROUPS: list[tuple[str, ...]] = [
