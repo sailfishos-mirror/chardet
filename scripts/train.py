@@ -759,6 +759,12 @@ def main() -> None:
         help="Number of parallel threads for downloading",
     )
     parser.add_argument(
+        "--build-workers",
+        type=int,
+        default=os.cpu_count(),
+        help="Number of parallel processes for building models (default: all CPUs)",
+    )
+    parser.add_argument(
         "--encodings",
         nargs="+",
         default=None,
