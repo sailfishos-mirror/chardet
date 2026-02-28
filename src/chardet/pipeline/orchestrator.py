@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from chardet.models import infer_language
 from chardet.pipeline import DetectionResult
 from chardet.pipeline.ascii import detect_ascii
 from chardet.pipeline.binary import is_binary
@@ -347,12 +348,31 @@ def _promote_koi8t(
     return results
 
 
-def run_pipeline(
+def _fill_language(results: list[DetectionResult]) -> list[DetectionResult]:
+    """Fill in language for results where encoding implies a single language."""
+    filled: list[DetectionResult] = []
+    for result in results:
+        if result.language is None and result.encoding is not None:
+            lang = infer_language(result.encoding)
+            if lang is not None:
+                filled.append(
+                    DetectionResult(
+                        encoding=result.encoding,
+                        confidence=result.confidence,
+                        language=lang,
+                    )
+                )
+                continue
+        filled.append(result)
+    return filled
+
+
+def _run_pipeline_core(
     data: bytes,
     encoding_era: EncodingEra,
     max_bytes: int = 200_000,
 ) -> list[DetectionResult]:
-    """Run the full detection pipeline. Returns list of results sorted by confidence."""
+    """Core pipeline logic. Returns list of results sorted by confidence."""
     clear_analysis_cache()
     data = data[:max_bytes]
 
@@ -446,3 +466,13 @@ def run_pipeline(
     results = resolve_confusion_groups(data, results)
     results = _demote_niche_latin(data, results)
     return _promote_koi8t(data, results)
+
+
+def run_pipeline(
+    data: bytes,
+    encoding_era: EncodingEra,
+    max_bytes: int = 200_000,
+) -> list[DetectionResult]:
+    """Run the full detection pipeline. Returns list of results sorted by confidence."""
+    results = _run_pipeline_core(data, encoding_era, max_bytes)
+    return _fill_language(results)

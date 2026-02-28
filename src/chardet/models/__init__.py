@@ -14,6 +14,53 @@ _MODEL_CACHE: dict[str, bytearray] | None = None
 _ENC_INDEX: dict[str, list[tuple[str | None, bytearray]]] | None = None
 # Cached L2 norms for all models, keyed by id(model)
 _MODEL_NORMS: dict[int, float] | None = None
+# Encodings that map to exactly one language.  Includes gb2312 which has no
+# bigram model of its own but is unambiguously Chinese.
+_SINGLE_LANG_MAP: dict[str, str] = {
+    "big5": "zh",
+    "cp1006": "ur",
+    "cp1026": "tr",
+    "cp1125": "uk",
+    "cp424": "he",
+    "cp737": "el",
+    "cp856": "he",
+    "cp857": "tr",
+    "cp860": "pt",
+    "cp861": "is",
+    "cp862": "he",
+    "cp863": "fr",
+    "cp864": "ar",
+    "cp869": "el",
+    "cp874": "th",
+    "cp875": "el",
+    "cp932": "ja",
+    "cp949": "ko",
+    "euc-jp": "ja",
+    "euc-kr": "ko",
+    "gb18030": "zh",
+    "gb2312": "zh",
+    "hz-gb-2312": "zh",
+    "iso-2022-jp": "ja",
+    "iso-2022-kr": "ko",
+    "iso-8859-7": "el",
+    "iso-8859-8": "he",
+    "iso-8859-9": "tr",
+    "johab": "ko",
+    "koi8-r": "ru",
+    "koi8-t": "tg",
+    "koi8-u": "uk",
+    "kz-1048": "kk",
+    "mac-greek": "el",
+    "mac-iceland": "is",
+    "mac-turkish": "tr",
+    "ptcp154": "kk",
+    "shift_jis": "ja",
+    "tis-620": "th",
+    "windows-1253": "el",
+    "windows-1254": "tr",
+    "windows-1255": "he",
+    "windows-1258": "vi",
+}
 
 
 def load_models() -> dict[str, bytearray]:
@@ -81,6 +128,11 @@ def _get_enc_index() -> dict[str, list[tuple[str | None, bytearray]]]:
             index.setdefault(key, []).append((None, model))
     _ENC_INDEX = index
     return index
+
+
+def infer_language(encoding: str) -> str | None:
+    """Return the language for a single-language encoding, or None."""
+    return _SINGLE_LANG_MAP.get(encoding)
 
 
 def _get_model_norms() -> dict[int, float]:
