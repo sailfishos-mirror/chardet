@@ -168,6 +168,17 @@ ignore = [
 quote-style = "double"
 indent-style = "space"
 
+[tool.coverage.run]
+source = ["src/chardet"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+]
+
 [dependency-groups]
 dev = [
     "datasets>=4.6.0",
