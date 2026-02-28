@@ -376,10 +376,13 @@ def run_comparison(
     max_label = max(len(label) for label in detector_labels)
     for label in detector_labels:
         s = stats[label]
-        acc = s["correct"] / total if total else 0
+        enc_acc = s["correct"] / total if total else 0
+        lang_acc = s["lang_correct"] / s["lang_total"] if s["lang_total"] else 0
         print(
             f"  {label + ':':<{max_label + 1}} "
-            f"{s['correct']:>4}/{total} = {acc:.1%}  ({s['time']:.2f}s)"
+            f"{s['correct']:>4}/{total} = {enc_acc:.1%} encoding  "
+            f"{s['lang_correct']:>4}/{s['lang_total']} = {lang_acc:.1%} language  "
+            f"({s['time']:.2f}s)"
         )
 
     # -- Detection runtime distribution --
@@ -511,6 +514,35 @@ def run_comparison(
             else:
                 pairwise[label]["ties"].append((enc, ref_acc, t_enc))
 
+    # -- Per-encoding language accuracy --
+    print()
+    print("=" * 100)
+    print("PER-ENCODING LANGUAGE ACCURACY")
+    print("=" * 100)
+
+    header = f"  {'Encoding':<25} {'Files':>5}"
+    for label in detector_labels:
+        header += f"  {label:>{col_w}}"
+    print(header)
+    sep = f"  {'-' * 25} {'-' * 5}"
+    for _ in detector_labels:
+        sep += f"  {'-' * col_w}"
+    print(sep)
+
+    for enc in all_encodings:
+        t_enc = stats[ref_label]["per_enc"][enc]["lang_total"]
+        if t_enc == 0:
+            continue
+
+        row = f"  {enc:<25} {t_enc:>5}"
+        for label in detector_labels:
+            s = stats[label]["per_enc"][enc]
+            lang_t = s["lang_total"]
+            lang_c = s["lang_correct"]
+            acc = lang_c / lang_t if lang_t else 0
+            row += f"  {lang_c:>{col_w - 12}}/{lang_t} = {acc:>6.1%} "
+        print(row)
+
     # -- Pairwise comparisons vs reference detector --
     for label in detector_labels[1:]:
         pw = pairwise[label]
@@ -554,6 +586,31 @@ def run_comparison(
             print(f)
         if len(failures) > 80:
             print(f"  ... and {len(failures) - 80} more")
+
+    # -- Language failure details --
+    for label in detector_labels:
+        lang_failures = stats[label]["lang_failures"]
+        # Skip detectors that never detected any language (e.g., charset-normalizer)
+        if (
+            lang_failures
+            and stats[label]["lang_correct"] == 0
+            and stats[label]["lang_total"] > 0
+        ):
+            print()
+            print("=" * 100)
+            print(
+                f"{label.upper()} LANGUAGE FAILURES (all {len(lang_failures)} — detector does not report language)"
+            )
+            print("=" * 100)
+            continue
+        print()
+        print("=" * 100)
+        print(f"{label.upper()} LANGUAGE FAILURES ({len(lang_failures)} total)")
+        print("=" * 100)
+        for f in lang_failures[:80]:
+            print(f)
+        if len(lang_failures) > 80:
+            print(f"  ... and {len(lang_failures) - 80} more")
 
 
 # ---------------------------------------------------------------------------
