@@ -12,8 +12,12 @@ import importlib.resources
 import struct
 import unicodedata
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from chardet.registry import REGISTRY
+
+if TYPE_CHECKING:
+    from chardet.pipeline import DetectionResult
 
 
 def _decode_byte_table(codec_name: str) -> list[str | None]:
@@ -433,3 +437,74 @@ def resolve_by_bigram_rescore(
     if best_b > best_a:
         return enc_b
     return None
+
+
+def _find_pair_key(
+    maps: DistinguishingMaps,
+    enc_a: str,
+    enc_b: str,
+) -> tuple[str, str] | None:
+    """Find the canonical key for a pair of encodings in the confusion maps."""
+    if (enc_a, enc_b) in maps:
+        return (enc_a, enc_b)
+    if (enc_b, enc_a) in maps:
+        return (enc_b, enc_a)
+    return None
+
+
+def resolve_confusion_groups(
+    data: bytes,
+    results: list[DetectionResult],
+    strategy: str = "hybrid",
+) -> list[DetectionResult]:
+    """Resolve confusion between similar encodings in the top results.
+
+    Compares the top two results. If they form a known confusion pair,
+    applies the specified resolution strategy to determine the winner.
+
+    Strategies:
+    - "category": Unicode category voting only
+    - "bigram": Distinguishing-bigram re-scoring only
+    - "hybrid": Both strategies; bigram wins on disagreement
+    - "none": No resolution (passthrough)
+    """
+    if strategy == "none" or len(results) < 2:
+        return results
+
+    top = results[0]
+    second = results[1]
+    if top.encoding is None or second.encoding is None:
+        return results
+
+    maps = load_confusion_data()
+    pair_key = _find_pair_key(maps, top.encoding, second.encoding)
+    if pair_key is None:
+        return results
+
+    diff_bytes, categories = maps[pair_key]
+    enc_a, enc_b = pair_key
+
+    winner = None
+    if strategy == "category":
+        winner = resolve_by_category_voting(data, enc_a, enc_b, diff_bytes, categories)
+    elif strategy == "bigram":
+        winner = resolve_by_bigram_rescore(data, enc_a, enc_b, diff_bytes)
+    elif strategy == "hybrid":
+        cat_winner = resolve_by_category_voting(
+            data, enc_a, enc_b, diff_bytes, categories
+        )
+        bigram_winner = resolve_by_bigram_rescore(data, enc_a, enc_b, diff_bytes)
+        if cat_winner == bigram_winner:
+            winner = cat_winner
+        elif bigram_winner is not None:
+            winner = bigram_winner
+        else:
+            winner = cat_winner
+
+    if winner is None or winner == top.encoding:
+        return results
+
+    if winner == second.encoding:
+        return [second, top, *results[2:]]
+
+    return results

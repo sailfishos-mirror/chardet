@@ -5,6 +5,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
+from chardet.pipeline import DetectionResult
 from chardet.pipeline.confusion import (
     compute_confusion_groups,
     compute_distinguishing_maps,
@@ -12,6 +13,7 @@ from chardet.pipeline.confusion import (
     load_confusion_data,
     resolve_by_bigram_rescore,
     resolve_by_category_voting,
+    resolve_confusion_groups,
     serialize_confusion_data,
 )
 
@@ -137,3 +139,26 @@ def test_bigram_rescore_returns_valid_result():
     data = bytes([0x41, 0xD5, 0x42, 0xD5, 0x43])
     result = resolve_by_bigram_rescore(data, "cp850", "cp858", diff_bytes)
     assert result in ("cp850", "cp858", None)
+
+
+def test_resolve_confusion_groups_no_change_when_unrelated():
+    """Unrelated encodings should not be reordered by confusion resolution."""
+    results = [
+        DetectionResult(encoding="utf-8", confidence=0.95, language=None),
+        DetectionResult(encoding="koi8-r", confidence=0.80, language="Russian"),
+    ]
+    resolved = resolve_confusion_groups(b"Hello world", results)
+    assert resolved[0].encoding == "utf-8"
+
+
+def test_resolve_confusion_groups_preserves_all_results():
+    """Confusion resolution should preserve all results, only reorder."""
+    results = [
+        DetectionResult(encoding="cp037", confidence=0.95, language="English"),
+        DetectionResult(encoding="cp500", confidence=0.94, language="English"),
+        DetectionResult(encoding="windows-1252", confidence=0.50, language="English"),
+    ]
+    resolved = resolve_confusion_groups(bytes(range(256)), results)
+    assert len(resolved) == len(results)
+    resolved_encs = {r.encoding for r in resolved}
+    assert resolved_encs == {"cp037", "cp500", "windows-1252"}

@@ -8,6 +8,7 @@ from chardet.pipeline import DetectionResult
 from chardet.pipeline.ascii import detect_ascii
 from chardet.pipeline.binary import is_binary
 from chardet.pipeline.bom import detect_bom
+from chardet.pipeline.confusion import resolve_confusion_groups
 from chardet.pipeline.escape import detect_escape_encoding
 from chardet.pipeline.markup import detect_markup_charset
 from chardet.pipeline.statistical import score_candidates
@@ -434,14 +435,18 @@ def run_pipeline(
         structural_scores.sort(key=lambda x: x[1], reverse=True)
         _, best_score = structural_scores[0]
         if best_score >= _STRUCTURAL_CONFIDENCE_THRESHOLD:
-            return _score_structural_candidates(
+            results = _score_structural_candidates(
                 data, structural_scores, valid_candidates
             )
+            results = resolve_confusion_groups(data, results)
+            results = _demote_niche_latin(data, results)
+            return _promote_koi8t(data, results)
 
     # Stage 3: Statistical scoring for all remaining candidates
-    results = score_candidates(data, tuple(valid_candidates))
+    results = list(score_candidates(data, tuple(valid_candidates)))
     if not results:
         return [_FALLBACK_RESULT]
 
+    results = resolve_confusion_groups(data, results)
     results = _demote_niche_latin(data, results)
     return _promote_koi8t(data, results)
