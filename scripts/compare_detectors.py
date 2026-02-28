@@ -101,7 +101,7 @@ def _run_timing_subprocess(
     data_dir: str,
     *,
     detector_type: str = "chardet",
-    use_encoding_era: bool = True,
+    encoding_era: str = "all",
     pure: bool = False,
 ) -> tuple[list[tuple[str, str, str, str | None]], float, list[float], float]:
     """Run detection timing in an isolated subprocess via ``benchmark_time.py``.
@@ -114,8 +114,8 @@ def _run_timing_subprocess(
         Path to the test data directory.
     detector_type : str
         One of ``"chardet"``, ``"charset-normalizer"``, or ``"cchardet"``.
-    use_encoding_era : bool
-        For ``"chardet"`` only -- whether to pass ``encoding_era``.
+    encoding_era : str
+        For ``"chardet"`` only -- ``"all"``, ``"modern_web"``, or ``"none"``.
     pure : bool
         Abort if mypyc .so/.pyd files are found (chardet only).
 
@@ -138,8 +138,7 @@ def _run_timing_subprocess(
         data_dir,
         "--json-only",
     ]
-    if not use_encoding_era:
-        cmd.append("--no-encoding-era")
+    cmd.extend(["--encoding-era", encoding_era])
     if pure:
         cmd.append("--pure")
 
@@ -180,7 +179,7 @@ def _measure_memory_subprocess(
     data_dir: str,
     *,
     python_executable: str,
-    use_encoding_era: bool = True,
+    encoding_era: str = "all",
     pure: bool = False,
 ) -> dict[str, int]:
     """Measure memory by running ``benchmark_memory.py`` in a subprocess."""
@@ -194,8 +193,7 @@ def _measure_memory_subprocess(
         data_dir,
         "--json-only",
     ]
-    if not use_encoding_era:
-        cmd.append("--no-encoding-era")
+    cmd.extend(["--encoding-era", encoding_era])
     if pure:
         cmd.append("--pure")
 
@@ -246,7 +244,7 @@ def _record_result(
 
 def run_comparison(
     data_dir: Path,
-    detectors: list[tuple[str, str, str, bool]],
+    detectors: list[tuple[str, str, str, str]],
     *,
     pure: bool = False,
 ) -> None:
@@ -256,8 +254,8 @@ def run_comparison(
     ----------
     data_dir : Path
         Path to the test data directory.
-    detectors : list[tuple[str, str, str, bool]]
-        Each tuple is ``(label, detector_type, python_executable, use_encoding_era)``.
+    detectors : list[tuple[str, str, str, str]]
+        Each tuple is ``(label, detector_type, python_executable, encoding_era)``.
     pure : bool
         Propagate ``--pure`` to chardet subprocess scripts.
 
@@ -299,13 +297,13 @@ def run_comparison(
 
     # --- Subprocess detection for all detectors ---
     import_times: dict[str, float] = {}
-    for label, detector_type, python_exe, use_era in detectors:
+    for label, detector_type, python_exe, era in detectors:
         print(f"  Running detection for {label} ...")
         results, elapsed, file_times, import_time = _run_timing_subprocess(
             python_exe,
             data_dir_str,
             detector_type=detector_type,
-            use_encoding_era=use_era,
+            encoding_era=era,
             pure=pure and detector_type == "chardet",
         )
         stats[label]["time"] = elapsed
@@ -319,13 +317,13 @@ def run_comparison(
     # --- Subprocess-isolated memory measurement ---
     print("Measuring memory (isolated subprocesses)...")
     memory: dict[str, dict] = {}
-    for label, detector_type, python_exe, use_era in detectors:
+    for label, detector_type, python_exe, era in detectors:
         print(f"  Measuring memory for {label} ...")
         memory[label] = _measure_memory_subprocess(
             detector_type,
             data_dir_str,
             python_executable=python_exe,
-            use_encoding_era=use_era,
+            encoding_era=era,
             pure=pure and detector_type == "chardet",
         )
 
@@ -633,26 +631,21 @@ if __name__ == "__main__":
             except subprocess.CalledProcessError as exc:
                 print(f"  WARNING: failed to create venv for {label}: {exc}")
 
-        # Build unified detector list: (label, detector_type, python_exe, use_era)
-        detectors: list[tuple[str, str, str, bool]] = [
-            (
-                "chardet-rewrite",
-                "chardet",
-                str(venvs["chardet-rewrite"][1]),
-                True,
-            ),
+        # Build unified detector list: (label, detector_type, python_exe, encoding_era)
+        detectors: list[tuple[str, str, str, str]] = [
+            ("chardet-rewrite", "chardet", str(venvs["chardet-rewrite"][1]), "all"),
         ]
         if cn_label in venvs:
             detectors.append(
-                (cn_label, "charset-normalizer", str(venvs[cn_label][1]), False)
+                (cn_label, "charset-normalizer", str(venvs[cn_label][1]), "none")
             )
         for version in args.chardet_version:
             label = f"chardet {version}"
             if label in venvs:
-                use_era = int(version.split(".")[0]) >= 6
-                detectors.append((label, "chardet", str(venvs[label][1]), use_era))
+                era = "all" if int(version.split(".")[0]) >= 6 else "none"
+                detectors.append((label, "chardet", str(venvs[label][1]), era))
         for label, det_type, python_path in extra_detectors:
-            detectors.append((label, det_type, str(python_path), False))
+            detectors.append((label, det_type, str(python_path), "none"))
 
         run_comparison(data_dir, detectors, pure=args.pure)
     finally:

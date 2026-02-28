@@ -37,16 +37,15 @@ def main() -> None:
         help="Path to test data directory (default: tests/data)",
     )
     parser.add_argument(
-        "--use-encoding-era",
-        action="store_true",
-        default=True,
-        help="Pass encoding_era=EncodingEra.ALL to chardet.detect (default)",
-    )
-    parser.add_argument(
-        "--no-encoding-era",
-        action="store_false",
-        dest="use_encoding_era",
-        help="Do not pass encoding_era (for old chardet < 6.0)",
+        "--encoding-era",
+        choices=["all", "modern_web", "none"],
+        default="all",
+        help=(
+            "Encoding era for chardet.detect(): "
+            "'all' (default) for EncodingEra.ALL, "
+            "'modern_web' for EncodingEra.MODERN_WEB, "
+            "'none' to omit (for chardet < 6.0)"
+        ),
     )
     parser.add_argument(
         "--json-only",
@@ -83,15 +82,16 @@ def main() -> None:
     all_data = [(enc, lang, fp, fp.read_bytes()) for enc, lang, fp in test_files]
 
     # Import detector and build detect function — timed with perf_counter only
-    if args.detector == "chardet" and args.use_encoding_era:
+    if args.detector == "chardet" and args.encoding_era != "none":
         t0 = time.perf_counter()
         import chardet
         from chardet.enums import EncodingEra
 
         import_time = time.perf_counter() - t0
+        era = EncodingEra.ALL if args.encoding_era == "all" else EncodingEra.MODERN_WEB
 
         def detect(data: bytes) -> str | None:
-            return chardet.detect(data, encoding_era=EncodingEra.ALL)["encoding"]
+            return chardet.detect(data, encoding_era=era)["encoding"]
 
     elif args.detector == "chardet":
         t0 = time.perf_counter()
@@ -162,7 +162,7 @@ def main() -> None:
 
         print(f"Detector: {args.detector}")
         if args.detector == "chardet":
-            print(f"  encoding_era: {args.use_encoding_era}")
+            print(f"  encoding_era: {args.encoding_era}")
         print(f"  Files:        {len(all_data)}")
         print()
         print("Timing:")
