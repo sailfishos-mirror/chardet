@@ -1,4 +1,9 @@
-"""Model loading and bigram scoring utilities."""
+"""Model loading and bigram scoring utilities.
+
+Note: ``from __future__ import annotations`` is intentionally omitted because
+this module is compiled with mypyc, which does not support PEP 563 string
+annotations.
+"""
 
 import importlib.resources
 import struct
@@ -26,24 +31,28 @@ def load_models() -> dict[str, bytearray]:
         _MODEL_CACHE = models
         return models
 
-    offset = 0
-    (num_encodings,) = struct.unpack_from("!I", data, offset)
-    offset += 4
-
-    for _ in range(num_encodings):
-        (name_len,) = struct.unpack_from("!I", data, offset)
-        offset += 4
-        name = data[offset : offset + name_len].decode("utf-8")
-        offset += name_len
-        (num_entries,) = struct.unpack_from("!I", data, offset)
+    try:
+        offset = 0
+        (num_encodings,) = struct.unpack_from("!I", data, offset)
         offset += 4
 
-        table = bytearray(65536)
-        for _ in range(num_entries):
-            b1, b2, weight = struct.unpack_from("!BBB", data, offset)
-            offset += 3
-            table[(b1 << 8) | b2] = weight
-        models[name] = table
+        for _ in range(num_encodings):
+            (name_len,) = struct.unpack_from("!I", data, offset)
+            offset += 4
+            name = data[offset : offset + name_len].decode("utf-8")
+            offset += name_len
+            (num_entries,) = struct.unpack_from("!I", data, offset)
+            offset += 4
+
+            table = bytearray(65536)
+            for _ in range(num_entries):
+                b1, b2, weight = struct.unpack_from("!BBB", data, offset)
+                offset += 3
+                table[(b1 << 8) | b2] = weight
+            models[name] = table
+    except struct.error as e:
+        msg = f"corrupt models.bin: {e}"
+        raise ValueError(msg) from e
 
     _MODEL_CACHE = models
     return models
@@ -118,9 +127,13 @@ def _score_with_profile(profile: BigramProfile, model: bytearray) -> float:
 def score_bigrams(
     data: bytes,
     encoding: str,
-    models: dict[str, bytearray],
+    models: dict[str, bytearray] | None = None,
 ) -> float:
-    """Score data against a specific encoding's bigram model. Returns 0.0-1.0."""
+    """Score data against a specific encoding's bigram model. Returns 0.0-1.0.
+
+    Convenience wrapper around ``score_best_language`` that discards the
+    language result.  Primarily used in tests.
+    """
     if not data:
         return 0.0
     score, _ = score_best_language(data, encoding, models)
@@ -130,7 +143,7 @@ def score_bigrams(
 def score_best_language(
     data: bytes,
     encoding: str,
-    models: dict[str, bytearray],  # noqa: ARG001
+    models: dict[str, bytearray] | None = None,  # noqa: ARG001
     profile: BigramProfile | None = None,
 ) -> tuple[float, str | None]:
     """Score data against all language variants of an encoding.
@@ -138,9 +151,9 @@ def score_best_language(
     Returns (best_score, best_language). Uses a pre-grouped index for O(L)
     lookup where L is the number of language variants for the encoding.
 
-    The *models* parameter is accepted for API consistency with
-    ``score_bigrams`` but the internal index (built once from the loaded
-    models) is used for efficient lookup.
+    The *models* parameter is accepted for backward compatibility but is not
+    used; the internal index (built once from the loaded models) is used
+    for efficient lookup.
 
     If *profile* is provided, it is reused instead of recomputing the bigram
     frequency distribution from *data*.

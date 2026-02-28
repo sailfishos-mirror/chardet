@@ -33,6 +33,11 @@ def normalize_encoding_name(name: str) -> str:
 # when the expected encoding is the subset counts as correct.
 # E.g., expected=ascii, detected=utf-8 -> correct (utf-8 ⊃ ascii).
 # But expected=utf-8, detected=ascii -> wrong (ascii ⊄ utf-8).
+#
+# Note: some subset keys (gb2312, iso-8859-11) are not in the detection
+# registry — the detector never returns them.  They appear here because
+# chardet test-suite expected values use these names, so the superset
+# mapping is needed for accuracy evaluation only.
 SUPERSETS: dict[str, frozenset[str]] = {
     "ascii": frozenset({"utf-8", "windows-1252"}),
     "tis-620": frozenset({"iso-8859-11", "cp874"}),
@@ -41,7 +46,9 @@ SUPERSETS: dict[str, frozenset[str]] = {
     "shift_jis": frozenset({"cp932"}),
     "euc-kr": frozenset({"cp949"}),
     # Each Windows code page fills the C1 control range (0x80-0x9F) with
-    # printable characters, making it a strict superset of its ISO counterpart.
+    # printable characters.  For detection purposes this makes them acceptable
+    # supersets of their ISO counterparts (the remaining byte positions may
+    # differ slightly between the two, but the detection signal is equivalent).
     "iso-8859-1": frozenset({"windows-1252"}),
     "iso-8859-2": frozenset({"windows-1250"}),
     "iso-8859-5": frozenset({"windows-1251"}),
@@ -56,6 +63,7 @@ SUPERSETS: dict[str, frozenset[str]] = {
 # API option.  When enabled, detected encoding names are replaced with the
 # Windows/CP superset that modern software actually uses (browsers, editors,
 # etc. treat these ISO subsets as their Windows counterparts).
+# Values use display-cased names (e.g. "Windows-1252") to match chardet 6.x output.
 PREFERRED_SUPERSET: dict[str, str] = {
     "ascii": "Windows-1252",
     "euc-kr": "CP949",
@@ -86,10 +94,10 @@ def apply_legacy_rename(
 
 
 # Bidirectional equivalents -- byte-order variants only.
-BIDIRECTIONAL_GROUPS: list[tuple[str, ...]] = [
+BIDIRECTIONAL_GROUPS: tuple[tuple[str, ...], ...] = (
     ("utf-16", "utf-16-le", "utf-16-be"),
     ("utf-32", "utf-32-le", "utf-32-be"),
-]
+)
 
 # Pre-built normalized lookups for fast comparison.
 _NORMALIZED_SUPERSETS: dict[str, frozenset[str]] = {
@@ -99,11 +107,17 @@ _NORMALIZED_SUPERSETS: dict[str, frozenset[str]] = {
     for subset, supersets in SUPERSETS.items()
 }
 
-_NORMALIZED_BIDIR: dict[str, frozenset[str]] = {}
-for _group in BIDIRECTIONAL_GROUPS:
-    _normed = frozenset(normalize_encoding_name(n) for n in _group)
-    for _name in _group:
-        _NORMALIZED_BIDIR[normalize_encoding_name(_name)] = _normed
+
+def _build_bidir_index() -> dict[str, frozenset[str]]:
+    result: dict[str, frozenset[str]] = {}
+    for group in BIDIRECTIONAL_GROUPS:
+        normed = frozenset(normalize_encoding_name(n) for n in group)
+        for name in group:
+            result[normalize_encoding_name(name)] = normed
+    return result
+
+
+_NORMALIZED_BIDIR: dict[str, frozenset[str]] = _build_bidir_index()
 
 
 def is_correct(expected: str, detected: str | None) -> bool:
@@ -140,13 +154,12 @@ def _strip_combining(text: str) -> str:
     return "".join(c for c in nfkd if not unicodedata.combining(c))
 
 
-# Specific symbol pairs that should be treated as equivalent.
-# The generic currency sign (¤) was replaced by the euro sign (€) in later
-# encoding revisions (e.g. iso-8859-15 vs iso-8859-1).  Detecting the euro
-# encoding is always acceptable.
-_EQUIVALENT_SYMBOLS: frozenset[frozenset[str]] = frozenset(
+# Pre-computed symbol pair lookups for O(1) equivalence checks.
+# Both orderings are stored to avoid constructing temporaries per call.
+_EQUIVALENT_SYMBOL_PAIRS: frozenset[tuple[str, str]] = frozenset(
     {
-        frozenset({"¤", "€"}),
+        ("¤", "€"),
+        ("€", "¤"),
     }
 )
 
@@ -161,7 +174,7 @@ def _chars_equivalent(a: str, b: str) -> bool:
     """
     if a == b:
         return True
-    if frozenset({a, b}) in _EQUIVALENT_SYMBOLS:
+    if (a, b) in _EQUIVALENT_SYMBOL_PAIRS:
         return True
     # Compare base letters after stripping combining marks.
     return _strip_combining(a) == _strip_combining(b)

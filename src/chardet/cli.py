@@ -9,6 +9,9 @@ from pathlib import Path
 import chardet
 from chardet.enums import EncodingEra
 
+_ERA_NAMES = [e.name.lower() for e in EncodingEra]
+_DEFAULT_MAX_BYTES = 200_000
+
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Detect character encoding of files.")
@@ -20,7 +23,11 @@ def main(argv: list[str] | None = None) -> None:
         "--legacy", action="store_true", help="Include legacy encodings"
     )
     parser.add_argument(
-        "-e", "--encoding-era", default=None, help="Encoding era filter"
+        "-e",
+        "--encoding-era",
+        default=None,
+        choices=_ERA_NAMES,
+        help="Encoding era filter",
     )
     parser.add_argument(
         "--version", action="version", version=f"chardet {chardet.__version__}"
@@ -38,7 +45,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.files:
         for filepath in args.files:
             with Path(filepath).open("rb") as f:
-                data = f.read()
+                data = f.read(_DEFAULT_MAX_BYTES)
             result = chardet.detect(data, encoding_era=era)
             if args.minimal:
                 print(result["encoding"])
@@ -47,7 +54,7 @@ def main(argv: list[str] | None = None) -> None:
                     f"{filepath}: {result['encoding']} with confidence {result['confidence']}"
                 )
     else:
-        data = sys.stdin.buffer.read()
+        data = sys.stdin.buffer.read(_DEFAULT_MAX_BYTES)
         result = chardet.detect(data, encoding_era=era)
         if args.minimal:
             print(result["encoding"])

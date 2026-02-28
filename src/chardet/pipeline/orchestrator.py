@@ -5,10 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from chardet.pipeline import DetectionResult
-
-if TYPE_CHECKING:
-    from chardet.enums import EncodingEra
-    from chardet.registry import EncodingInfo
 from chardet.pipeline.ascii import detect_ascii
 from chardet.pipeline.binary import is_binary
 from chardet.pipeline.bom import detect_bom
@@ -16,6 +12,7 @@ from chardet.pipeline.escape import detect_escape_encoding
 from chardet.pipeline.markup import detect_markup_charset
 from chardet.pipeline.statistical import score_candidates
 from chardet.pipeline.structural import (
+    clear_analysis_cache,
     compute_lead_byte_diversity,
     compute_multibyte_byte_coverage,
     compute_structural_score,
@@ -24,6 +21,13 @@ from chardet.pipeline.utf8 import detect_utf8
 from chardet.pipeline.utf1632 import detect_utf1632_patterns
 from chardet.pipeline.validity import filter_by_validity
 from chardet.registry import get_candidates
+
+if TYPE_CHECKING:
+    from chardet.enums import EncodingEra
+    from chardet.registry import EncodingInfo
+
+# Byte table for fast non-ASCII counting (C-speed via bytes.translate).
+_HIGH_BYTES: bytes = bytes(range(0x80, 0x100))
 
 _BINARY_RESULT = DetectionResult(encoding=None, confidence=0.95, language=None)
 _EMPTY_RESULT = DetectionResult(encoding="utf-8", confidence=0.10, language=None)
@@ -248,7 +252,7 @@ def _gate_cjk_candidates(
             if mb_score < _CJK_MIN_MB_RATIO:
                 continue  # No multi-byte structure -> eliminate
             if non_ascii_count < 0:
-                non_ascii_count = sum(1 for b in data if b > 0x7F)
+                non_ascii_count = len(data) - len(data.translate(None, _HIGH_BYTES))
             if non_ascii_count < _CJK_MIN_NON_ASCII:
                 continue  # Too few high bytes to trust the score
             byte_coverage = compute_multibyte_byte_coverage(data, enc)
@@ -278,13 +282,7 @@ def _score_structural_candidates(
     valid_mb = tuple(
         enc_lookup[name] for name, _sc in structural_scores if name in enc_lookup
     )
-    if valid_mb:
-        results = list(score_candidates(data, valid_mb))
-    else:
-        results = [
-            DetectionResult(encoding=name, confidence=score, language=None)
-            for name, score in structural_scores
-        ]
+    results = list(score_candidates(data, valid_mb))
     single_byte = tuple(e for e in valid_candidates if not e.is_multibyte)
     if single_byte:
         results.extend(score_candidates(data, single_byte))
@@ -356,6 +354,7 @@ def run_pipeline(
     max_bytes: int = 200_000,
 ) -> list[DetectionResult]:
     """Run the full detection pipeline. Returns list of results sorted by confidence."""
+    clear_analysis_cache()
     data = data[:max_bytes]
 
     if not data:

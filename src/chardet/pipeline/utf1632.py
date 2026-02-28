@@ -60,10 +60,13 @@ def _check_utf32(data: bytes) -> DetectionResult | None:
     - UTF-32-BE: the second byte is also 0x00
     - UTF-32-LE: the third byte is also 0x00
     """
-    if len(data) < _MIN_BYTES_UTF32 or len(data) % 4 != 0:
+    # Trim to a multiple of 4 bytes (like _check_utf16 trims to even length)
+    trimmed_len = len(data) - (len(data) % 4)
+    if trimmed_len < _MIN_BYTES_UTF32:
         return None
+    data = data[:trimmed_len]
 
-    num_units = len(data) // 4
+    num_units = trimmed_len // 4
 
     # UTF-32-BE: first byte of each 4-byte unit must be 0x00
     be_first_null = sum(1 for i in range(0, len(data), 4) if data[i] == 0)

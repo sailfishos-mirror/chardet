@@ -7,17 +7,14 @@ from typing import ClassVar
 
 from chardet.enums import EncodingEra, LanguageFilter
 from chardet.equivalences import PREFERRED_SUPERSET, apply_legacy_rename
+from chardet.pipeline import DetectionResult
 from chardet.pipeline.ascii import detect_ascii
 from chardet.pipeline.bom import detect_bom
 from chardet.pipeline.escape import detect_escape_encoding
 from chardet.pipeline.orchestrator import run_pipeline
 from chardet.pipeline.utf8 import detect_utf8
 
-_NONE_RESULT: dict[str, str | float | None] = {
-    "encoding": None,
-    "confidence": 0.0,
-    "language": None,
-}
+_NONE_RESULT = DetectionResult(encoding=None, confidence=0.0, language=None)
 
 # Minimum bytes before running deterministic checks (avoids repeated work
 # on tiny feed() calls).
@@ -146,4 +143,4 @@ class UniversalDetector:
     def result(self) -> dict[str, str | float | None]:
         if self._result is not None:
             return self._result
-        return dict(_NONE_RESULT)
+        return _NONE_RESULT.to_dict()

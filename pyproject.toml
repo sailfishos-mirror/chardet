@@ -127,6 +127,10 @@ ignore = [
     "FBT001",  # bool params match chardet 6.x public API for backward compat
     "FBT002",  # bool param defaults match chardet 6.x public API
 ]
+"src/chardet/detector.py" = [
+    "FBT001",  # bool params match chardet 6.x public API for backward compat
+    "FBT002",  # bool param defaults match chardet 6.x public API
+]
 "src/chardet/cli.py" = [
     "T201",    # CLI prints output to stdout
 ]
