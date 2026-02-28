@@ -353,6 +353,12 @@ def _promote_koi8t(
     return results
 
 
+# Maximum bytes of data used for language scoring in _fill_language.
+# Language bigrams converge quickly — 2 KB is sufficient for discrimination
+# across 48 languages while keeping Tier 3 (48-model scoring) fast.
+_LANG_SCORE_MAX_BYTES = 2048
+
+
 def _to_utf8(data: bytes, encoding: str) -> bytes | None:
     """Decode data from encoding and re-encode as UTF-8 for language scoring.
 
@@ -517,4 +523,4 @@ def run_pipeline(
 ) -> list[DetectionResult]:
     """Run the full detection pipeline. Returns list of results sorted by confidence."""
     results = _run_pipeline_core(data, encoding_era, max_bytes)
-    return _fill_language(data[:max_bytes], results)
+    return _fill_language(data[:_LANG_SCORE_MAX_BYTES], results)

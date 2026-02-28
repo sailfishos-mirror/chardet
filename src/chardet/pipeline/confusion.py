@@ -419,7 +419,7 @@ def resolve_by_bigram_rescore(
     if not freq:
         return None
 
-    profile = BigramProfile.__new__(BigramProfile)
+    profile = BigramProfile(b"")
     profile.weighted_freq = freq
     profile.weight_sum = w_sum
     profile.input_norm = math.sqrt(sum(v * v for v in freq.values()))

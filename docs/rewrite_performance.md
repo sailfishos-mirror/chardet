@@ -43,31 +43,34 @@ The pure-Python build is 1.5x slower (53.37s vs 35.75s).
 ## Language Detection Accuracy
 
 The rewrite returns a `language` field alongside the detected encoding.
-For single-language encodings (e.g. Big5→Chinese, EUC-JP→Japanese,
-ISO-8859-7→Greek), the language is inferred automatically from a
-hardcoded mapping of 41 encodings. For multi-language encodings (e.g.
-windows-1252, ISO-8859-5), the language comes from statistical bigram
-scoring. Universal encodings (UTF-8, UTF-16, UTF-32) have no inherent
-language signal and always return `language=None`.
+Language detection uses a three-tier approach:
+
+1. **Tier 1**: Hardcoded mapping for 41 single-language encodings
+   (e.g. Big5→Chinese, EUC-JP→Japanese, ISO-8859-7→Greek)
+2. **Tier 2**: Statistical bigram scoring for multi-language encodings
+   (e.g. windows-1252, ISO-8859-5) — reuses the encoding's language
+   model variants
+3. **Tier 3**: Decode to UTF-8 and score against 48 UTF-8 byte bigram
+   language models — universal fallback for all encodings including
+   UTF-8, UTF-16, and UTF-32
 
 | Metric | Count |
 |---|---|
-| Correct language | 930/2161 (43.0%) |
-| Wrong language | 64/2161 (3.0%) |
-| No language returned | 1167/2161 (54.0%) |
+| Correct language | 1987/2161 (91.9%) |
+| Wrong language | 174/2161 (8.1%) |
+| No language returned | 0/2161 (0.0%) |
 
-Of the 1167 files with no language returned:
+Every detected file now receives a language. The 174 wrong-language
+cases are primarily confusable language pairs within the same script
+(e.g. Danish/Norwegian, French/Spanish for English text, Belarusian/
+Bulgarian for Cyrillic). The UTF-8 language scoring uses the first
+2 KB of data to keep overhead low while maintaining discrimination
+across all 48 languages.
 
-- **1002** are universal encodings (UTF-8/16/32) where language cannot be
-  determined from encoding alone
-- **165** are multi-language encodings detected via early pipeline stages
-  (markup charset, ASCII) that bypass statistical scoring
-
-When a language *is* returned, it is correct **93.6%** of the time
-(930 correct out of 994 non-None results). The 64 wrong-language cases
-are primarily multi-language encodings where the statistical scorer picks
-a plausible but incorrect language (e.g. EBCDIC cp037/cp500, iso-8859-1,
-iso-8859-14).
+The pure Python overhead for the three-tier language detection is
+~800ms across 2161 files (~19% increase). With mypyc compilation,
+the overhead is fully absorbed — the compiled build is faster overall
+than the pure Python baseline without language detection.
 
 ## Detection Runtime Distribution
 
@@ -209,16 +212,16 @@ In-process timing (2161 files, `encoding_era=ALL`, pre-loaded into memory):
 
 | Build | Total | Per-file mean | Speedup |
 |---|---|---|---|
-| Pure Python | 5,066ms | 2.34ms | baseline |
-| mypyc compiled | 4,982ms | 2.31ms | **1.02x** |
+| Pure Python | 5,960ms | 2.76ms | baseline |
+| mypyc compiled | 3,977ms | 1.84ms | **1.50x** |
 
-The mypyc speedup is now negligible (1.02x) compared to the previous 1.44x.
-The cosine similarity refactor in the bigram scoring engine shifted the
-bottleneck away from the Python dict iteration and integer arithmetic that
-mypyc could optimize. The current hot path is dominated by operations that
-CPython already handles via C: `struct.unpack_from` for model loading,
-`bytes` iteration for bigram extraction, and built-in `.decode()` for
-validity filtering.
+The mypyc speedup (1.50x) is significant again after the addition of
+UTF-8 language models. The three-tier `_fill_language` post-processing
+adds ~800ms of BigramProfile construction and cosine scoring in pure
+Python — exactly the kind of tight-loop integer arithmetic that mypyc
+compiles to fast C code. The compiled build (3,977ms) is actually faster
+than the pure Python baseline *before* language detection was added
+(~5,015ms).
 
 Pure Python wheels are published alongside mypyc wheels for PyPy and
 platforms without prebuilt binaries. No runtime dependencies are added.
@@ -247,7 +250,8 @@ platforms without prebuilt binaries. No runtime dependencies are added.
    lowest accuracy (56.8%) and zero support for many encoding families. It's
    a poor choice when encoding breadth matters.
 
-6. **mypyc compilation provides minimal speedup** (1.02x) after the cosine
-   similarity refactor. The pure Python path is now fast enough that the
-   remaining bottleneck is in already-C operations. mypyc wheels are still
-   published for marginal gains and forward compatibility.
+6. **mypyc compilation provides 1.50x speedup** after the addition of
+   UTF-8 language models. The BigramProfile construction and scoring in
+   `_fill_language` is the kind of tight-loop work that mypyc optimizes
+   well, bringing the compiled total (3,977ms) below the pre-language
+   pure Python baseline (~5,015ms).
