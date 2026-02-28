@@ -353,6 +353,19 @@ def _promote_koi8t(
     return results
 
 
+def _to_utf8(data: bytes, encoding: str) -> bytes | None:
+    """Decode data from encoding and re-encode as UTF-8 for language scoring.
+
+    Returns None if decoding fails. For UTF-8, returns data as-is.
+    """
+    if encoding == "utf-8":
+        return data
+    try:
+        return data.decode(encoding, errors="ignore").encode("utf-8")
+    except (LookupError, UnicodeDecodeError):
+        return None
+
+
 def _fill_language(
     data: bytes, results: list[DetectionResult]
 ) -> list[DetectionResult]:
@@ -360,9 +373,11 @@ def _fill_language(
 
     Tier 1: single-language encodings via hardcoded map (instant).
     Tier 2: multi-language encodings via statistical bigram scoring (lazy).
+    Tier 3: decode to UTF-8, score against UTF-8 language models (universal fallback).
     """
     filled: list[DetectionResult] = []
     profile: BigramProfile | None = None
+    utf8_profile: BigramProfile | None = None
     for result in results:
         if result.language is None and result.encoding is not None:
             # Tier 1: single-language encoding
@@ -372,6 +387,15 @@ def _fill_language(
                 if profile is None:
                     profile = BigramProfile(data)
                 _, lang = score_best_language(data, result.encoding, profile=profile)
+            # Tier 3: decode to UTF-8, score against UTF-8 language models
+            if lang is None and data and has_model_variants("utf-8"):
+                utf8_data = _to_utf8(data, result.encoding)
+                if utf8_data:
+                    if utf8_profile is None or result.encoding != "utf-8":
+                        utf8_profile = BigramProfile(utf8_data)
+                    _, lang = score_best_language(
+                        utf8_data, "utf-8", profile=utf8_profile
+                    )
             if lang is not None:
                 filled.append(
                     DetectionResult(
