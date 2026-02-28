@@ -8,7 +8,9 @@ to resolve statistical scoring ties.
 from __future__ import annotations
 
 import codecs
+import struct
 import unicodedata
+from pathlib import Path
 
 from chardet.registry import REGISTRY
 
@@ -159,5 +161,124 @@ def compute_distinguishing_maps(
                 cat_b = unicodedata.category(char_b) if char_b else "Cn"
                 categories[b] = (cat_a, cat_b)
             result[(name_a, name_b)] = (diff_bytes, categories)
+
+    return result
+
+
+# Unicode general category -> uint8 encoding for struct serialization
+_CATEGORY_TO_INT: dict[str, int] = {
+    "Lu": 0,
+    "Ll": 1,
+    "Lt": 2,
+    "Lm": 3,
+    "Lo": 4,  # Letters
+    "Mn": 5,
+    "Mc": 6,
+    "Me": 7,  # Marks
+    "Nd": 8,
+    "Nl": 9,
+    "No": 10,  # Numbers
+    "Pc": 11,
+    "Pd": 12,
+    "Ps": 13,
+    "Pe": 14,  # Punctuation
+    "Pi": 15,
+    "Pf": 16,
+    "Po": 17,
+    "Sm": 18,
+    "Sc": 19,
+    "Sk": 20,
+    "So": 21,  # Symbols
+    "Zs": 22,
+    "Zl": 23,
+    "Zp": 24,  # Separators
+    "Cc": 25,
+    "Cf": 26,
+    "Cs": 27,
+    "Co": 28,
+    "Cn": 29,  # Other
+}
+_INT_TO_CATEGORY: dict[int, str] = {v: k for k, v in _CATEGORY_TO_INT.items()}
+
+
+def serialize_confusion_data(maps: DistinguishingMaps, output_path: str) -> int:
+    """Serialize confusion group data to binary format.
+
+    Format:
+      uint16: number_of_pairs
+      Per pair:
+        uint8:  name_a_length
+        bytes:  name_a (UTF-8)
+        uint8:  name_b_length
+        bytes:  name_b (UTF-8)
+        uint8:  num_distinguishing_bytes
+        Per distinguishing byte:
+          uint8:  byte_value
+          uint8:  cat_a (enum)
+          uint8:  cat_b (enum)
+
+    Returns file size in bytes.
+    """
+    out = Path(output_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("wb") as f:
+        f.write(struct.pack("!H", len(maps)))
+        for (name_a, name_b), (diff_bytes, categories) in sorted(maps.items()):
+            a_bytes = name_a.encode("utf-8")
+            b_bytes = name_b.encode("utf-8")
+            f.write(struct.pack("!B", len(a_bytes)))
+            f.write(a_bytes)
+            f.write(struct.pack("!B", len(b_bytes)))
+            f.write(b_bytes)
+            sorted_diffs = sorted(diff_bytes)
+            f.write(struct.pack("!B", len(sorted_diffs)))
+            for bv in sorted_diffs:
+                cat_a, cat_b = categories[bv]
+                f.write(
+                    struct.pack(
+                        "!BBB",
+                        bv,
+                        _CATEGORY_TO_INT.get(cat_a, 29),
+                        _CATEGORY_TO_INT.get(cat_b, 29),
+                    )
+                )
+    return out.stat().st_size
+
+
+def deserialize_confusion_data(input_path: str) -> DistinguishingMaps:
+    """Load confusion group data from binary format."""
+    with Path(input_path).open("rb") as f:
+        data = f.read()
+
+    result: DistinguishingMaps = {}
+    offset = 0
+    (num_pairs,) = struct.unpack_from("!H", data, offset)
+    offset += 2
+
+    for _ in range(num_pairs):
+        (name_a_len,) = struct.unpack_from("!B", data, offset)
+        offset += 1
+        name_a = data[offset : offset + name_a_len].decode("utf-8")
+        offset += name_a_len
+
+        (name_b_len,) = struct.unpack_from("!B", data, offset)
+        offset += 1
+        name_b = data[offset : offset + name_b_len].decode("utf-8")
+        offset += name_b_len
+
+        (num_diffs,) = struct.unpack_from("!B", data, offset)
+        offset += 1
+
+        diff_bytes: list[int] = []
+        categories: dict[int, tuple[str, str]] = {}
+        for _ in range(num_diffs):
+            bv, cat_a_int, cat_b_int = struct.unpack_from("!BBB", data, offset)
+            offset += 3
+            diff_bytes.append(bv)
+            categories[bv] = (
+                _INT_TO_CATEGORY.get(cat_a_int, "Cn"),
+                _INT_TO_CATEGORY.get(cat_b_int, "Cn"),
+            )
+        result[(name_a, name_b)] = (frozenset(diff_bytes), categories)
 
     return result

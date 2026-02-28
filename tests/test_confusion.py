@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import tempfile
+from pathlib import Path
+
 from chardet.pipeline.confusion import (
     compute_confusion_groups,
     compute_distinguishing_maps,
+    deserialize_confusion_data,
+    serialize_confusion_data,
 )
 
 
@@ -59,3 +64,30 @@ def test_distinguishing_map_has_categories():
             # Categories should be 2-char Unicode general category strings
             assert len(cat_a) == 2
             assert len(cat_b) == 2
+
+
+def test_serialize_deserialize_roundtrip():
+    """Serialization and deserialization should preserve all data."""
+    maps = compute_distinguishing_maps(threshold=0.80)
+    with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as f:
+        path = Path(f.name)
+    try:
+        serialize_confusion_data(maps, str(path))
+        loaded = deserialize_confusion_data(str(path))
+        assert len(loaded) == len(maps)
+        for key in maps:
+            assert key in loaded or (key[1], key[0]) in loaded
+    finally:
+        path.unlink(missing_ok=True)
+
+
+def test_serialized_file_is_small():
+    """Confusion data should be <10KB."""
+    maps = compute_distinguishing_maps(threshold=0.80)
+    with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as f:
+        path = Path(f.name)
+    try:
+        serialize_confusion_data(maps, str(path))
+        assert path.stat().st_size < 10_000
+    finally:
+        path.unlink(missing_ok=True)
