@@ -135,6 +135,11 @@ def infer_language(encoding: str) -> str | None:
     return _SINGLE_LANG_MAP.get(encoding)
 
 
+def has_model_variants(encoding: str) -> bool:
+    """Return True if the encoding has language variants in the model index."""
+    return encoding in _get_enc_index()
+
+
 def _get_model_norms() -> dict[int, float]:
     """Return cached L2 norms for all models, keyed by id(model)."""
     global _MODEL_NORMS  # noqa: PLW0603

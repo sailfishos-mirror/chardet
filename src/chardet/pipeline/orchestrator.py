@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from chardet.models import infer_language
+from chardet.models import (
+    BigramProfile,
+    has_model_variants,
+    infer_language,
+    score_best_language,
+)
 from chardet.pipeline import DetectionResult
 from chardet.pipeline.ascii import detect_ascii
 from chardet.pipeline.binary import is_binary
@@ -348,12 +353,25 @@ def _promote_koi8t(
     return results
 
 
-def _fill_language(results: list[DetectionResult]) -> list[DetectionResult]:
-    """Fill in language for results where encoding implies a single language."""
+def _fill_language(
+    data: bytes, results: list[DetectionResult]
+) -> list[DetectionResult]:
+    """Fill in language for results missing it.
+
+    Tier 1: single-language encodings via hardcoded map (instant).
+    Tier 2: multi-language encodings via statistical bigram scoring (lazy).
+    """
     filled: list[DetectionResult] = []
+    profile: BigramProfile | None = None
     for result in results:
         if result.language is None and result.encoding is not None:
+            # Tier 1: single-language encoding
             lang = infer_language(result.encoding)
+            # Tier 2: statistical scoring for multi-language encodings
+            if lang is None and data and has_model_variants(result.encoding):
+                if profile is None:
+                    profile = BigramProfile(data)
+                _, lang = score_best_language(data, result.encoding, profile=profile)
             if lang is not None:
                 filled.append(
                     DetectionResult(
@@ -475,4 +493,4 @@ def run_pipeline(
 ) -> list[DetectionResult]:
     """Run the full detection pipeline. Returns list of results sorted by confidence."""
     results = _run_pipeline_core(data, encoding_era, max_bytes)
-    return _fill_language(results)
+    return _fill_language(data[:max_bytes], results)
