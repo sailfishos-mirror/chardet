@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-# Add scripts directory to path so we can import train
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+from typing import TYPE_CHECKING
 
 from train import _build_one_model, _worker_text_cache
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_build_one_model_returns_tuple(tmp_path: Path) -> None:

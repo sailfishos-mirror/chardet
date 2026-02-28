@@ -29,7 +29,7 @@ import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 
-from chardet.pipeline.confusion import (
+from confusion_training import (
     compute_distinguishing_maps,
     serialize_confusion_data,
 )
