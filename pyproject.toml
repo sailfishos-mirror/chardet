@@ -145,6 +145,7 @@ ignore = [
 "src/chardet/pipeline/structural.py" = ["FA100"]
 "src/chardet/pipeline/validity.py" = ["FA100"]
 "src/chardet/pipeline/statistical.py" = ["FA100"]
+"src/chardet/pipeline/confusion.py" = ["PLC0415"]  # delayed import avoids circular dependency
 
 [tool.ruff.format]
 quote-style = "double"

@@ -393,7 +393,11 @@ def resolve_by_bigram_rescore(
     byte is a distinguishing byte, then scores both encodings against their
     best language model.
     """
-    from chardet.models import BigramProfile, _get_enc_index, _score_with_profile
+    from chardet.models import (
+        BigramProfile,
+        _get_enc_index,
+        _score_with_profile,
+    )
 
     if len(data) < 2:
         return None

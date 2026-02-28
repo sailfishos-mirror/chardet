@@ -55,7 +55,7 @@ def test_distinguishing_map_cp037_cp500():
     maps = compute_distinguishing_maps(threshold=0.80)
     pair_key = ("cp037", "cp500") if ("cp037", "cp500") in maps else ("cp500", "cp037")
     assert pair_key in maps
-    diff_bytes, categories = maps[pair_key]
+    diff_bytes, _categories = maps[pair_key]
     assert len(diff_bytes) == 7
 
 
