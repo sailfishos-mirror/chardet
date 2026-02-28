@@ -103,7 +103,9 @@ def _run_timing_subprocess(
     detector_type: str = "chardet",
     encoding_era: str = "all",
     pure: bool = False,
-) -> tuple[list[tuple[str, str, str, str | None]], float, list[float], float]:
+) -> tuple[
+    list[tuple[str, str, str, str | None, str | None]], float, list[float], float
+]:
     """Run detection timing in an isolated subprocess via ``benchmark_time.py``.
 
     Parameters
@@ -123,8 +125,8 @@ def _run_timing_subprocess(
     -------
     tuple
         ``(results, elapsed, file_times, import_time)`` where *results* is a
-        list of ``(expected_encoding, language, filepath_str,
-        detected_encoding)`` tuples, *file_times* is a list of per-file
+        list of ``(expected_encoding, expected_language, filepath_str,
+        detected_encoding, detected_language)`` tuples, *file_times* is a list of per-file
         durations in seconds, and *import_time* is the detector import time.
 
     """
@@ -150,7 +152,7 @@ def _run_timing_subprocess(
         )
         return [], 0.0, [], 0.0
 
-    results: list[tuple[str, str, str, str | None]] = []
+    results: list[tuple[str, str, str, str | None, str | None]] = []
     file_times: list[float] = []
     timing = 0.0
     import_time = 0.0
@@ -163,7 +165,13 @@ def _run_timing_subprocess(
             import_time = obj["import_time"]
         else:
             results.append(
-                (obj["expected"], obj["language"], obj["path"], obj["detected"])
+                (
+                    obj["expected"],
+                    obj["language"],
+                    obj["path"],
+                    obj["detected"],
+                    obj.get("detected_language"),
+                )
             )
             file_times.append(obj["elapsed"])
     return results, timing, file_times, import_time
@@ -215,11 +223,13 @@ def _measure_memory_subprocess(
 # ---------------------------------------------------------------------------
 
 
-def _record_result(
+def _record_result(  # noqa: PLR0913
     detector_stats: dict,
     expected_encoding: str,
+    expected_language: str,
     filepath: Path,
     detected: str | None,
+    detected_language: str | None,
 ) -> None:
     """Update a detector's stats dict with one detection result."""
     detector_stats["total"] += 1
@@ -234,6 +244,21 @@ def _record_result(
         detector_stats["failures"].append(
             f"  {filepath.parent.name}/{filepath.name}: "
             f"expected={expected_encoding}, got={detected}"
+        )
+
+    # Language tracking (independent of encoding accuracy)
+    detector_stats["lang_total"] += 1
+    detector_stats["per_enc"][expected_encoding]["lang_total"] += 1
+    if (
+        detected_language is not None
+        and detected_language.lower() == expected_language.lower()
+    ):
+        detector_stats["lang_correct"] += 1
+        detector_stats["per_enc"][expected_encoding]["lang_correct"] += 1
+    else:
+        detector_stats["lang_failures"].append(
+            f"  {filepath.parent.name}/{filepath.name}: "
+            f"expected={expected_language}, got={detected_language}"
         )
 
 
@@ -287,8 +312,18 @@ def run_comparison(
         stats[label] = {
             "correct": 0,
             "total": 0,
-            "per_enc": defaultdict(lambda: {"correct": 0, "total": 0}),
+            "lang_correct": 0,
+            "lang_total": 0,
+            "per_enc": defaultdict(
+                lambda: {
+                    "correct": 0,
+                    "total": 0,
+                    "lang_correct": 0,
+                    "lang_total": 0,
+                }
+            ),
             "failures": [],
+            "lang_failures": [],
             "time": 0.0,
             "file_times": [],
         }
@@ -309,8 +344,10 @@ def run_comparison(
         stats[label]["time"] = elapsed
         stats[label]["file_times"] = file_times
         import_times[label] = import_time
-        for expected, _language, path_str, detected in results:
-            _record_result(stats[label], expected, Path(path_str), detected)
+        for expected, exp_lang, path_str, detected, det_lang in results:
+            _record_result(
+                stats[label], expected, exp_lang, Path(path_str), detected, det_lang
+            )
 
     total = stats[detectors[0][0]]["total"]
 
