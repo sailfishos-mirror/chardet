@@ -11,6 +11,7 @@ annotations.
 
 from collections.abc import Callable
 
+from chardet.pipeline import PipelineContext
 from chardet.registry import EncodingInfo
 
 # ---------------------------------------------------------------------------
@@ -296,41 +297,30 @@ _ANALYSERS: dict[str, Callable[[bytes], tuple[float, int, int]]] = {
     "johab": _analyze_johab,
 }
 
-# Cache for analysis results to avoid re-scanning data within a single
-# pipeline run.  Keyed by (data id, encoding name).  Populated by
-# compute_structural_score and reused by compute_multibyte_byte_coverage
-# and compute_lead_byte_diversity on the same data object.
-#
-# IMPORTANT: This cache uses id(data) as a key, which is only valid while
-# the data object is alive.  clear_analysis_cache() MUST be called at the
-# start of every run_pipeline() call to prevent stale entries from a
-# previously deallocated object whose id() was reused.  len(data) is
-# included as a secondary guard against id reuse.  This module is
-# NOT safe under free-threaded Python (PEP 703) without external locking.
-_analysis_cache: dict[tuple[int, int, str], tuple[float, int, int]] = {}
+
+def clear_analysis_cache() -> None:
+    """No-op kept for backward compatibility until orchestrator is updated.
+
+    .. deprecated::
+        The module-level cache has been replaced by ``PipelineContext``.
+        This stub will be removed once ``orchestrator.py`` is updated.
+    """
 
 
-def _get_analysis(data: bytes, name: str) -> tuple[float, int, int] | None:
+def _get_analysis(
+    data: bytes, name: str, ctx: PipelineContext
+) -> tuple[float, int, int] | None:
     """Return cached analysis or compute and cache it."""
     key = (id(data), len(data), name)
-    cached = _analysis_cache.get(key)
+    cached = ctx.analysis_cache.get(key)
     if cached is not None:
         return cached
     analyser = _ANALYSERS.get(name)
     if analyser is None:
         return None
     result = analyser(data)
-    _analysis_cache[key] = result
+    ctx.analysis_cache[key] = result
     return result
-
-
-def clear_analysis_cache() -> None:
-    """Clear the per-pipeline-run analysis cache.
-
-    Called by the orchestrator at the start of each ``run_pipeline()`` call
-    to prevent unbounded growth.
-    """
-    _analysis_cache.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -338,7 +328,9 @@ def clear_analysis_cache() -> None:
 # ---------------------------------------------------------------------------
 
 
-def compute_structural_score(data: bytes, encoding_info: EncodingInfo) -> float:
+def compute_structural_score(
+    data: bytes, encoding_info: EncodingInfo, ctx: PipelineContext
+) -> float:
     """Return 0.0-1.0 indicating how well *data* matches the encoding's structure.
 
     For single-byte encodings (``is_multibyte is False``), always returns 0.0.
@@ -347,7 +339,7 @@ def compute_structural_score(data: bytes, encoding_info: EncodingInfo) -> float:
     if not data or not encoding_info.is_multibyte:
         return 0.0
 
-    result = _get_analysis(data, encoding_info.name)
+    result = _get_analysis(data, encoding_info.name, ctx)
     if result is None:
         return 0.0
 
@@ -355,7 +347,10 @@ def compute_structural_score(data: bytes, encoding_info: EncodingInfo) -> float:
 
 
 def compute_multibyte_byte_coverage(
-    data: bytes, encoding_info: EncodingInfo, non_ascii_count: int = -1
+    data: bytes,
+    encoding_info: EncodingInfo,
+    ctx: PipelineContext,
+    non_ascii_count: int = -1,
 ) -> float:
     """Ratio of non-ASCII bytes that participate in valid multi-byte sequences.
 
@@ -373,7 +368,7 @@ def compute_multibyte_byte_coverage(
     if not data or not encoding_info.is_multibyte:
         return 0.0
 
-    result = _get_analysis(data, encoding_info.name)
+    result = _get_analysis(data, encoding_info.name, ctx)
     if result is None:
         return 0.0
 
@@ -390,7 +385,9 @@ def compute_multibyte_byte_coverage(
     return mb_bytes / non_ascii
 
 
-def compute_lead_byte_diversity(data: bytes, encoding_info: EncodingInfo) -> int:
+def compute_lead_byte_diversity(
+    data: bytes, encoding_info: EncodingInfo, ctx: PipelineContext
+) -> int:
     """Count distinct lead byte values in valid multi-byte pairs.
 
     Genuine CJK text uses lead bytes from across the encoding's full
@@ -400,7 +397,7 @@ def compute_lead_byte_diversity(data: bytes, encoding_info: EncodingInfo) -> int
     """
     if not data or not encoding_info.is_multibyte:
         return 0
-    result = _get_analysis(data, encoding_info.name)
+    result = _get_analysis(data, encoding_info.name, ctx)
     if result is None:
         return 256  # Unknown encoding -- don't gate
     return result[2]  # lead_diversity
