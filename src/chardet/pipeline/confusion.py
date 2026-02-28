@@ -371,9 +371,9 @@ def resolve_by_category_voting(
         pref_a = _CATEGORY_PREFERENCE.get(cat_a, 0)
         pref_b = _CATEGORY_PREFERENCE.get(cat_b, 0)
         if pref_a > pref_b:
-            votes_a += 1
+            votes_a += pref_a - pref_b
         elif pref_b > pref_a:
-            votes_b += 1
+            votes_b += pref_b - pref_a
     if votes_a > votes_b:
         return enc_a
     if votes_b > votes_a:
