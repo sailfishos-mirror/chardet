@@ -193,7 +193,7 @@ def test_plain_ascii_returns_none() -> None:
 
 def test_latin1_text_returns_none() -> None:
     """Latin-1 encoded text should not be detected as UTF-16/32."""
-    data = "Caf\xe9 cr\xe8me avec des r\xe9sum\xe9s fran\xe7ais".encode("latin-1")
+    data = b"Caf\xe9 cr\xe8me avec des r\xe9sum\xe9s fran\xe7ais"
     result = detect_utf1632_patterns(data)
     assert result is None
 
