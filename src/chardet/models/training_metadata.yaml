@@ -1,4 +1,4 @@
-training_date: "2026-02-27T20:14:08Z"
+training_date: "2026-02-28T15:32:07Z"
 max_samples: 15000
 models:
   ar/cp720:
@@ -527,7 +527,7 @@ models:
     language: hr
     encoding: iso-8859-16
     samples_used: 25000
-    bigram_entries: 676
+    bigram_entries: 677
     source: culturax
   hr/iso-8859-2:
     language: hr
@@ -545,7 +545,7 @@ models:
     language: hr
     encoding: windows-1250
     samples_used: 25000
-    bigram_entries: 676
+    bigram_entries: 677
     source: culturax
   hu/cp852:
     language: hu
@@ -1391,7 +1391,7 @@ models:
     language: zh
     encoding: gb18030
     samples_used: 25000
-    bigram_entries: 5707
+    bigram_entries: 5706
     source: culturax
   zh/hz-gb-2312:
     language: zh
