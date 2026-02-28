@@ -49,6 +49,9 @@ include = [
     "/src/chardet/pipeline/structural.py",
     "/src/chardet/pipeline/validity.py",
     "/src/chardet/pipeline/statistical.py",
+    "/src/chardet/pipeline/utf1632.py",
+    "/src/chardet/pipeline/utf8.py",
+    "/src/chardet/pipeline/escape.py",
 ]
 mypy-args = ["--ignore-missing-imports"]
 options = { debug_level = "0" }
@@ -145,6 +148,9 @@ ignore = [
 "src/chardet/pipeline/structural.py" = ["FA100"]
 "src/chardet/pipeline/validity.py" = ["FA100"]
 "src/chardet/pipeline/statistical.py" = ["FA100"]
+"src/chardet/pipeline/utf1632.py" = ["FA100"]
+"src/chardet/pipeline/utf8.py" = ["FA100"]
+"src/chardet/pipeline/escape.py" = ["FA100"]
 "src/chardet/pipeline/confusion.py" = ["PLC0415"]  # delayed import avoids circular dependency
 
 [tool.ruff.format]

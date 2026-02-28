@@ -3,9 +3,11 @@
 This stage runs after BOM detection but before binary detection.
 UTF-16 and UTF-32 encoded text contains characteristic null-byte patterns
 that would otherwise cause binary detection to reject the data.
-"""
 
-from __future__ import annotations
+Note: ``from __future__ import annotations`` is intentionally omitted because
+this module is compiled with mypyc, which does not support PEP 563 string
+annotations.
+"""
 
 import unicodedata
 

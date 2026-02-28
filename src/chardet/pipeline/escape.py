@@ -3,9 +3,11 @@
 These encodings use ESC (0x1B) or tilde (~) sequences to switch character sets.
 They must be detected before binary detection (ESC is a control byte) and before
 ASCII detection (HZ-GB-2312 uses only printable ASCII bytes plus tildes).
-"""
 
-from __future__ import annotations
+Note: ``from __future__ import annotations`` is intentionally omitted because
+this module is compiled with mypyc, which does not support PEP 563 string
+annotations.
+"""
 
 from chardet.pipeline import DetectionResult
 
