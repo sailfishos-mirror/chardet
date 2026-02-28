@@ -374,3 +374,62 @@ def resolve_by_category_voting(
     if votes_b > votes_a:
         return enc_b
     return None
+
+
+def resolve_by_bigram_rescore(
+    data: bytes,
+    enc_a: str,
+    enc_b: str,
+    diff_bytes: frozenset[int],
+) -> str | None:
+    """Resolve between two encodings by re-scoring only distinguishing bigrams.
+
+    Builds a focused bigram profile containing only bigrams where at least one
+    byte is a distinguishing byte, then scores both encodings against their
+    best language model.
+    """
+    from chardet.models import BigramProfile, _get_enc_index, _score_with_profile
+
+    if len(data) < 2:
+        return None
+
+    freq: dict[int, int] = {}
+    w_sum = 0
+    for i in range(len(data) - 1):
+        b1 = data[i]
+        b2 = data[i + 1]
+        if b1 not in diff_bytes and b2 not in diff_bytes:
+            continue
+        idx = (b1 << 8) | b2
+        weight = 8 if (b1 > 0x7F or b2 > 0x7F) else 1
+        freq[idx] = freq.get(idx, 0) + weight
+        w_sum += weight
+
+    if not freq:
+        return None
+
+    profile = BigramProfile.__new__(BigramProfile)
+    profile.weighted_freq = freq
+    profile.weight_sum = w_sum
+
+    index = _get_enc_index()
+
+    best_a = 0.0
+    variants_a = index.get(enc_a)
+    if variants_a:
+        for _, model in variants_a:
+            s = _score_with_profile(profile, model)
+            best_a = max(best_a, s)
+
+    best_b = 0.0
+    variants_b = index.get(enc_b)
+    if variants_b:
+        for _, model in variants_b:
+            s = _score_with_profile(profile, model)
+            best_b = max(best_b, s)
+
+    if best_a > best_b:
+        return enc_a
+    if best_b > best_a:
+        return enc_b
+    return None

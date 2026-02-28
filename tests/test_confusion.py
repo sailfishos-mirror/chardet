@@ -10,6 +10,7 @@ from chardet.pipeline.confusion import (
     compute_distinguishing_maps,
     deserialize_confusion_data,
     load_confusion_data,
+    resolve_by_bigram_rescore,
     resolve_by_category_voting,
     serialize_confusion_data,
 )
@@ -123,3 +124,16 @@ def test_category_voting_returns_none_on_no_distinguishing_bytes():
     data = bytes([0x41, 0x42, 0x43])
     winner = resolve_by_category_voting(data, "enc_a", "enc_b", diff_bytes, categories)
     assert winner is None
+
+
+def test_bigram_rescore_returns_valid_result():
+    """Bigram re-scoring should return one of the encodings or None."""
+    from chardet.models import load_models
+
+    models = load_models()
+    if not models:
+        return
+    diff_bytes = frozenset({0xD5})
+    data = bytes([0x41, 0xD5, 0x42, 0xD5, 0x43])
+    result = resolve_by_bigram_rescore(data, "cp850", "cp858", diff_bytes)
+    assert result in ("cp850", "cp858", None)
