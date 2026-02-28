@@ -9,7 +9,7 @@ from pathlib import Path
 import chardet
 from chardet.enums import EncodingEra
 
-_ERA_NAMES = [e.name.lower() for e in EncodingEra]
+_ERA_NAMES = [e.name.lower() for e in EncodingEra if e.bit_count() == 1] + ["all"]
 _DEFAULT_MAX_BYTES = 200_000
 
 

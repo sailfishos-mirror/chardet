@@ -21,6 +21,10 @@ class LanguageFilter(enum.IntFlag):
     """Language filter flags for UniversalDetector (chardet 6.x API compat).
 
     Accepted but not used — our pipeline does not filter by language group.
+
+    .. deprecated::
+        Retained only for backward compatibility with chardet 6.x callers.
+        Will be removed in a future major version.
     """
 
     CHINESE_SIMPLIFIED = 0x01

@@ -215,6 +215,4 @@ def is_equivalent_detection(data: bytes, expected: str, detected: str | None) ->
     if len(text_exp) != len(text_det):
         return False
 
-    return all(
-        _chars_equivalent(a, b) for a, b in zip(text_exp, text_det, strict=False)
-    )
+    return all(_chars_equivalent(a, b) for a, b in zip(text_exp, text_det, strict=True))

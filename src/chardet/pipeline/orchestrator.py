@@ -34,6 +34,8 @@ if TYPE_CHECKING:
     from chardet.registry import EncodingInfo
 
 # Byte table for fast non-ASCII counting (C-speed via bytes.translate).
+# Intentionally duplicated in structural.py — each mypyc-compiled module
+# needs its own copy to avoid cross-module global lookups.
 _HIGH_BYTES: bytes = bytes(range(0x80, 0x100))
 
 _BINARY_RESULT = DetectionResult(encoding=None, confidence=0.95, language=None)
@@ -523,4 +525,6 @@ def run_pipeline(
 ) -> list[DetectionResult]:
     """Run the full detection pipeline. Returns list of results sorted by confidence."""
     results = _run_pipeline_core(data, encoding_era, max_bytes)
+    # Language scoring uses only the first 2 KB — bigrams converge quickly
+    # and this keeps Tier 3 (48-model scoring) fast even on large inputs.
     return _fill_language(data[:_LANG_SCORE_MAX_BYTES], results)
