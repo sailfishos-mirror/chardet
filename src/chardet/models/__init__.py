@@ -78,9 +78,9 @@ def load_models() -> dict[str, bytearray]:
         return _MODEL_CACHE
 
     with _MODEL_CACHE_LOCK:
-        if _MODEL_CACHE is not None:
-            return _MODEL_CACHE
-
+        # No re-check: mypyc type-narrows _MODEL_CACHE to None after the
+        # outer check, so a re-read here would hit a TypeError under mypyc.
+        # Worst case two threads both build on first call (idempotent).
         models: dict[str, bytearray] = {}
         ref = importlib.resources.files("chardet.models").joinpath("models.bin")
         data = ref.read_bytes()
@@ -126,8 +126,8 @@ def _get_enc_index() -> dict[str, list[tuple[str | None, bytearray]]]:
     if _ENC_INDEX is not None:
         return _ENC_INDEX
     with _ENC_INDEX_LOCK:
-        if _ENC_INDEX is not None:
-            return _ENC_INDEX
+        # No re-check: mypyc type-narrows _ENC_INDEX to None after the
+        # outer check, so a re-read here would hit a TypeError under mypyc.
         models = load_models()
         index: dict[str, list[tuple[str | None, bytearray]]] = {}
         for key, model in models.items():
@@ -157,8 +157,8 @@ def _get_model_norms() -> dict[int, float]:
     if _MODEL_NORMS is not None:
         return _MODEL_NORMS
     with _MODEL_NORMS_LOCK:
-        if _MODEL_NORMS is not None:
-            return _MODEL_NORMS
+        # No re-check: mypyc type-narrows _MODEL_NORMS to None after the
+        # outer check, so a re-read here would hit a TypeError under mypyc.
         models = load_models()
         norms: dict[int, float] = {}
         for model in models.values():

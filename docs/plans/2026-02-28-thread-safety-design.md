@@ -119,6 +119,10 @@ Applied to:
 - `models/__init__.py` is mypyc-compiled. `threading.Lock` is a standard
   Python object — mypyc calls through the C API. The lock is never touched
   on the hot path (fast-path check returns before reaching the lock).
+  **Important:** mypyc type-narrows `Optional` globals after a `None` check,
+  so the standard double-checked locking re-check inside the lock hits a
+  `TypeError` at runtime. The inner re-check is omitted in mypyc-compiled
+  modules; worst case two threads both build on first call (idempotent).
 
 - `registry.py` is not mypyc-compiled. No constraints.
 
