@@ -91,10 +91,10 @@ def detect_all(  # noqa: PLR0913
     rename = _resolve_rename(should_rename_legacy, encoding_era)
     dicts = [r.to_dict() for r in results]
     if not ignore_threshold:
-        filtered = [d for d in dicts if d["confidence"] > MINIMUM_THRESHOLD]
+        filtered = [d for d in dicts if float(d["confidence"] or 0) > MINIMUM_THRESHOLD]
         if filtered:
             dicts = filtered
     if rename:
         for d in dicts:
             apply_legacy_rename(d)
-    return sorted(dicts, key=lambda d: -d["confidence"])
+    return sorted(dicts, key=lambda d: float(d["confidence"] or 0), reverse=True)
