@@ -11,7 +11,7 @@ MIT-licensed, ground-up rewrite of chardet (the Python character encoding detect
 ### Development Setup
 ```bash
 uv sync                    # install dependencies
-pre-commit install         # set up pre-commit hooks (ruff lint+format, trailing whitespace, etc.)
+prek install               # set up pre-commit hooks (ruff lint+format, trailing whitespace, etc.)
 ```
 
 ### Testing
