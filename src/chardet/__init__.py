@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import warnings
 
+from chardet._utils import _resolve_rename, _validate_max_bytes
 from chardet.detector import UniversalDetector
 from chardet.enums import EncodingEra, LanguageFilter
 from chardet.equivalences import apply_legacy_rename
@@ -21,14 +22,6 @@ __all__ = [
 MINIMUM_THRESHOLD = 0.20
 
 
-def _resolve_rename(
-    should_rename_legacy: bool | None, encoding_era: EncodingEra
-) -> bool:
-    if should_rename_legacy is None:
-        return encoding_era == EncodingEra.MODERN_WEB
-    return should_rename_legacy
-
-
 def _warn_deprecated_chunk_size(chunk_size: int, stacklevel: int = 3) -> None:
     if chunk_size != 65_536:
         warnings.warn(
@@ -36,12 +29,6 @@ def _warn_deprecated_chunk_size(chunk_size: int, stacklevel: int = 3) -> None:
             DeprecationWarning,
             stacklevel=stacklevel,
         )
-
-
-def _validate_max_bytes(max_bytes: int) -> None:
-    if not isinstance(max_bytes, int) or max_bytes < 1:
-        msg = "max_bytes must be a positive integer"
-        raise ValueError(msg)
 
 
 def detect(

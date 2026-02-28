@@ -5,6 +5,7 @@ from __future__ import annotations
 import warnings
 from typing import ClassVar
 
+from chardet._utils import _resolve_rename, _validate_max_bytes
 from chardet.enums import EncodingEra, LanguageFilter
 from chardet.equivalences import PREFERRED_SUPERSET, apply_legacy_rename
 from chardet.pipeline import DetectionResult
@@ -41,13 +42,8 @@ class UniversalDetector:
                 DeprecationWarning,
                 stacklevel=2,
             )
-        if should_rename_legacy is None:
-            self._rename_legacy = encoding_era == EncodingEra.MODERN_WEB
-        else:
-            self._rename_legacy = should_rename_legacy
-        if not isinstance(max_bytes, int) or max_bytes < 1:
-            msg = "max_bytes must be a positive integer"
-            raise ValueError(msg)
+        self._rename_legacy = _resolve_rename(should_rename_legacy, encoding_era)
+        _validate_max_bytes(max_bytes)
         self._encoding_era = encoding_era
         self._max_bytes = max_bytes
         self._buffer = bytearray()

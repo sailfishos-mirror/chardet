@@ -57,7 +57,8 @@ mypy-args = ["--ignore-missing-imports"]
 options = { debug_level = "0" }
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "scripts/tests"]
+pythonpath = ["scripts"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = [
@@ -114,6 +115,11 @@ ignore = [
     "PLC0415", # conditional imports sometimes needed
     "PERF401", # manual list comprehension (readability)
 ]
+"scripts/tests/**" = [
+    "S101",    # assert is standard in tests
+    "PT011",   # pytest.raises broad match acceptable
+    "INP001",  # not a package
+]
 "scripts/**" = [
     "T201",    # print is the output mechanism
     "INP001",  # not a package
@@ -135,6 +141,9 @@ ignore = [
 "src/chardet/__init__.py" = [
     "FBT001",  # bool params match chardet 6.x public API for backward compat
     "FBT002",  # bool param defaults match chardet 6.x public API
+]
+"src/chardet/_utils.py" = [
+    "FBT001",  # bool params match chardet 6.x public API for backward compat
 ]
 "src/chardet/detector.py" = [
     "FBT001",  # bool params match chardet 6.x public API for backward compat
