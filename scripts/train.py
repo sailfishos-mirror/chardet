@@ -63,6 +63,57 @@ _WESTERN_EUROPEAN_LANGS = [
     "ms",
 ]
 
+_ALL_LANGS = [
+    "ar",
+    "be",
+    "bg",
+    "br",
+    "cs",
+    "cy",
+    "da",
+    "de",
+    "el",
+    "eo",
+    "es",
+    "et",
+    "fa",
+    "fi",
+    "fr",
+    "ga",
+    "gd",
+    "he",
+    "hr",
+    "hu",
+    "id",
+    "is",
+    "it",
+    "ja",
+    "kk",
+    "ko",
+    "lt",
+    "lv",
+    "mk",
+    "ms",
+    "mt",
+    "nl",
+    "no",
+    "pl",
+    "pt",
+    "ro",
+    "ru",
+    "sk",
+    "sl",
+    "sr",
+    "sv",
+    "tg",
+    "th",
+    "tr",
+    "uk",
+    "ur",
+    "vi",
+    "zh",
+]
+
 ENCODING_LANG_MAP: dict[str, list[str]] = {
     # CJK - Japanese
     "shift_jis": ["ja"],
@@ -186,6 +237,8 @@ ENCODING_LANG_MAP: dict[str, list[str]] = {
         "id",
         "ms",
     ],
+    # Universal Unicode encoding — trained on all languages for language detection
+    "utf-8": _ALL_LANGS,
 }
 
 # CulturaX dataset on Hugging Face

@@ -1,4 +1,4 @@
-training_date: "2026-02-28T15:32:07Z"
+training_date: "2026-02-28T20:54:36Z"
 max_samples: 15000
 models:
   ar/cp720:
@@ -18,6 +18,12 @@ models:
     encoding: iso-8859-6
     samples_used: 25000
     bigram_entries: 844
+    source: culturax
+  ar/utf-8:
+    language: ar
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 204
     source: culturax
   ar/windows-1256:
     language: ar
@@ -49,6 +55,12 @@ models:
     samples_used: 25000
     bigram_entries: 1198
     source: culturax
+  be/utf-8:
+    language: be
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 235
+    source: culturax
   be/windows-1251:
     language: be
     encoding: windows-1251
@@ -79,6 +91,12 @@ models:
     samples_used: 25000
     bigram_entries: 876
     source: culturax
+  bg/utf-8:
+    language: bg
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 229
+    source: culturax
   bg/windows-1251:
     language: bg
     encoding: windows-1251
@@ -90,6 +108,12 @@ models:
     encoding: iso-8859-14
     samples_used: 25000
     bigram_entries: 861
+    source: culturax
+  br/utf-8:
+    language: br
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 883
     source: culturax
   cs/cp852:
     language: cs
@@ -109,6 +133,12 @@ models:
     samples_used: 25000
     bigram_entries: 1355
     source: culturax
+  cs/utf-8:
+    language: cs
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 1097
+    source: culturax
   cs/windows-1250:
     language: cs
     encoding: windows-1250
@@ -120,6 +150,12 @@ models:
     encoding: iso-8859-14
     samples_used: 25000
     bigram_entries: 764
+    source: culturax
+  cy/utf-8:
+    language: cy
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 777
     source: culturax
   da/cp037:
     language: da
@@ -175,6 +211,12 @@ models:
     samples_used: 25000
     bigram_entries: 787
     source: culturax
+  da/utf-8:
+    language: da
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 773
+    source: culturax
   da/windows-1252:
     language: da
     encoding: windows-1252
@@ -229,6 +271,12 @@ models:
     samples_used: 25000
     bigram_entries: 903
     source: culturax
+  de/utf-8:
+    language: de
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 900
+    source: culturax
   de/windows-1252:
     language: de
     encoding: windows-1252
@@ -265,6 +313,12 @@ models:
     samples_used: 25000
     bigram_entries: 1323
     source: culturax
+  el/utf-8:
+    language: el
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 293
+    source: culturax
   el/windows-1253:
     language: el
     encoding: windows-1253
@@ -276,6 +330,12 @@ models:
     encoding: iso-8859-3
     samples_used: 25000
     bigram_entries: 1025
+    source: culturax
+  eo/utf-8:
+    language: eo
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 1036
     source: culturax
   es/cp037:
     language: es
@@ -325,6 +385,12 @@ models:
     samples_used: 25000
     bigram_entries: 801
     source: culturax
+  es/utf-8:
+    language: es
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 777
+    source: culturax
   es/windows-1252:
     language: es
     encoding: windows-1252
@@ -349,6 +415,12 @@ models:
     samples_used: 25000
     bigram_entries: 877
     source: culturax
+  et/utf-8:
+    language: et
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 855
+    source: culturax
   et/windows-1257:
     language: et
     encoding: windows-1257
@@ -366,6 +438,12 @@ models:
     encoding: iso-8859-6
     samples_used: 25000
     bigram_entries: 740
+    source: culturax
+  fa/utf-8:
+    language: fa
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 224
     source: culturax
   fa/windows-1256:
     language: fa
@@ -408,6 +486,12 @@ models:
     encoding: mac-roman
     samples_used: 25000
     bigram_entries: 722
+    source: culturax
+  fi/utf-8:
+    language: fi
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 692
     source: culturax
   fi/windows-1252:
     language: fi
@@ -469,6 +553,12 @@ models:
     samples_used: 25000
     bigram_entries: 700
     source: culturax
+  fr/utf-8:
+    language: fr
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 699
+    source: culturax
   fr/windows-1252:
     language: fr
     encoding: windows-1252
@@ -481,11 +571,23 @@ models:
     samples_used: 25000
     bigram_entries: 703
     source: culturax
+  ga/utf-8:
+    language: ga
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 659
+    source: culturax
   gd/iso-8859-14:
     language: gd
     encoding: iso-8859-14
     samples_used: 8408
     bigram_entries: 540
+    source: culturax
+  gd/utf-8:
+    language: gd
+    encoding: utf-8
+    samples_used: 8408
+    bigram_entries: 515
     source: culturax
   he/cp424:
     language: he
@@ -510,6 +612,12 @@ models:
     encoding: iso-8859-8
     samples_used: 25000
     bigram_entries: 979
+    source: culturax
+  he/utf-8:
+    language: he
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 154
     source: culturax
   he/windows-1255:
     language: he
@@ -541,6 +649,12 @@ models:
     samples_used: 25000
     bigram_entries: 674
     source: culturax
+  hr/utf-8:
+    language: hr
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 665
+    source: culturax
   hr/windows-1250:
     language: hr
     encoding: windows-1250
@@ -570,6 +684,12 @@ models:
     encoding: mac-latin2
     samples_used: 25000
     bigram_entries: 1243
+    source: culturax
+  hu/utf-8:
+    language: hu
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 965
     source: culturax
   hu/windows-1250:
     language: hu
@@ -604,6 +724,12 @@ models:
   id/mac-roman:
     language: id
     encoding: mac-roman
+    samples_used: 25000
+    bigram_entries: 536
+    source: culturax
+  id/utf-8:
+    language: id
+    encoding: utf-8
     samples_used: 25000
     bigram_entries: 536
     source: culturax
@@ -661,6 +787,12 @@ models:
     samples_used: 25000
     bigram_entries: 906
     source: culturax
+  is/utf-8:
+    language: is
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 828
+    source: culturax
   is/windows-1252:
     language: is
     encoding: windows-1252
@@ -715,6 +847,12 @@ models:
     samples_used: 25000
     bigram_entries: 661
     source: culturax
+  it/utf-8:
+    language: it
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 670
+    source: culturax
   it/windows-1252:
     language: it
     encoding: windows-1252
@@ -745,6 +883,12 @@ models:
     samples_used: 25000
     bigram_entries: 3513
     source: culturax
+  ja/utf-8:
+    language: ja
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 627
+    source: culturax
   kk/kz-1048:
     language: kk
     encoding: kz-1048
@@ -756,6 +900,12 @@ models:
     encoding: ptcp154
     samples_used: 25000
     bigram_entries: 1213
+    source: culturax
+  kk/utf-8:
+    language: kk
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 291
     source: culturax
   ko/cp949:
     language: ko
@@ -781,6 +931,12 @@ models:
     samples_used: 25000
     bigram_entries: 2075
     source: culturax
+  ko/utf-8:
+    language: ko
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 926
+    source: culturax
   lt/cp775:
     language: lt
     encoding: cp775
@@ -798,6 +954,12 @@ models:
     encoding: iso-8859-4
     samples_used: 25000
     bigram_entries: 943
+    source: culturax
+  lt/utf-8:
+    language: lt
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 894
     source: culturax
   lt/windows-1257:
     language: lt
@@ -822,6 +984,12 @@ models:
     encoding: iso-8859-4
     samples_used: 25000
     bigram_entries: 905
+    source: culturax
+  lv/utf-8:
+    language: lv
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 806
     source: culturax
   lv/windows-1257:
     language: lv
@@ -852,6 +1020,12 @@ models:
     encoding: mac-cyrillic
     samples_used: 25000
     bigram_entries: 699
+    source: culturax
+  mk/utf-8:
+    language: mk
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 184
     source: culturax
   mk/windows-1251:
     language: mk
@@ -889,6 +1063,12 @@ models:
     samples_used: 25000
     bigram_entries: 673
     source: culturax
+  ms/utf-8:
+    language: ms
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 680
+    source: culturax
   ms/windows-1252:
     language: ms
     encoding: windows-1252
@@ -900,6 +1080,12 @@ models:
     encoding: iso-8859-3
     samples_used: 25000
     bigram_entries: 972
+    source: culturax
+  mt/utf-8:
+    language: mt
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 962
     source: culturax
   nl/cp037:
     language: nl
@@ -949,6 +1135,12 @@ models:
     samples_used: 25000
     bigram_entries: 694
     source: culturax
+  nl/utf-8:
+    language: nl
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 700
+    source: culturax
   nl/windows-1252:
     language: nl
     encoding: windows-1252
@@ -991,6 +1183,12 @@ models:
     samples_used: 25000
     bigram_entries: 802
     source: culturax
+  no/utf-8:
+    language: no
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 798
+    source: culturax
   no/windows-1252:
     language: no
     encoding: windows-1252
@@ -1020,6 +1218,12 @@ models:
     encoding: mac-latin2
     samples_used: 25000
     bigram_entries: 1106
+    source: culturax
+  pl/utf-8:
+    language: pl
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 1077
     source: culturax
   pl/windows-1250:
     language: pl
@@ -1081,6 +1285,12 @@ models:
     samples_used: 25000
     bigram_entries: 828
     source: culturax
+  pt/utf-8:
+    language: pt
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 792
+    source: culturax
   pt/windows-1252:
     language: pt
     encoding: windows-1252
@@ -1098,6 +1308,12 @@ models:
     encoding: iso-8859-2
     samples_used: 25000
     bigram_entries: 714
+    source: culturax
+  ro/utf-8:
+    language: ro
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 717
     source: culturax
   ro/windows-1250:
     language: ro
@@ -1135,6 +1351,12 @@ models:
     samples_used: 25000
     bigram_entries: 1441
     source: culturax
+  ru/utf-8:
+    language: ru
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 259
+    source: culturax
   ru/windows-1251:
     language: ru
     encoding: windows-1251
@@ -1159,6 +1381,12 @@ models:
     samples_used: 25000
     bigram_entries: 1258
     source: culturax
+  sk/utf-8:
+    language: sk
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 1165
+    source: culturax
   sk/windows-1250:
     language: sk
     encoding: windows-1250
@@ -1182,6 +1410,12 @@ models:
     encoding: iso-8859-2
     samples_used: 25000
     bigram_entries: 812
+    source: culturax
+  sl/utf-8:
+    language: sl
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 813
     source: culturax
   sl/windows-1250:
     language: sl
@@ -1212,6 +1446,12 @@ models:
     encoding: mac-cyrillic
     samples_used: 25000
     bigram_entries: 872
+    source: culturax
+  sr/utf-8:
+    language: sr
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 211
     source: culturax
   sr/windows-1251:
     language: sr
@@ -1267,6 +1507,12 @@ models:
     samples_used: 25000
     bigram_entries: 915
     source: culturax
+  sv/utf-8:
+    language: sv
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 897
+    source: culturax
   sv/windows-1252:
     language: sv
     encoding: windows-1252
@@ -1279,6 +1525,12 @@ models:
     samples_used: 25000
     bigram_entries: 801
     source: culturax
+  tg/utf-8:
+    language: tg
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 251
+    source: culturax
   th/cp874:
     language: th
     encoding: cp874
@@ -1290,6 +1542,12 @@ models:
     encoding: tis-620
     samples_used: 25000
     bigram_entries: 2778
+    source: culturax
+  th/utf-8:
+    language: th
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 114
     source: culturax
   tr/cp037:
     language: tr
@@ -1327,6 +1585,12 @@ models:
     samples_used: 25000
     bigram_entries: 1153
     source: culturax
+  tr/utf-8:
+    language: tr
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 823
+    source: culturax
   tr/windows-1254:
     language: tr
     encoding: windows-1254
@@ -1363,6 +1627,12 @@ models:
     samples_used: 25000
     bigram_entries: 1394
     source: culturax
+  uk/utf-8:
+    language: uk
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 273
+    source: culturax
   uk/windows-1251:
     language: uk
     encoding: windows-1251
@@ -1374,6 +1644,18 @@ models:
     encoding: cp1006
     samples_used: 25000
     bigram_entries: 19
+    source: culturax
+  ur/utf-8:
+    language: ur
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 237
+    source: culturax
+  vi/utf-8:
+    language: vi
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 674
     source: culturax
   vi/windows-1258:
     language: vi
@@ -1398,4 +1680,10 @@ models:
     encoding: hz-gb-2312
     samples_used: 25000
     bigram_entries: 3194
+    source: culturax
+  zh/utf-8:
+    language: zh
+    encoding: utf-8
+    samples_used: 25000
+    bigram_entries: 2517
     source: culturax
