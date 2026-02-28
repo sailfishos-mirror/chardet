@@ -10,7 +10,7 @@ from chardet.models import (
     infer_language,
     score_best_language,
 )
-from chardet.pipeline import DetectionResult
+from chardet.pipeline import DetectionResult, PipelineContext
 from chardet.pipeline.ascii import detect_ascii
 from chardet.pipeline.binary import is_binary
 from chardet.pipeline.bom import detect_bom
@@ -19,7 +19,6 @@ from chardet.pipeline.escape import detect_escape_encoding
 from chardet.pipeline.markup import detect_markup_charset
 from chardet.pipeline.statistical import score_candidates
 from chardet.pipeline.structural import (
-    clear_analysis_cache,
     compute_lead_byte_diversity,
     compute_multibyte_byte_coverage,
     compute_structural_score,
@@ -226,7 +225,8 @@ _CJK_DIVERSITY_MIN_NON_ASCII = 16
 def _gate_cjk_candidates(
     data: bytes,
     valid_candidates: tuple[EncodingInfo, ...],
-) -> tuple[tuple[EncodingInfo, ...], dict[str, float]]:
+    ctx: PipelineContext,
+) -> tuple[EncodingInfo, ...]:
     """Eliminate CJK multi-byte candidates that lack genuine multi-byte structure.
 
     Four checks are applied in order to each multi-byte candidate:
@@ -248,33 +248,31 @@ def _gate_cjk_candidates(
        draws from a wide repertoire of lead bytes; European false positives
        cluster in a narrow band (e.g. 0xC0-0xDF for accented Latin).
 
-    Returns the filtered candidate list and a dict of cached structural
-    scores for reuse in Stage 2b.
+    Returns the filtered candidate list.  Structural scores are cached in
+    ``ctx.mb_scores`` for reuse in Stage 2b.
     """
-    non_ascii_count = -1  # Lazy; computed only when needed
-    mb_scores: dict[str, float] = {}
     gated: list[EncodingInfo] = []
     for enc in valid_candidates:
         if enc.is_multibyte:
-            mb_score = compute_structural_score(data, enc)
-            mb_scores[enc.name] = mb_score
+            mb_score = compute_structural_score(data, enc, ctx)
+            ctx.mb_scores[enc.name] = mb_score
             if mb_score < _CJK_MIN_MB_RATIO:
                 continue  # No multi-byte structure -> eliminate
-            if non_ascii_count < 0:
-                non_ascii_count = len(data) - len(data.translate(None, _HIGH_BYTES))
-            if non_ascii_count < _CJK_MIN_NON_ASCII:
+            if ctx.non_ascii_count < 0:
+                ctx.non_ascii_count = len(data) - len(data.translate(None, _HIGH_BYTES))
+            if ctx.non_ascii_count < _CJK_MIN_NON_ASCII:
                 continue  # Too few high bytes to trust the score
             byte_coverage = compute_multibyte_byte_coverage(
-                data, enc, non_ascii_count=non_ascii_count
+                data, enc, ctx, non_ascii_count=ctx.non_ascii_count
             )
             if byte_coverage < _CJK_MIN_BYTE_COVERAGE:
                 continue  # Most high bytes are orphans -> not CJK
-            if non_ascii_count >= _CJK_DIVERSITY_MIN_NON_ASCII:
-                lead_diversity = compute_lead_byte_diversity(data, enc)
+            if ctx.non_ascii_count >= _CJK_DIVERSITY_MIN_NON_ASCII:
+                lead_diversity = compute_lead_byte_diversity(data, enc, ctx)
                 if lead_diversity < _CJK_MIN_LEAD_DIVERSITY:
                     continue  # Too few distinct lead bytes -> not CJK
         gated.append(enc)
-    return tuple(gated), mb_scores
+    return tuple(gated)
 
 
 def _score_structural_candidates(
@@ -423,7 +421,7 @@ def _run_pipeline_core(
     max_bytes: int = 200_000,
 ) -> list[DetectionResult]:
     """Core pipeline logic. Returns list of results sorted by confidence."""
-    clear_analysis_cache()
+    ctx = PipelineContext()
     data = data[:max_bytes]
 
     if not data:
@@ -479,7 +477,7 @@ def _run_pipeline_core(
 
     # Gate: eliminate CJK multi-byte candidates that lack genuine
     # multi-byte structure.  Cache structural scores for Stage 2b.
-    valid_candidates, mb_scores = _gate_cjk_candidates(data, valid_candidates)
+    valid_candidates = _gate_cjk_candidates(data, valid_candidates, ctx)
 
     if not valid_candidates:
         return [_FALLBACK_RESULT]
@@ -489,9 +487,9 @@ def _run_pipeline_core(
     structural_scores: list[tuple[str, float]] = []
     for enc in valid_candidates:
         if enc.is_multibyte:
-            score = mb_scores.get(enc.name)
+            score = ctx.mb_scores.get(enc.name)
             if score is None:
-                score = compute_structural_score(data, enc)
+                score = compute_structural_score(data, enc, ctx)
             if score > 0.0:
                 structural_scores.append((enc.name, score))
 

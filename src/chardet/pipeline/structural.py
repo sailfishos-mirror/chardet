@@ -298,15 +298,6 @@ _ANALYSERS: dict[str, Callable[[bytes], tuple[float, int, int]]] = {
 }
 
 
-def clear_analysis_cache() -> None:
-    """No-op kept for backward compatibility until orchestrator is updated.
-
-    .. deprecated::
-        The module-level cache has been replaced by ``PipelineContext``.
-        This stub will be removed once ``orchestrator.py`` is updated.
-    """
-
-
 def _get_analysis(
     data: bytes, name: str, ctx: PipelineContext
 ) -> tuple[float, int, int] | None:
