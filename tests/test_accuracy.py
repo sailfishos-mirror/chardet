@@ -7,6 +7,7 @@ pytest_generate_tests hook. Run with `pytest -n auto` for parallel execution.
 
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 
 import chardet
@@ -30,3 +31,12 @@ def test_detect(expected_encoding: str, language: str, test_file_path: Path) -> 
         f"(confidence={result['confidence']:.2f}, "
         f"language={language}, file={test_file_path.name})"
     )
+
+    # Language accuracy: warn but don't fail
+    detected_language = result["language"]
+    if detected_language is None or detected_language.lower() != language.lower():
+        warnings.warn(
+            f"Language mismatch: expected={language}, got={detected_language} "
+            f"(encoding={expected_encoding}, file={test_file_path.name})",
+            stacklevel=1,
+        )
