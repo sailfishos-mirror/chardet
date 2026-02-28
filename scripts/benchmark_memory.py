@@ -59,7 +59,18 @@ def main() -> None:
         default=False,
         help="Print only JSON output (for consumption by other scripts)",
     )
+    parser.add_argument(
+        "--pure",
+        action="store_true",
+        default=False,
+        help="Abort if mypyc .so/.pyd files are present (ensure pure-Python measurement)",
+    )
     args = parser.parse_args()
+
+    if args.pure and args.detector == "chardet":
+        from utils import abort_if_mypyc_compiled
+
+        abort_if_mypyc_compiled()
 
     data_dir: Path = args.data_dir.resolve()
     if not data_dir.is_dir():

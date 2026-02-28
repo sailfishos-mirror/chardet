@@ -530,7 +530,18 @@ if __name__ == "__main__":
         default=False,
         help="Include charset-normalizer pure-Python subprocess variant",
     )
+    parser.add_argument(
+        "--pure",
+        action="store_true",
+        default=False,
+        help="Abort if mypyc .so/.pyd files are present (ensure pure-Python measurement)",
+    )
     args = parser.parse_args()
+
+    if args.pure:
+        from utils import abort_if_mypyc_compiled
+
+        abort_if_mypyc_compiled()
 
     # Force line-buffered stdout so progress is visible when piped (e.g. tee).
     sys.stdout.reconfigure(line_buffering=True)

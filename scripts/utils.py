@@ -2,10 +2,39 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import sys
+from pathlib import Path
 
-if TYPE_CHECKING:
-    from pathlib import Path
+
+def find_chardet_so_files() -> list[Path]:
+    """Return any mypyc .so/.pyd files under the chardet package directory."""
+    import chardet
+
+    pkg_dir = Path(chardet.__file__).parent
+    return sorted(
+        p for p in pkg_dir.rglob("*") if p.suffix in (".so", ".pyd") and p.is_file()
+    )
+
+
+def abort_if_mypyc_compiled() -> None:
+    """Exit with an error if chardet has mypyc .so/.pyd files present.
+
+    Called when ``--pure`` is passed to ensure benchmarks measure
+    pure-Python performance only.
+    """
+    so_files = find_chardet_so_files()
+    if so_files:
+        print(
+            "ERROR: --pure flag set but mypyc compiled extensions detected:",
+            file=sys.stderr,
+        )
+        for p in so_files:
+            print(f"  {p}", file=sys.stderr)
+        print(
+            "\nRemove these .so/.pyd files before benchmarking pure Python.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
 
 def format_bytes(n: int) -> str:
