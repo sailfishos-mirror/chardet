@@ -90,8 +90,9 @@ def main() -> None:
         import_time = time.perf_counter() - t0
         era = EncodingEra.ALL if args.encoding_era == "all" else EncodingEra.MODERN_WEB
 
-        def detect(data: bytes) -> str | None:
-            return chardet.detect(data, encoding_era=era)["encoding"]
+        def detect(data: bytes) -> tuple[str | None, str | None]:
+            r = chardet.detect(data, encoding_era=era)
+            return r["encoding"], r["language"]
 
     elif args.detector == "chardet":
         t0 = time.perf_counter()
@@ -99,8 +100,9 @@ def main() -> None:
 
         import_time = time.perf_counter() - t0
 
-        def detect(data: bytes) -> str | None:
-            return chardet.detect(data)["encoding"]
+        def detect(data: bytes) -> tuple[str | None, str | None]:
+            r = chardet.detect(data)
+            return r["encoding"], r["language"]
 
     elif args.detector == "cchardet":
         t0 = time.perf_counter()
@@ -108,8 +110,8 @@ def main() -> None:
 
         import_time = time.perf_counter() - t0
 
-        def detect(data: bytes) -> str | None:
-            return cchardet.detect(data)["encoding"]
+        def detect(data: bytes) -> tuple[str | None, str | None]:
+            return cchardet.detect(data)["encoding"], None
 
     else:
         t0 = time.perf_counter()
@@ -117,17 +119,17 @@ def main() -> None:
 
         import_time = time.perf_counter() - t0
 
-        def detect(data: bytes) -> str | None:
+        def detect(data: bytes) -> tuple[str | None, str | None]:
             r = from_bytes(data)
             best = r.best()
-            return best.encoding if best else None
+            return (best.encoding if best else None), None
 
     # Run detection over all files, collect per-file times + results
     file_times: list[float] = []
     t_total_start = time.perf_counter()
     for enc, lang, fp, data in all_data:
         ft0 = time.perf_counter()
-        detected = detect(data)
+        detected, detected_language = detect(data)
         file_elapsed = time.perf_counter() - ft0
         file_times.append(file_elapsed)
 
@@ -139,6 +141,7 @@ def main() -> None:
                         "language": lang,
                         "path": str(fp),
                         "detected": detected,
+                        "detected_language": detected_language,
                         "elapsed": file_elapsed,
                     }
                 )
