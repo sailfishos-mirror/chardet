@@ -199,6 +199,17 @@ class BigramProfile:
         self.weight_sum = w_sum
         self.input_norm = math.sqrt(sum(v * v for v in freq.values()))
 
+    @classmethod
+    def from_weighted_freq(
+        cls, weighted_freq: dict[int, int], weight_sum: int
+    ) -> "BigramProfile":
+        """Create a BigramProfile from pre-computed weighted frequencies."""
+        profile = cls(b"")
+        profile.weighted_freq = weighted_freq
+        profile.weight_sum = weight_sum
+        profile.input_norm = math.sqrt(sum(v * v for v in weighted_freq.values()))
+        return profile
+
 
 def _score_with_profile(profile: BigramProfile, model: bytearray) -> float:
     """Score a pre-computed bigram profile against a single model using cosine similarity."""
@@ -214,36 +225,15 @@ def _score_with_profile(profile: BigramProfile, model: bytearray) -> float:
     return dot / (model_norm * profile.input_norm)
 
 
-def score_bigrams(
-    data: bytes,
-    encoding: str,
-    models: dict[str, bytearray] | None = None,
-) -> float:
-    """Score data against a specific encoding's bigram model. Returns 0.0-1.0.
-
-    Convenience wrapper around ``score_best_language`` that discards the
-    language result.  Primarily used in tests.
-    """
-    if not data:
-        return 0.0
-    score, _ = score_best_language(data, encoding, models)
-    return score
-
-
 def score_best_language(
     data: bytes,
     encoding: str,
-    models: dict[str, bytearray] | None = None,  # noqa: ARG001
     profile: BigramProfile | None = None,
 ) -> tuple[float, str | None]:
     """Score data against all language variants of an encoding.
 
     Returns (best_score, best_language). Uses a pre-grouped index for O(L)
     lookup where L is the number of language variants for the encoding.
-
-    The *models* parameter is accepted for backward compatibility but is not
-    used; the internal index (built once from the loaded models) is used
-    for efficient lookup.
 
     If *profile* is provided, it is reused instead of recomputing the bigram
     frequency distribution from *data*.
