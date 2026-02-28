@@ -303,3 +303,74 @@ def load_confusion_data() -> DistinguishingMaps:
         return _CONFUSION_CACHE
     _CONFUSION_CACHE = deserialize_confusion_data_from_bytes(raw)
     return _CONFUSION_CACHE
+
+
+# Unicode general category preference scores for voting resolution.
+# Higher scores indicate more linguistically meaningful characters.
+_CATEGORY_PREFERENCE: dict[str, int] = {
+    "Lu": 10,
+    "Ll": 10,
+    "Lt": 10,
+    "Lm": 9,
+    "Lo": 9,
+    "Nd": 8,
+    "Nl": 7,
+    "No": 7,
+    "Pc": 6,
+    "Pd": 6,
+    "Ps": 6,
+    "Pe": 6,
+    "Pi": 6,
+    "Pf": 6,
+    "Po": 6,
+    "Sc": 5,
+    "Sm": 5,
+    "Sk": 4,
+    "So": 4,
+    "Zs": 3,
+    "Zl": 3,
+    "Zp": 3,
+    "Cf": 2,
+    "Cc": 1,
+    "Co": 1,
+    "Cs": 0,
+    "Cn": 0,
+    "Mn": 5,
+    "Mc": 5,
+    "Me": 5,
+}
+
+
+def resolve_by_category_voting(
+    data: bytes,
+    enc_a: str,
+    enc_b: str,
+    diff_bytes: frozenset[int],
+    categories: dict[int, tuple[str, str]],
+) -> str | None:
+    """Resolve between two encodings using Unicode category voting.
+
+    For each distinguishing byte present in the data, compare the Unicode
+    general category under each encoding. The encoding whose interpretation
+    has the higher category preference score gets a vote. The encoding with
+    more votes wins.
+    """
+    votes_a = 0
+    votes_b = 0
+    data_bytes = set(data)
+    relevant = data_bytes & diff_bytes
+    if not relevant:
+        return None
+    for bv in relevant:
+        cat_a, cat_b = categories[bv]
+        pref_a = _CATEGORY_PREFERENCE.get(cat_a, 0)
+        pref_b = _CATEGORY_PREFERENCE.get(cat_b, 0)
+        if pref_a > pref_b:
+            votes_a += 1
+        elif pref_b > pref_a:
+            votes_b += 1
+    if votes_a > votes_b:
+        return enc_a
+    if votes_b > votes_a:
+        return enc_b
+    return None

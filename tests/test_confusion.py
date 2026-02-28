@@ -10,6 +10,7 @@ from chardet.pipeline.confusion import (
     compute_distinguishing_maps,
     deserialize_confusion_data,
     load_confusion_data,
+    resolve_by_category_voting,
     serialize_confusion_data,
 )
 
@@ -104,3 +105,21 @@ def test_load_confusion_data():
         for key in maps
     )
     assert found_ebcdic
+
+
+def test_category_voting_prefers_letter_over_symbol():
+    """Category voting should prefer letter (Ll) over symbol (So)."""
+    diff_bytes = frozenset({0xD5})
+    categories = {0xD5: ("Ll", "So")}
+    data = bytes([0x41, 0xD5, 0x42])
+    winner = resolve_by_category_voting(data, "enc_a", "enc_b", diff_bytes, categories)
+    assert winner == "enc_a"
+
+
+def test_category_voting_returns_none_on_no_distinguishing_bytes():
+    """Category voting should return None when no distinguishing bytes are in data."""
+    diff_bytes = frozenset({0xD5})
+    categories = {0xD5: ("Ll", "So")}
+    data = bytes([0x41, 0x42, 0x43])
+    winner = resolve_by_category_voting(data, "enc_a", "enc_b", diff_bytes, categories)
+    assert winner is None
