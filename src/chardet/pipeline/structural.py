@@ -24,6 +24,8 @@ from chardet.registry import EncodingInfo
 
 # Byte table for fast non-ASCII counting (C-speed via bytes.translate).
 # Deleting all bytes >= 0x80 and comparing lengths gives the non-ASCII count.
+# Intentionally duplicated in orchestrator.py — each mypyc-compiled module
+# needs its own copy to avoid cross-module global lookups.
 _HIGH_BYTES: bytes = bytes(range(0x80, 0x100))
 
 
@@ -302,14 +304,15 @@ _ANALYSERS: dict[str, Callable[[bytes], tuple[float, int, int]]] = {
 # IMPORTANT: This cache uses id(data) as a key, which is only valid while
 # the data object is alive.  clear_analysis_cache() MUST be called at the
 # start of every run_pipeline() call to prevent stale entries from a
-# previously deallocated object whose id() was reused.  This module is
+# previously deallocated object whose id() was reused.  len(data) is
+# included as a secondary guard against id reuse.  This module is
 # NOT safe under free-threaded Python (PEP 703) without external locking.
-_analysis_cache: dict[tuple[int, str], tuple[float, int, int]] = {}
+_analysis_cache: dict[tuple[int, int, str], tuple[float, int, int]] = {}
 
 
 def _get_analysis(data: bytes, name: str) -> tuple[float, int, int] | None:
     """Return cached analysis or compute and cache it."""
-    key = (id(data), name)
+    key = (id(data), len(data), name)
     cached = _analysis_cache.get(key)
     if cached is not None:
         return cached
