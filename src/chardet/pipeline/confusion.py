@@ -10,6 +10,7 @@ Build-time computation (``compute_confusion_groups``, ``compute_distinguishing_m
 from __future__ import annotations
 
 import struct
+import threading
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -58,6 +59,7 @@ _CATEGORY_TO_INT: dict[str, int] = {
 _INT_TO_CATEGORY: dict[int, str] = {v: k for k, v in _CATEGORY_TO_INT.items()}
 
 _CONFUSION_CACHE: DistinguishingMaps | None = None
+_CONFUSION_CACHE_LOCK = threading.Lock()
 
 
 def deserialize_confusion_data_from_bytes(data: bytes) -> DistinguishingMaps:
@@ -101,15 +103,18 @@ def load_confusion_data() -> DistinguishingMaps:
     global _CONFUSION_CACHE  # noqa: PLW0603
     if _CONFUSION_CACHE is not None:
         return _CONFUSION_CACHE
-    import importlib.resources
+    with _CONFUSION_CACHE_LOCK:
+        if _CONFUSION_CACHE is not None:
+            return _CONFUSION_CACHE
+        import importlib.resources
 
-    ref = importlib.resources.files("chardet.models").joinpath("confusion.bin")
-    raw = ref.read_bytes()
-    if not raw:
-        _CONFUSION_CACHE = {}
+        ref = importlib.resources.files("chardet.models").joinpath("confusion.bin")
+        raw = ref.read_bytes()
+        if not raw:
+            _CONFUSION_CACHE = {}
+            return _CONFUSION_CACHE
+        _CONFUSION_CACHE = deserialize_confusion_data_from_bytes(raw)
         return _CONFUSION_CACHE
-    _CONFUSION_CACHE = deserialize_confusion_data_from_bytes(raw)
-    return _CONFUSION_CACHE
 
 
 # Unicode general category preference scores for voting resolution.

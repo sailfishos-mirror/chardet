@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import threading
 
 from chardet.enums import EncodingEra
 
@@ -19,16 +20,22 @@ class EncodingInfo:
 
 
 _CANDIDATES_CACHE: dict[int, tuple[EncodingInfo, ...]] = {}
+_CANDIDATES_CACHE_LOCK = threading.Lock()
 
 
 def get_candidates(era: EncodingEra) -> tuple[EncodingInfo, ...]:
     """Return registry entries matching the given era filter."""
     key = int(era)
     result = _CANDIDATES_CACHE.get(key)
-    if result is None:
+    if result is not None:
+        return result
+    with _CANDIDATES_CACHE_LOCK:
+        result = _CANDIDATES_CACHE.get(key)
+        if result is not None:
+            return result
         result = tuple(enc for enc in REGISTRY if enc.era & era)
         _CANDIDATES_CACHE[key] = result
-    return result
+        return result
 
 
 # Era assignments match chardet 6.0.0's chardet/metadata/charsets.py
