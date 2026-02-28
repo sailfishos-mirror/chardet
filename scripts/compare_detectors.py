@@ -537,10 +537,9 @@ def run_comparison(
         row = f"  {enc:<25} {t_enc:>5}"
         for label in detector_labels:
             s = stats[label]["per_enc"][enc]
-            lang_t = s["lang_total"]
             lang_c = s["lang_correct"]
-            acc = lang_c / lang_t if lang_t else 0
-            row += f"  {lang_c:>{col_w - 12}}/{lang_t} = {acc:>6.1%} "
+            acc = lang_c / t_enc if t_enc else 0
+            row += f"  {lang_c:>{col_w - 12}}/{t_enc} = {acc:>6.1%} "
         print(row)
 
     # -- Pairwise comparisons vs reference detector --
