@@ -215,13 +215,19 @@ In-process timing (2161 files, `encoding_era=ALL`, pre-loaded into memory):
 | Pure Python | 5,960ms | 2.76ms | baseline |
 | mypyc compiled | 3,977ms | 1.84ms | **1.50x** |
 
-The mypyc speedup (1.50x) is significant again after the addition of
-UTF-8 language models. The three-tier `_fill_language` post-processing
-adds ~800ms of BigramProfile construction and cosine scoring in pure
-Python — exactly the kind of tight-loop integer arithmetic that mypyc
-compiles to fast C code. The compiled build (3,977ms) is actually faster
-than the pure Python baseline *before* language detection was added
-(~5,015ms).
+The mypyc speedup is 1.50x. The three-tier `_fill_language`
+post-processing adds ~800ms of BigramProfile construction and cosine
+scoring in pure Python — exactly the kind of tight-loop integer
+arithmetic that mypyc compiles to fast C code. The compiled build
+(3,977ms) is actually faster than the pure Python baseline *before*
+language detection was added (~5,015ms).
+
+*Note:* Previously reported mypyc numbers (1.02x speedup at ~4,982ms)
+are suspect — a mypyc-incompatible `BigramProfile.__new__()` call in
+`confusion.py` caused a runtime crash, meaning that benchmark was
+likely run on a stale build from before confusion group resolution
+was added. The 1.50x figure above is the first reliable mypyc
+measurement with the full feature set.
 
 Pure Python wheels are published alongside mypyc wheels for PyPy and
 platforms without prebuilt binaries. No runtime dependencies are added.
