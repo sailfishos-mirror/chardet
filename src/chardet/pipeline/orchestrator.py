@@ -285,12 +285,8 @@ def _score_structural_candidates(
     valid_mb = tuple(
         enc_lookup[name] for name, _sc in structural_scores if name in enc_lookup
     )
-    results = list(score_candidates(data, valid_mb))
     single_byte = tuple(e for e in valid_candidates if not e.is_multibyte)
-    if single_byte:
-        results.extend(score_candidates(data, single_byte))
-    results.sort(key=lambda r: r.confidence, reverse=True)
-    return results
+    return list(score_candidates(data, (*valid_mb, *single_byte)))
 
 
 def _demote_niche_latin(
