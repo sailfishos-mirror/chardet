@@ -40,6 +40,35 @@ Baltic, etc.).
 The two charset-normalizer variants produce identical accuracy (1924/2161).
 The pure-Python build is 1.5x slower (53.37s vs 35.75s).
 
+## Language Detection Accuracy
+
+The rewrite returns a `language` field alongside the detected encoding.
+For single-language encodings (e.g. Big5→Chinese, EUC-JP→Japanese,
+ISO-8859-7→Greek), the language is inferred automatically from a
+hardcoded mapping of 41 encodings. For multi-language encodings (e.g.
+windows-1252, ISO-8859-5), the language comes from statistical bigram
+scoring. Universal encodings (UTF-8, UTF-16, UTF-32) have no inherent
+language signal and always return `language=None`.
+
+| Metric | Count |
+|---|---|
+| Correct language | 930/2161 (43.0%) |
+| Wrong language | 64/2161 (3.0%) |
+| No language returned | 1167/2161 (54.0%) |
+
+Of the 1167 files with no language returned:
+
+- **1002** are universal encodings (UTF-8/16/32) where language cannot be
+  determined from encoding alone
+- **165** are multi-language encodings detected via early pipeline stages
+  (markup charset, ASCII) that bypass statistical scoring
+
+When a language *is* returned, it is correct **93.6%** of the time
+(930 correct out of 994 non-None results). The 64 wrong-language cases
+are primarily multi-language encodings where the statistical scorer picks
+a plausible but incorrect language (e.g. EBCDIC cp037/cp500, iso-8859-1,
+iso-8859-14).
+
 ## Detection Runtime Distribution
 
 | Detector | Total | Mean | Median | p90 | p95 |
