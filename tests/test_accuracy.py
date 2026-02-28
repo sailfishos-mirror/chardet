@@ -10,6 +10,8 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING
 
+from utils import normalize_language
+
 import chardet
 from chardet.enums import EncodingEra
 from chardet.equivalences import is_correct, is_equivalent_detection
@@ -33,8 +35,8 @@ def test_detect(expected_encoding: str, language: str, test_file_path: Path) -> 
     )
 
     # Language accuracy: warn but don't fail
-    detected_language = result["language"]
-    if detected_language is None or detected_language.lower() != language.lower():
+    detected_language = normalize_language(result["language"])
+    if detected_language is None or detected_language != language.lower():
         warnings.warn(
             f"Language mismatch: expected={language}, got={detected_language} "
             f"(encoding={expected_encoding}, file={test_file_path.name})",

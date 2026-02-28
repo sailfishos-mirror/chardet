@@ -26,7 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from utils import collect_test_files
+from utils import collect_test_files, normalize_language
 from utils import format_bytes as _format_bytes
 
 from chardet.equivalences import (
@@ -249,10 +249,8 @@ def _record_result(  # noqa: PLR0913
     # Language tracking (independent of encoding accuracy)
     detector_stats["lang_total"] += 1
     detector_stats["per_enc"][expected_encoding]["lang_total"] += 1
-    if (
-        detected_language is not None
-        and detected_language.lower() == expected_language.lower()
-    ):
+    normalized = normalize_language(detected_language)
+    if normalized is not None and normalized == expected_language.lower():
         detector_stats["lang_correct"] += 1
         detector_stats["per_enc"][expected_encoding]["lang_correct"] += 1
     else:

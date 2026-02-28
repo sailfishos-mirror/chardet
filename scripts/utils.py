@@ -46,6 +46,65 @@ def format_bytes(n: int) -> str:
     return f"{n} B"
 
 
+ISO_TO_LANGUAGE: dict[str, str] = {
+    "ar": "arabic",
+    "be": "belarusian",
+    "bg": "bulgarian",
+    "br": "breton",
+    "cs": "czech",
+    "cy": "welsh",
+    "da": "danish",
+    "de": "german",
+    "el": "greek",
+    "eo": "esperanto",
+    "es": "spanish",
+    "et": "estonian",
+    "fa": "farsi",
+    "fi": "finnish",
+    "fr": "french",
+    "ga": "irish",
+    "gd": "gaelic",
+    "he": "hebrew",
+    "hr": "croatian",
+    "hu": "hungarian",
+    "id": "indonesian",
+    "is": "icelandic",
+    "it": "italian",
+    "ja": "japanese",
+    "kk": "kazakh",
+    "ko": "korean",
+    "lt": "lithuanian",
+    "lv": "latvian",
+    "mk": "macedonian",
+    "ms": "malay",
+    "mt": "maltese",
+    "nl": "dutch",
+    "no": "norwegian",
+    "pl": "polish",
+    "pt": "portuguese",
+    "ro": "romanian",
+    "ru": "russian",
+    "sk": "slovak",
+    "sl": "slovene",
+    "sr": "serbian",
+    "sv": "swedish",
+    "tg": "tajik",
+    "th": "thai",
+    "tr": "turkish",
+    "uk": "ukrainian",
+    "ur": "urdu",
+    "vi": "vietnamese",
+    "zh": "chinese",
+}
+
+
+def normalize_language(detected_language: str | None) -> str | None:
+    """Map ISO 639-1 code to the English name used in test data directories."""
+    if detected_language is None:
+        return None
+    return ISO_TO_LANGUAGE.get(detected_language.lower(), detected_language.lower())
+
+
 def collect_test_files(data_dir: Path) -> list[tuple[str, str, Path]]:
     """Collect (encoding, language, filepath) tuples from test data.
 
