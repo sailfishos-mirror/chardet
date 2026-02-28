@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from chardet.pipeline.confusion import compute_confusion_groups
+from chardet.pipeline.confusion import (
+    compute_confusion_groups,
+    compute_distinguishing_maps,
+)
 
 
 def test_compute_confusion_groups_finds_ebcdic():
@@ -35,3 +38,24 @@ def test_unrelated_encodings_not_grouped():
     for group in groups:
         # KOI8-R (Cyrillic) should never be grouped with cp437 (DOS Latin)
         assert not ("koi8-r" in group and "cp437" in group)
+
+
+def test_distinguishing_map_cp037_cp500():
+    """cp037 and cp500 should have exactly 7 distinguishing bytes."""
+    maps = compute_distinguishing_maps(threshold=0.80)
+    pair_key = ("cp037", "cp500") if ("cp037", "cp500") in maps else ("cp500", "cp037")
+    assert pair_key in maps
+    diff_bytes, categories = maps[pair_key]
+    assert len(diff_bytes) == 7
+
+
+def test_distinguishing_map_has_categories():
+    """Each distinguishing byte should have Unicode category info."""
+    maps = compute_distinguishing_maps(threshold=0.80)
+    for diff_bytes, categories in maps.values():
+        for byte_val in diff_bytes:
+            assert byte_val in categories
+            cat_a, cat_b = categories[byte_val]
+            # Categories should be 2-char Unicode general category strings
+            assert len(cat_a) == 2
+            assert len(cat_b) == 2
