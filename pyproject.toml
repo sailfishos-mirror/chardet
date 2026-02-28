@@ -114,6 +114,8 @@ ignore = [
     "PT011",   # pytest.raises broad match acceptable
     "PLC0415", # conditional imports sometimes needed
     "PERF401", # manual list comprehension (readability)
+    "SLF001",  # private member access (whitebox testing of internals)
+    "ARG001",  # unused function arguments (pytest fixtures)
 ]
 "scripts/tests/**" = [
     "S101",    # assert is standard in tests
