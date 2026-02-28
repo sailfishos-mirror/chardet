@@ -9,6 +9,7 @@ from chardet.pipeline.confusion import (
     compute_confusion_groups,
     compute_distinguishing_maps,
     deserialize_confusion_data,
+    load_confusion_data,
     serialize_confusion_data,
 )
 
@@ -91,3 +92,15 @@ def test_serialized_file_is_small():
         assert path.stat().st_size < 10_000
     finally:
         path.unlink(missing_ok=True)
+
+
+def test_load_confusion_data():
+    """Loading confusion data from the bundled file should return valid maps."""
+    maps = load_confusion_data()
+    assert len(maps) > 0
+    found_ebcdic = any(
+        ("cp037" in key[0] and "cp500" in key[1])
+        or ("cp500" in key[0] and "cp037" in key[1])
+        for key in maps
+    )
+    assert found_ebcdic

@@ -8,6 +8,7 @@ to resolve statistical scoring ties.
 from __future__ import annotations
 
 import codecs
+import importlib.resources
 import struct
 import unicodedata
 from pathlib import Path
@@ -200,6 +201,8 @@ _CATEGORY_TO_INT: dict[str, int] = {
 }
 _INT_TO_CATEGORY: dict[int, str] = {v: k for k, v in _CATEGORY_TO_INT.items()}
 
+_CONFUSION_CACHE: DistinguishingMaps | None = None
+
 
 def serialize_confusion_data(maps: DistinguishingMaps, output_path: str) -> int:
     """Serialize confusion group data to binary format.
@@ -245,11 +248,8 @@ def serialize_confusion_data(maps: DistinguishingMaps, output_path: str) -> int:
     return out.stat().st_size
 
 
-def deserialize_confusion_data(input_path: str) -> DistinguishingMaps:
-    """Load confusion group data from binary format."""
-    with Path(input_path).open("rb") as f:
-        data = f.read()
-
+def deserialize_confusion_data_from_bytes(data: bytes) -> DistinguishingMaps:
+    """Load confusion group data from raw bytes."""
     result: DistinguishingMaps = {}
     offset = 0
     (num_pairs,) = struct.unpack_from("!H", data, offset)
@@ -269,16 +269,37 @@ def deserialize_confusion_data(input_path: str) -> DistinguishingMaps:
         (num_diffs,) = struct.unpack_from("!B", data, offset)
         offset += 1
 
-        diff_bytes: list[int] = []
+        diff_bytes_list: list[int] = []
         categories: dict[int, tuple[str, str]] = {}
         for _ in range(num_diffs):
             bv, cat_a_int, cat_b_int = struct.unpack_from("!BBB", data, offset)
             offset += 3
-            diff_bytes.append(bv)
+            diff_bytes_list.append(bv)
             categories[bv] = (
                 _INT_TO_CATEGORY.get(cat_a_int, "Cn"),
                 _INT_TO_CATEGORY.get(cat_b_int, "Cn"),
             )
-        result[(name_a, name_b)] = (frozenset(diff_bytes), categories)
+        result[(name_a, name_b)] = (frozenset(diff_bytes_list), categories)
 
     return result
+
+
+def deserialize_confusion_data(input_path: str) -> DistinguishingMaps:
+    """Load confusion group data from binary format."""
+    with Path(input_path).open("rb") as f:
+        data = f.read()
+    return deserialize_confusion_data_from_bytes(data)
+
+
+def load_confusion_data() -> DistinguishingMaps:
+    """Load confusion group data from the bundled confusion.bin file."""
+    global _CONFUSION_CACHE  # noqa: PLW0603
+    if _CONFUSION_CACHE is not None:
+        return _CONFUSION_CACHE
+    ref = importlib.resources.files("chardet.models").joinpath("confusion.bin")
+    raw = ref.read_bytes()
+    if not raw:
+        _CONFUSION_CACHE = {}
+        return _CONFUSION_CACHE
+    _CONFUSION_CACHE = deserialize_confusion_data_from_bytes(raw)
+    return _CONFUSION_CACHE
