@@ -29,6 +29,11 @@ import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 
+from chardet.pipeline.confusion import (
+    compute_distinguishing_maps,
+    serialize_confusion_data,
+)
+
 print = functools.partial(print, flush=True)  # noqa: A001
 
 # ---------------------------------------------------------------------------
@@ -985,6 +990,15 @@ def main() -> None:
     # Serialize
     print("=== Serializing models ===")
     file_size = serialize_models(models, args.output)
+
+    print("=== Computing confusion groups ===")
+    confusion_maps = compute_distinguishing_maps(threshold=0.80)
+    confusion_path = os.path.join(os.path.dirname(args.output), "confusion.bin")
+    confusion_size = serialize_confusion_data(confusion_maps, confusion_path)
+    print(f"Confusion groups: {len(confusion_maps)} pairs")
+    print(
+        f"Confusion data:   {confusion_size:,} bytes ({confusion_size / 1024:.1f} KB)"
+    )
 
     metadata_path = Path(args.output).with_name("training_metadata.yaml")
     _write_training_metadata(metadata_path, models, args.max_samples, args.cache_dir)
