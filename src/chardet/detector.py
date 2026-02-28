@@ -43,6 +43,9 @@ class UniversalDetector:
             self._rename_legacy = encoding_era == EncodingEra.MODERN_WEB
         else:
             self._rename_legacy = should_rename_legacy
+        if max_bytes < 1:
+            msg = "max_bytes must be a positive integer"
+            raise ValueError(msg)
         self._encoding_era = encoding_era
         self._max_bytes = max_bytes
         self._buffer = bytearray()

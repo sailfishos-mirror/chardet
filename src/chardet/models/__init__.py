@@ -36,6 +36,10 @@ def load_models() -> dict[str, bytearray]:
         (num_encodings,) = struct.unpack_from("!I", data, offset)
         offset += 4
 
+        if num_encodings > 10_000:
+            msg = f"corrupt models.bin: num_encodings={num_encodings} exceeds limit"
+            raise ValueError(msg)
+
         for _ in range(num_encodings):
             (name_len,) = struct.unpack_from("!I", data, offset)
             offset += 4
@@ -50,7 +54,7 @@ def load_models() -> dict[str, bytearray]:
                 offset += 3
                 table[(b1 << 8) | b2] = weight
             models[name] = table
-    except struct.error as e:
+    except (struct.error, UnicodeDecodeError) as e:
         msg = f"corrupt models.bin: {e}"
         raise ValueError(msg) from e
 

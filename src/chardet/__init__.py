@@ -51,6 +51,9 @@ def detect(
     *chunk_size* is accepted but has no effect.
     """
     _warn_deprecated_chunk_size(chunk_size)
+    if max_bytes < 1:
+        msg = "max_bytes must be a positive integer"
+        raise ValueError(msg)
     data = byte_str if isinstance(byte_str, bytes) else bytes(byte_str)
     results = run_pipeline(data, encoding_era, max_bytes=max_bytes)
     result = results[0].to_dict()
@@ -73,6 +76,9 @@ def detect_all(  # noqa: PLR0913
     *chunk_size* is accepted but has no effect.
     """
     _warn_deprecated_chunk_size(chunk_size)
+    if max_bytes < 1:
+        msg = "max_bytes must be a positive integer"
+        raise ValueError(msg)
     data = byte_str if isinstance(byte_str, bytes) else bytes(byte_str)
     results = run_pipeline(data, encoding_era, max_bytes=max_bytes)
     rename = _resolve_rename(should_rename_legacy, encoding_era)
