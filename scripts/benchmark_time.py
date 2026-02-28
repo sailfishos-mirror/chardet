@@ -39,8 +39,14 @@ def main() -> None:
     parser.add_argument(
         "--use-encoding-era",
         action="store_true",
-        default=False,
-        help="Pass encoding_era=EncodingEra.ALL to chardet.detect (chardet 6.x+)",
+        default=True,
+        help="Pass encoding_era=EncodingEra.ALL to chardet.detect (default)",
+    )
+    parser.add_argument(
+        "--no-encoding-era",
+        action="store_false",
+        dest="use_encoding_era",
+        help="Do not pass encoding_era (for old chardet < 6.0)",
     )
     parser.add_argument(
         "--json-only",

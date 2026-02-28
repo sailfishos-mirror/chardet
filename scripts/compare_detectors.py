@@ -6,15 +6,16 @@ Includes:
 - Pairwise win/loss/tie breakdowns per opponent
 - Memory usage comparison (peak traced allocations)
 
-All detectors run in isolated subprocesses for consistent measurement.
-Old chardet versions (via ``--chardet-version``) run in temporary venvs
-created with ``uv`` to avoid import conflicts with chardet-rewrite.
+All detectors — including chardet-rewrite — run in isolated temporary venvs
+created with ``uv`` for fair, consistent measurement.  Use ``--pure`` to
+guarantee the chardet-rewrite venv contains no mypyc extensions.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import statistics
 import subprocess
@@ -43,6 +44,8 @@ from chardet.equivalences import (
 def _create_detector_venv(
     label: str,
     pip_args: list[str],
+    *,
+    env: dict[str, str] | None = None,
 ) -> tuple[Path, Path]:
     """Create a temporary venv with a detector package installed.
 
@@ -52,6 +55,9 @@ def _create_detector_venv(
         Human-readable label used for the temp dir prefix and log messages.
     pip_args : list[str]
         Arguments passed directly to ``uv pip install --python <venv_python>``.
+    env : dict[str, str] | None
+        Environment variables for the pip install step.  ``None`` inherits the
+        parent process environment.
 
     Returns
     -------
@@ -75,6 +81,7 @@ def _create_detector_venv(
         check=True,
         capture_output=True,
         text=True,
+        env=env,
     )
     return venv_dir, venv_python
 
@@ -95,6 +102,7 @@ def _run_timing_subprocess(
     *,
     detector_type: str = "chardet",
     use_encoding_era: bool = True,
+    pure: bool = False,
 ) -> tuple[list[tuple[str, str, str, str | None]], float, list[float], float]:
     """Run detection timing in an isolated subprocess via ``benchmark_time.py``.
 
@@ -108,6 +116,8 @@ def _run_timing_subprocess(
         One of ``"chardet"``, ``"charset-normalizer"``, or ``"cchardet"``.
     use_encoding_era : bool
         For ``"chardet"`` only -- whether to pass ``encoding_era``.
+    pure : bool
+        Abort if mypyc .so/.pyd files are found (chardet only).
 
     Returns
     -------
@@ -128,8 +138,10 @@ def _run_timing_subprocess(
         data_dir,
         "--json-only",
     ]
-    if use_encoding_era:
-        cmd.append("--use-encoding-era")
+    if not use_encoding_era:
+        cmd.append("--no-encoding-era")
+    if pure:
+        cmd.append("--pure")
 
     result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if result.returncode != 0:
@@ -167,14 +179,14 @@ def _measure_memory_subprocess(
     detector: str,
     data_dir: str,
     *,
-    python_executable: str | None = None,
+    python_executable: str,
     use_encoding_era: bool = True,
+    pure: bool = False,
 ) -> dict[str, int]:
     """Measure memory by running ``benchmark_memory.py`` in a subprocess."""
-    exe = python_executable or sys.executable
     benchmark_script = str(Path(__file__).resolve().parent / "benchmark_memory.py")
     cmd = [
-        exe,
+        python_executable,
         benchmark_script,
         "--detector",
         detector,
@@ -182,8 +194,10 @@ def _measure_memory_subprocess(
         data_dir,
         "--json-only",
     ]
-    if use_encoding_era:
-        cmd.append("--use-encoding-era")
+    if not use_encoding_era:
+        cmd.append("--no-encoding-era")
+    if pure:
+        cmd.append("--pure")
 
     result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if result.returncode != 0:
@@ -233,6 +247,8 @@ def _record_result(
 def run_comparison(
     data_dir: Path,
     detectors: list[tuple[str, str, str, bool]],
+    *,
+    pure: bool = False,
 ) -> None:
     """Run accuracy and performance comparison across detectors.
 
@@ -242,6 +258,8 @@ def run_comparison(
         Path to the test data directory.
     detectors : list[tuple[str, str, str, bool]]
         Each tuple is ``(label, detector_type, python_executable, use_encoding_era)``.
+    pure : bool
+        Propagate ``--pure`` to chardet subprocess scripts.
 
     """
     test_files = collect_test_files(data_dir)
@@ -288,6 +306,7 @@ def run_comparison(
             data_dir_str,
             detector_type=detector_type,
             use_encoding_era=use_era,
+            pure=pure and detector_type == "chardet",
         )
         stats[label]["time"] = elapsed
         stats[label]["file_times"] = file_times
@@ -307,6 +326,7 @@ def run_comparison(
             data_dir_str,
             python_executable=python_exe,
             use_encoding_era=use_era,
+            pure=pure and detector_type == "chardet",
         )
 
     # ===================================================================
@@ -534,14 +554,10 @@ if __name__ == "__main__":
         "--pure",
         action="store_true",
         default=False,
-        help="Abort if mypyc .so/.pyd files are present (ensure pure-Python measurement)",
+        help="Ensure chardet-rewrite venv is pure Python (strips HATCH_BUILD_HOOK_ENABLE_MYPYC, "
+        "propagates --pure to subprocesses to abort if .so/.pyd files are found)",
     )
     args = parser.parse_args()
-
-    if args.pure:
-        from utils import abort_if_mypyc_compiled
-
-        abort_if_mypyc_compiled()
 
     # Force line-buffered stdout so progress is visible when piped (e.g. tee).
     sys.stdout.reconfigure(line_buffering=True)
@@ -551,10 +567,27 @@ if __name__ == "__main__":
         print(f"ERROR: Test data directory not found: {data_dir}")
         sys.exit(1)
 
-    # Create temporary venvs for all subprocess detectors
+    project_root = str(Path(__file__).resolve().parent.parent)
+
+    # When --pure, strip the mypyc build hook env var so the chardet-rewrite
+    # venv is guaranteed to be pure Python even if the caller has it set.
+    install_env: dict[str, str] | None = None
+    if args.pure:
+        install_env = {
+            k: v for k, v in os.environ.items() if k != "HATCH_BUILD_HOOK_ENABLE_MYPYC"
+        }
+
+    # Create temporary venvs for ALL detectors (including chardet-rewrite)
+    # so every detector runs in an isolated subprocess under identical conditions.
     # label -> (venv_dir, python_path)
     venvs: dict[str, tuple[Path, Path]] = {}
     try:
+        print("Setting up chardet-rewrite venv ...")
+        venv_dir, python_path = _create_detector_venv(
+            "chardet-rewrite", [project_root], env=install_env
+        )
+        venvs["chardet-rewrite"] = (venv_dir, python_path)
+
         if args.chardet_version:
             print("Setting up external chardet venvs ...")
         for version in args.chardet_version:
@@ -602,7 +635,12 @@ if __name__ == "__main__":
 
         # Build unified detector list: (label, detector_type, python_exe, use_era)
         detectors: list[tuple[str, str, str, bool]] = [
-            ("chardet-rewrite", "chardet", sys.executable, True),
+            (
+                "chardet-rewrite",
+                "chardet",
+                str(venvs["chardet-rewrite"][1]),
+                True,
+            ),
         ]
         if cn_label in venvs:
             detectors.append(
@@ -616,7 +654,7 @@ if __name__ == "__main__":
         for label, det_type, python_path in extra_detectors:
             detectors.append((label, det_type, str(python_path), False))
 
-        run_comparison(data_dir, detectors)
+        run_comparison(data_dir, detectors, pure=args.pure)
     finally:
         for label, (venv_dir, _) in venvs.items():
             print(f"  Cleaning up venv for {label} ...")
