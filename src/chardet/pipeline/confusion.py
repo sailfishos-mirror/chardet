@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import codecs
 import importlib.resources
+import os
 import struct
 import unicodedata
 from pathlib import Path
@@ -467,7 +468,13 @@ def resolve_confusion_groups(
     - "bigram": Distinguishing-bigram re-scoring only
     - "hybrid": Both strategies; bigram wins on disagreement
     - "none": No resolution (passthrough)
+
+    The CHARDET_CONFUSION_STRATEGY env var overrides the default strategy.
     """
+    env_override = os.environ.get("CHARDET_CONFUSION_STRATEGY")
+    if env_override:
+        strategy = env_override
+
     if strategy == "none" or len(results) < 2:
         return results
 
