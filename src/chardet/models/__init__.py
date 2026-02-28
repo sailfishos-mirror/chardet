@@ -8,12 +8,16 @@ annotations.
 import importlib.resources
 import math
 import struct
+import threading
 
 _MODEL_CACHE: dict[str, bytearray] | None = None
+_MODEL_CACHE_LOCK = threading.Lock()
 # Pre-grouped index: encoding name -> [(lang, model), ...]
 _ENC_INDEX: dict[str, list[tuple[str | None, bytearray]]] | None = None
+_ENC_INDEX_LOCK = threading.Lock()
 # Cached L2 norms for all models, keyed by id(model)
 _MODEL_NORMS: dict[int, float] | None = None
+_MODEL_NORMS_LOCK = threading.Lock()
 # Encodings that map to exactly one language.  Includes gb2312 which has no
 # bigram model of its own but is unambiguously Chinese.
 _SINGLE_LANG_MAP: dict[str, str] = {
@@ -73,43 +77,47 @@ def load_models() -> dict[str, bytearray]:
     if _MODEL_CACHE is not None:
         return _MODEL_CACHE
 
-    models: dict[str, bytearray] = {}
-    ref = importlib.resources.files("chardet.models").joinpath("models.bin")
-    data = ref.read_bytes()
+    with _MODEL_CACHE_LOCK:
+        if _MODEL_CACHE is not None:
+            return _MODEL_CACHE
 
-    if not data:
+        models: dict[str, bytearray] = {}
+        ref = importlib.resources.files("chardet.models").joinpath("models.bin")
+        data = ref.read_bytes()
+
+        if not data:
+            _MODEL_CACHE = models
+            return models
+
+        try:
+            offset = 0
+            (num_encodings,) = struct.unpack_from("!I", data, offset)
+            offset += 4
+
+            if num_encodings > 10_000:
+                msg = f"corrupt models.bin: num_encodings={num_encodings} exceeds limit"
+                raise ValueError(msg)
+
+            for _ in range(num_encodings):
+                (name_len,) = struct.unpack_from("!I", data, offset)
+                offset += 4
+                name = data[offset : offset + name_len].decode("utf-8")
+                offset += name_len
+                (num_entries,) = struct.unpack_from("!I", data, offset)
+                offset += 4
+
+                table = bytearray(65536)
+                for _ in range(num_entries):
+                    b1, b2, weight = struct.unpack_from("!BBB", data, offset)
+                    offset += 3
+                    table[(b1 << 8) | b2] = weight
+                models[name] = table
+        except (struct.error, UnicodeDecodeError) as e:
+            msg = f"corrupt models.bin: {e}"
+            raise ValueError(msg) from e
+
         _MODEL_CACHE = models
         return models
-
-    try:
-        offset = 0
-        (num_encodings,) = struct.unpack_from("!I", data, offset)
-        offset += 4
-
-        if num_encodings > 10_000:
-            msg = f"corrupt models.bin: num_encodings={num_encodings} exceeds limit"
-            raise ValueError(msg)
-
-        for _ in range(num_encodings):
-            (name_len,) = struct.unpack_from("!I", data, offset)
-            offset += 4
-            name = data[offset : offset + name_len].decode("utf-8")
-            offset += name_len
-            (num_entries,) = struct.unpack_from("!I", data, offset)
-            offset += 4
-
-            table = bytearray(65536)
-            for _ in range(num_entries):
-                b1, b2, weight = struct.unpack_from("!BBB", data, offset)
-                offset += 3
-                table[(b1 << 8) | b2] = weight
-            models[name] = table
-    except (struct.error, UnicodeDecodeError) as e:
-        msg = f"corrupt models.bin: {e}"
-        raise ValueError(msg) from e
-
-    _MODEL_CACHE = models
-    return models
 
 
 def _get_enc_index() -> dict[str, list[tuple[str | None, bytearray]]]:
@@ -117,17 +125,20 @@ def _get_enc_index() -> dict[str, list[tuple[str | None, bytearray]]]:
     global _ENC_INDEX  # noqa: PLW0603
     if _ENC_INDEX is not None:
         return _ENC_INDEX
-    models = load_models()
-    index: dict[str, list[tuple[str | None, bytearray]]] = {}
-    for key, model in models.items():
-        if "/" in key:
-            lang, enc = key.split("/", 1)
-            index.setdefault(enc, []).append((lang, model))
-        else:
-            # Plain encoding key (backward compat / fallback)
-            index.setdefault(key, []).append((None, model))
-    _ENC_INDEX = index
-    return index
+    with _ENC_INDEX_LOCK:
+        if _ENC_INDEX is not None:
+            return _ENC_INDEX
+        models = load_models()
+        index: dict[str, list[tuple[str | None, bytearray]]] = {}
+        for key, model in models.items():
+            if "/" in key:
+                lang, enc = key.split("/", 1)
+                index.setdefault(enc, []).append((lang, model))
+            else:
+                # Plain encoding key (backward compat / fallback)
+                index.setdefault(key, []).append((None, model))
+        _ENC_INDEX = index
+        return index
 
 
 def infer_language(encoding: str) -> str | None:
@@ -145,19 +156,22 @@ def _get_model_norms() -> dict[int, float]:
     global _MODEL_NORMS  # noqa: PLW0603
     if _MODEL_NORMS is not None:
         return _MODEL_NORMS
-    models = load_models()
-    norms: dict[int, float] = {}
-    for model in models.values():
-        mid = id(model)
-        if mid not in norms:
-            sq_sum = 0
-            for i in range(65536):
-                v = model[i]
-                if v:
-                    sq_sum += v * v
-            norms[mid] = math.sqrt(sq_sum)
-    _MODEL_NORMS = norms
-    return norms
+    with _MODEL_NORMS_LOCK:
+        if _MODEL_NORMS is not None:
+            return _MODEL_NORMS
+        models = load_models()
+        norms: dict[int, float] = {}
+        for model in models.values():
+            mid = id(model)
+            if mid not in norms:
+                sq_sum = 0
+                for i in range(65536):
+                    v = model[i]
+                    if v:
+                        sq_sum += v * v
+                norms[mid] = math.sqrt(sq_sum)
+        _MODEL_NORMS = norms
+        return norms
 
 
 class BigramProfile:
