@@ -12,10 +12,18 @@ from __future__ import annotations
 import argparse
 import json
 import platform
-import resource
 import sys
 import tracemalloc
 from pathlib import Path
+
+try:
+    import resource
+
+    _HAS_RESOURCE = True
+except ImportError:
+    _HAS_RESOURCE = False
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from utils import format_bytes as _format_bytes
 
@@ -58,10 +66,6 @@ def main() -> None:
         print(f"ERROR: data directory not found: {data_dir}", file=sys.stderr)
         sys.exit(1)
 
-    # Make scripts/ importable for utils.collect_test_files
-    scripts_dir = str(Path(__file__).resolve().parent)
-    if scripts_dir not in sys.path:
-        sys.path.insert(0, scripts_dir)
     from utils import collect_test_files
 
     test_files = collect_test_files(data_dir)
@@ -75,7 +79,9 @@ def main() -> None:
     # Baseline: utils + file data loaded, detector library NOT yet imported
     baseline_current, _ = tracemalloc.get_traced_memory()
     tracemalloc.reset_peak()
-    rss_before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    rss_before = (
+        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss if _HAS_RESOURCE else 0
+    )
 
     # Import detector and build detect function
     if args.detector == "chardet" and args.use_encoding_era:
@@ -120,9 +126,11 @@ def main() -> None:
     _, traced_peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()
 
-    rss_after = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    rss_after = (
+        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss if _HAS_RESOURCE else 0
+    )
     # macOS reports ru_maxrss in bytes; Linux in KiB
-    if platform.system() != "Darwin":
+    if _HAS_RESOURCE and platform.system() != "Darwin":
         rss_before *= 1024
         rss_after *= 1024
 

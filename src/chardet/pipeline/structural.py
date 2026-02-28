@@ -298,6 +298,12 @@ _ANALYSERS: dict[str, Callable[[bytes], tuple[float, int, int]]] = {
 # pipeline run.  Keyed by (data id, encoding name).  Populated by
 # compute_structural_score and reused by compute_multibyte_byte_coverage
 # and compute_lead_byte_diversity on the same data object.
+#
+# IMPORTANT: This cache uses id(data) as a key, which is only valid while
+# the data object is alive.  clear_analysis_cache() MUST be called at the
+# start of every run_pipeline() call to prevent stale entries from a
+# previously deallocated object whose id() was reused.  This module is
+# NOT safe under free-threaded Python (PEP 703) without external locking.
 _analysis_cache: dict[tuple[int, str], tuple[float, int, int]] = {}
 
 
@@ -345,13 +351,18 @@ def compute_structural_score(data: bytes, encoding_info: EncodingInfo) -> float:
     return result[0]  # pair_ratio
 
 
-def compute_multibyte_byte_coverage(data: bytes, encoding_info: EncodingInfo) -> float:
+def compute_multibyte_byte_coverage(
+    data: bytes, encoding_info: EncodingInfo, non_ascii_count: int = -1
+) -> float:
     """Ratio of non-ASCII bytes that participate in valid multi-byte sequences.
 
     Genuine CJK text has nearly all non-ASCII bytes paired into valid
     multi-byte sequences (coverage close to 1.0), while Latin text with
     scattered high bytes has many "orphan" bytes that don't form valid pairs
     (coverage well below 1.0).
+
+    If *non_ascii_count* is provided (>= 0), it is used directly instead of
+    recomputing from the data.
 
     Returns 0.0 for single-byte encodings, empty data, or data with no
     non-ASCII bytes.
@@ -365,7 +376,11 @@ def compute_multibyte_byte_coverage(data: bytes, encoding_info: EncodingInfo) ->
 
     mb_bytes = result[1]
 
-    non_ascii = len(data) - len(data.translate(None, _HIGH_BYTES))
+    non_ascii = (
+        non_ascii_count
+        if non_ascii_count >= 0
+        else len(data) - len(data.translate(None, _HIGH_BYTES))
+    )
     if non_ascii == 0:
         return 0.0
 

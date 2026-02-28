@@ -114,3 +114,33 @@ def test_max_bytes_parameter():
     detector.feed(b"x" * 200)
     detector.close()
     assert detector.result is not None
+
+
+def test_max_bytes_zero_raises():
+    with pytest.raises(ValueError, match="max_bytes"):
+        UniversalDetector(max_bytes=0)
+
+
+def test_max_bytes_negative_raises():
+    with pytest.raises(ValueError, match="max_bytes"):
+        UniversalDetector(max_bytes=-1)
+
+
+def test_close_idempotent():
+    detector = UniversalDetector()
+    detector.feed(b"Hello world, this is enough text. " * 3)
+    result1 = detector.close()
+    result2 = detector.close()
+    assert result1 == result2
+
+
+def test_reset_allows_new_detection():
+    detector = UniversalDetector()
+    detector.feed(b"\xef\xbb\xbfHello")
+    detector.close()
+    assert detector.result["encoding"] == "utf-8-sig"
+
+    detector.reset()
+    detector.feed("Héllo wörld café".encode())
+    detector.close()
+    assert detector.result["encoding"] == "utf-8"

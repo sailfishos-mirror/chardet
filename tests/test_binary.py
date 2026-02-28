@@ -1,4 +1,6 @@
 # tests/test_binary.py
+from __future__ import annotations
+
 from chardet.pipeline.binary import is_binary
 
 
@@ -55,3 +57,15 @@ def test_max_bytes_respected():
     text = b"clean text " * 100
     binary_tail = b"\x00" * 1000
     assert is_binary(text + binary_tail, max_bytes=len(text)) is False
+
+
+def test_exactly_at_threshold_is_not_binary():
+    # 1 binary byte in 100 = exactly 1%, which is NOT > 0.01
+    data = b"a" * 99 + b"\x01"
+    assert is_binary(data) is False
+
+
+def test_just_above_threshold_is_binary():
+    # 2 binary bytes in 100 = 2% > 0.01
+    data = b"a" * 98 + b"\x01\x02"
+    assert is_binary(data) is True

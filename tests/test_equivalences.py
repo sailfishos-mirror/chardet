@@ -1,5 +1,11 @@
 # tests/test_equivalences.py
-from chardet.equivalences import is_equivalent_detection
+from __future__ import annotations
+
+from chardet.equivalences import (
+    apply_legacy_rename,
+    is_correct,
+    is_equivalent_detection,
+)
 
 
 def test_identical_decode_returns_true():
@@ -69,3 +75,37 @@ def test_symbol_vs_letter_difference_returns_false():
     # 0xD7 = multiplication sign in iso-8859-1, Cyrillic letter in iso-8859-5
     data = b"\xd7"
     assert is_equivalent_detection(data, "iso-8859-1", "iso-8859-5") is False
+
+
+def test_is_correct_exact_match():
+    assert is_correct("utf-8", "utf-8") is True
+
+
+def test_is_correct_none_detected():
+    assert is_correct("utf-8", None) is False
+
+
+def test_is_correct_superset():
+    assert is_correct("ascii", "utf-8") is True
+
+
+def test_is_correct_superset_reversed():
+    assert is_correct("utf-8", "ascii") is False
+
+
+def test_apply_legacy_rename_ascii():
+    d = {"encoding": "ascii", "confidence": 1.0, "language": None}
+    apply_legacy_rename(d)
+    assert d["encoding"] == "Windows-1252"
+
+
+def test_apply_legacy_rename_no_match():
+    d = {"encoding": "utf-8", "confidence": 1.0, "language": None}
+    apply_legacy_rename(d)
+    assert d["encoding"] == "utf-8"
+
+
+def test_apply_legacy_rename_none():
+    d = {"encoding": None, "confidence": 0.0, "language": None}
+    apply_legacy_rename(d)
+    assert d["encoding"] is None

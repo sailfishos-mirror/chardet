@@ -3,9 +3,10 @@ name = "chardet"
 version = "6.1.0"
 description = "Universal character encoding detector"
 license = "MIT"
+readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
@@ -20,6 +21,11 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Text Processing :: Linguistic",
 ]
+
+[project.urls]
+Homepage = "https://github.com/chardet/chardet"
+Repository = "https://github.com/chardet/chardet"
+"Bug Tracker" = "https://github.com/chardet/chardet/issues"
 
 [project.scripts]
 chardetect = "chardet.cli:main"

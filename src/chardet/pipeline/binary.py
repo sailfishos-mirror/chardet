@@ -6,7 +6,7 @@ from __future__ import annotations
 _BINARY_THRESHOLD = 0.01
 
 # Translation table that maps binary-indicator control bytes (0x00-0x08,
-# 0x0E-0x1F — excludes \t \n \r) to None (deleting them) and keeps
+# 0x0E-0x1F — excludes \t \n \v \f \r) to None (deleting them) and keeps
 # everything else.  len(data) - len(translated) gives the count in one
 # C-level pass.
 _BINARY_DELETE = bytes(range(0x09)) + bytes(range(0x0E, 0x20))

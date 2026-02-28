@@ -34,9 +34,10 @@ def detect_utf8(data: bytes) -> DetectionResult | None:
             # Invalid start byte (0x80-0xC1, 0xF5-0xFF)
             return None
 
-        # Check we have enough bytes remaining
+        # Truncated final sequence (e.g. from max_bytes slicing) — treat as
+        # valid since the bytes seen so far are structurally correct.
         if i + seq_len > length:
-            return None
+            break
 
         # Validate continuation bytes (must be 0x80-0xBF)
         for j in range(1, seq_len):

@@ -545,14 +545,16 @@ def get_texts(
 # ---------------------------------------------------------------------------
 
 
-def add_html_samples(texts: list[str], count: int = 20) -> list[str]:
+def add_html_samples(
+    texts: list[str], count: int = 20, charset: str = "utf-8"
+) -> list[str]:
     """Wrap some text samples in HTML to train on markup patterns."""
     html_samples = []
     for i, text in enumerate(texts[:count]):
         snippet = text[:500]
         html = (
             f"<!DOCTYPE html>\n<html>\n<head>\n"
-            f'<meta charset="utf-8">\n<title>Article {i}</title>\n'
+            f'<meta charset="{charset}">\n<title>Article {i}</title>\n'
             f"</head>\n<body>\n<h1>Article {i}</h1>\n"
             f"<p>{snippet}</p>\n</body>\n</html>"
         )
@@ -610,24 +612,32 @@ def deserialize_models(
         return {}
 
     models: dict[str, dict[tuple[int, int], int]] = {}
-    offset = 0
-    (num_encodings,) = struct.unpack_from("!I", data, offset)
-    offset += 4
-
-    for _ in range(num_encodings):
-        (name_len,) = struct.unpack_from("!I", data, offset)
-        offset += 4
-        name = data[offset : offset + name_len].decode("utf-8")
-        offset += name_len
-        (num_entries,) = struct.unpack_from("!I", data, offset)
+    try:
+        offset = 0
+        (num_encodings,) = struct.unpack_from("!I", data, offset)
         offset += 4
 
-        bigrams: dict[tuple[int, int], int] = {}
-        for _ in range(num_entries):
-            b1, b2, weight = struct.unpack_from("!BBB", data, offset)
-            offset += 3
-            bigrams[(b1, b2)] = weight
-        models[name] = bigrams
+        if num_encodings > 10_000:
+            msg = f"Corrupt models file: num_encodings={num_encodings} exceeds limit"
+            raise ValueError(msg)
+
+        for _ in range(num_encodings):
+            (name_len,) = struct.unpack_from("!I", data, offset)
+            offset += 4
+            name = data[offset : offset + name_len].decode("utf-8")
+            offset += name_len
+            (num_entries,) = struct.unpack_from("!I", data, offset)
+            offset += 4
+
+            bigrams: dict[tuple[int, int], int] = {}
+            for _ in range(num_entries):
+                b1, b2, weight = struct.unpack_from("!BBB", data, offset)
+                offset += 3
+                bigrams[(b1, b2)] = weight
+            models[name] = bigrams
+    except (struct.error, UnicodeDecodeError) as e:
+        msg = f"Corrupt models file: {e}"
+        raise ValueError(msg) from e
 
     if offset != len(data):
         msg = f"Corrupt models file: {len(data) - offset} trailing bytes"
@@ -652,7 +662,7 @@ def serialize_models(
             f.write(struct.pack("!I", len(name_bytes)))
             f.write(name_bytes)
             f.write(struct.pack("!I", len(bigrams)))
-            for (b1, b2), weight in bigrams.items():
+            for (b1, b2), weight in sorted(bigrams.items()):
                 f.write(struct.pack("!BBB", b1, b2, weight))
 
     return os.path.getsize(output_path)
@@ -761,7 +771,7 @@ def _build_one_model(  # noqa: PLR0913
         return (model_key, None, 0, 0)
 
     # Add HTML-wrapped samples
-    html_samples = add_html_samples(texts)
+    html_samples = add_html_samples(texts, charset=enc_name)
     all_texts = list(texts) + html_samples
 
     # Prepare substitutions for this encoding

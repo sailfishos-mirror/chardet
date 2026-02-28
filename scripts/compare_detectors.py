@@ -23,6 +23,8 @@ import tempfile
 from collections import defaultdict
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 from utils import collect_test_files
 from utils import format_bytes as _format_bytes
 

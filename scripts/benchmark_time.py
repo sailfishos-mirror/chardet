@@ -17,6 +17,8 @@ import sys
 import time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -53,10 +55,6 @@ def main() -> None:
         print(f"ERROR: data directory not found: {data_dir}", file=sys.stderr)
         sys.exit(1)
 
-    # Make scripts/ importable for utils.collect_test_files
-    scripts_dir = str(Path(__file__).resolve().parent)
-    if scripts_dir not in sys.path:
-        sys.path.insert(0, scripts_dir)
     from utils import collect_test_files
 
     test_files = collect_test_files(data_dir)

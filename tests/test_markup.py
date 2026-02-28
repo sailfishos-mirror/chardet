@@ -80,8 +80,16 @@ def test_valid_charset_declaration_accepted():
     assert result.encoding == "shift_jis"
 
 
-def test_only_scans_first_bytes():
-    padding = b"<!-- " + b"x" * 2000 + b" -->"
+def test_charset_within_scan_limit_found():
+    padding = b"x" * 100
     data = padding + b'<meta charset="utf-8">'
     result = detect_markup_charset(data)
     assert result is not None
+    assert result.encoding == "utf-8"
+
+
+def test_charset_beyond_scan_limit_ignored():
+    padding = b"x" * 5000  # Exceeds _SCAN_LIMIT (4096)
+    data = padding + b'<meta charset="utf-8">'
+    result = detect_markup_charset(data)
+    assert result is None

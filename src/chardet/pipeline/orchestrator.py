@@ -255,7 +255,9 @@ def _gate_cjk_candidates(
                 non_ascii_count = len(data) - len(data.translate(None, _HIGH_BYTES))
             if non_ascii_count < _CJK_MIN_NON_ASCII:
                 continue  # Too few high bytes to trust the score
-            byte_coverage = compute_multibyte_byte_coverage(data, enc)
+            byte_coverage = compute_multibyte_byte_coverage(
+                data, enc, non_ascii_count=non_ascii_count
+            )
             if byte_coverage < _CJK_MIN_BYTE_COVERAGE:
                 continue  # Most high bytes are orphans -> not CJK
             if non_ascii_count >= _CJK_DIVERSITY_MIN_NON_ASCII:

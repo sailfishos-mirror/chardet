@@ -23,6 +23,8 @@ _MIN_INCREMENTAL_CHECK = 64
 
 class UniversalDetector:
     MINIMUM_THRESHOLD = 0.20
+    # Exposed for backward compatibility with chardet 6.x callers that
+    # reference UniversalDetector.LEGACY_MAP directly.
     LEGACY_MAP: ClassVar[dict[str, str]] = dict(PREFERRED_SUPERSET)
 
     def __init__(
@@ -43,7 +45,7 @@ class UniversalDetector:
             self._rename_legacy = encoding_era == EncodingEra.MODERN_WEB
         else:
             self._rename_legacy = should_rename_legacy
-        if max_bytes < 1:
+        if not isinstance(max_bytes, int) or max_bytes < 1:
             msg = "max_bytes must be a positive integer"
             raise ValueError(msg)
         self._encoding_era = encoding_era
@@ -54,6 +56,7 @@ class UniversalDetector:
         self._result: dict[str, str | float | None] | None = None
         self._has_non_ascii = False
         self._last_checked: int = 0
+        self._bom_checked = False
 
     def feed(self, byte_str: bytes | bytearray) -> None:
         if self._closed:
@@ -72,14 +75,14 @@ class UniversalDetector:
         if self._result is not None or buf_len < 4:
             return
 
-        buf = bytes(self._buffer)
-
-        # BOM detection (definitive)
-        bom_result = detect_bom(buf)
-        if bom_result is not None:
-            self._result = bom_result.to_dict()
-            self._done = True
-            return
+        # BOM detection — only needs first 4 bytes, never changes answer
+        if not self._bom_checked:
+            self._bom_checked = True
+            bom_result = detect_bom(bytes(self._buffer[:4]))
+            if bom_result is not None:
+                self._result = bom_result.to_dict()
+                self._done = True
+                return
 
         # Avoid re-checking on every tiny feed; only recheck after enough new
         # data has arrived.
@@ -87,6 +90,8 @@ class UniversalDetector:
             return
         prev_checked = self._last_checked
         self._last_checked = buf_len
+
+        buf = bytes(self._buffer)
 
         # Track whether any non-ASCII byte has been seen (only scan new bytes)
         if not self._has_non_ascii:
@@ -137,6 +142,7 @@ class UniversalDetector:
         self._result = None
         self._has_non_ascii = False
         self._last_checked = 0
+        self._bom_checked = False
 
     @property
     def done(self) -> bool:

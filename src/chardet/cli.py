@@ -44,8 +44,12 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.files:
         for filepath in args.files:
-            with Path(filepath).open("rb") as f:
-                data = f.read(_DEFAULT_MAX_BYTES)
+            try:
+                with Path(filepath).open("rb") as f:
+                    data = f.read(_DEFAULT_MAX_BYTES)
+            except OSError as e:
+                print(f"chardetect: {filepath}: {e}", file=sys.stderr)
+                continue
             result = chardet.detect(data, encoding_era=era)
             if args.minimal:
                 print(result["encoding"])

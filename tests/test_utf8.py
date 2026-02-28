@@ -1,4 +1,6 @@
 # tests/test_utf8.py
+from __future__ import annotations
+
 from chardet.pipeline.utf8 import detect_utf8
 
 
@@ -57,4 +59,10 @@ def test_empty_input():
 def test_latin1_is_not_valid_utf8():
     data = "Héllo".encode("latin-1")
     result = detect_utf8(data)
+    assert result is None
+
+
+def test_surrogate_pair_rejected():
+    # U+D800 would encode as ED A0 80 in invalid UTF-8
+    result = detect_utf8(b"Hello " + b"\xed\xa0\x80" + b" World")
     assert result is None

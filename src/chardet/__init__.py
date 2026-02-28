@@ -38,6 +38,12 @@ def _warn_deprecated_chunk_size(chunk_size: int, stacklevel: int = 3) -> None:
         )
 
 
+def _validate_max_bytes(max_bytes: int) -> None:
+    if not isinstance(max_bytes, int) or max_bytes < 1:
+        msg = "max_bytes must be a positive integer"
+        raise ValueError(msg)
+
+
 def detect(
     byte_str: bytes | bytearray,
     should_rename_legacy: bool | None = None,
@@ -51,9 +57,7 @@ def detect(
     *chunk_size* is accepted but has no effect.
     """
     _warn_deprecated_chunk_size(chunk_size)
-    if max_bytes < 1:
-        msg = "max_bytes must be a positive integer"
-        raise ValueError(msg)
+    _validate_max_bytes(max_bytes)
     data = byte_str if isinstance(byte_str, bytes) else bytes(byte_str)
     results = run_pipeline(data, encoding_era, max_bytes=max_bytes)
     result = results[0].to_dict()
@@ -74,22 +78,23 @@ def detect_all(  # noqa: PLR0913
 
     Parameters match chardet 6.x for backward compatibility.
     *chunk_size* is accepted but has no effect.
+
+    When *ignore_threshold* is False (the default), results with confidence
+    <= MINIMUM_THRESHOLD (0.20) are filtered out.  If all results are below
+    the threshold, the full unfiltered list is returned as a fallback so the
+    caller always receives at least one result.
     """
     _warn_deprecated_chunk_size(chunk_size)
-    if max_bytes < 1:
-        msg = "max_bytes must be a positive integer"
-        raise ValueError(msg)
+    _validate_max_bytes(max_bytes)
     data = byte_str if isinstance(byte_str, bytes) else bytes(byte_str)
     results = run_pipeline(data, encoding_era, max_bytes=max_bytes)
     rename = _resolve_rename(should_rename_legacy, encoding_era)
     dicts = [r.to_dict() for r in results]
     if not ignore_threshold:
-        filtered = [
-            d for d in dicts if float(d.get("confidence") or 0) > MINIMUM_THRESHOLD
-        ]
+        filtered = [d for d in dicts if d["confidence"] > MINIMUM_THRESHOLD]
         if filtered:
             dicts = filtered
     if rename:
         for d in dicts:
             apply_legacy_rename(d)
-    return sorted(dicts, key=lambda d: -float(d.get("confidence") or 0))
+    return sorted(dicts, key=lambda d: -d["confidence"])

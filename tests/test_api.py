@@ -1,6 +1,8 @@
 # tests/test_api.py
 import warnings
 
+import pytest
+
 import chardet
 from chardet.enums import EncodingEra, LanguageFilter
 
@@ -184,3 +186,59 @@ def test_lang_filter_all_no_warning():
         UniversalDetector(lang_filter=LanguageFilter.ALL)
         dep_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
         assert len(dep_warnings) == 0
+
+
+# --- max_bytes validation tests ---
+
+
+def test_detect_max_bytes_zero_raises():
+    with pytest.raises(ValueError, match="max_bytes"):
+        chardet.detect(b"Hello", max_bytes=0)
+
+
+def test_detect_max_bytes_negative_raises():
+    with pytest.raises(ValueError, match="max_bytes"):
+        chardet.detect(b"Hello", max_bytes=-1)
+
+
+def test_detect_all_max_bytes_zero_raises():
+    with pytest.raises(ValueError, match="max_bytes"):
+        chardet.detect_all(b"Hello", max_bytes=0)
+
+
+def test_detect_all_max_bytes_negative_raises():
+    with pytest.raises(ValueError, match="max_bytes"):
+        chardet.detect_all(b"Hello", max_bytes=-1)
+
+
+# --- chunk_size deprecation tests ---
+
+
+def test_chunk_size_deprecation_warning():
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        chardet.detect(b"Hello", chunk_size=1024)
+        dep = [x for x in w if issubclass(x.category, DeprecationWarning)]
+        assert len(dep) == 1
+        assert "chunk_size" in str(dep[0].message)
+
+
+def test_default_chunk_size_no_warning():
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        chardet.detect(b"Hello")
+        dep = [x for x in w if issubclass(x.category, DeprecationWarning)]
+        assert len(dep) == 0
+
+
+# --- bytearray input tests ---
+
+
+def test_detect_bytearray_input():
+    result = chardet.detect(bytearray(b"Hello world"))
+    assert result["encoding"] is not None
+
+
+def test_detect_all_bytearray_input():
+    results = chardet.detect_all(bytearray(b"Hello world"))
+    assert len(results) >= 1

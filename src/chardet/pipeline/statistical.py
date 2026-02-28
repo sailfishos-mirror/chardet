@@ -1,6 +1,11 @@
-"""Stage 3: Statistical bigram scoring."""
+"""Stage 3: Statistical bigram scoring.
 
-from chardet.models import BigramProfile, load_models, score_best_language
+Note: ``from __future__ import annotations`` is intentionally omitted because
+this module is compiled with mypyc, which does not support PEP 563 string
+annotations.
+"""
+
+from chardet.models import BigramProfile, score_best_language
 from chardet.pipeline import DetectionResult
 from chardet.registry import EncodingInfo
 
@@ -12,12 +17,11 @@ def score_candidates(
     if not data or not candidates:
         return []
 
-    models = load_models()
     profile = BigramProfile(data)
     scores: list[tuple[str, float, str | None]] = []
 
     for enc in candidates:
-        s, lang = score_best_language(data, enc.name, models, profile=profile)
+        s, lang = score_best_language(data, enc.name, profile=profile)
         scores.append((enc.name, s, lang))
 
     # Sort by score descending
