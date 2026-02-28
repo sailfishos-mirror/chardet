@@ -80,6 +80,6 @@ def test_bigram_profile_high_byte_weight():
 
 def test_score_best_language_returns_language():
     data = "Привет мир, это тест".encode("windows-1251")
-    score, lang = score_best_language(data, "windows-1251", {})
+    score, lang = score_best_language(data, "windows-1251")
     assert score > 0.0
     assert lang is not None

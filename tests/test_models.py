@@ -1,14 +1,9 @@
-import sys
 from pathlib import Path
 
 import pytest
-
-# Add scripts/ to path so we can import train.py
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-
 from train import deserialize_models, serialize_models
 
-from chardet.models import load_models, score_bigrams
+from chardet.models import load_models, score_best_language
 
 
 def test_load_models_returns_dict() -> None:
@@ -27,28 +22,28 @@ def test_model_keys_are_strings() -> None:
         assert isinstance(key, str)
 
 
-def test_score_bigrams_returns_float() -> None:
-    """score_bigrams should work with plain encoding names (not lang/enc keys)."""
-    models = load_models()
-    score = score_bigrams(b"Hello world this is a test", "windows-1252", models)
+def test_score_best_language_returns_float() -> None:
+    """score_best_language should work with plain encoding names (not lang/enc keys)."""
+    load_models()
+    score, _ = score_best_language(b"Hello world this is a test", "windows-1252")
     assert isinstance(score, float)
     assert 0.0 < score <= 1.0
 
 
-def test_score_bigrams_unknown_encoding() -> None:
-    models = load_models()
-    score = score_bigrams(b"Hello", "not-a-real-encoding", models)
+def test_score_best_language_unknown_encoding() -> None:
+    load_models()
+    score, _ = score_best_language(b"Hello", "not-a-real-encoding")
     assert score == 0.0
 
 
-def test_score_bigrams_empty_data() -> None:
+def test_score_best_language_empty_data() -> None:
     models = load_models()
     encoding = next(iter(models))
-    score = score_bigrams(b"", encoding, models)
+    score, _ = score_best_language(b"", encoding)
     assert score == 0.0
 
 
-def test_score_bigrams_high_byte_weighting() -> None:
+def test_score_best_language_high_byte_weighting() -> None:
     """High-byte bigrams should be weighted more heavily than ASCII-only."""
     models = load_models()
     # Pick any encoding with a model
@@ -68,8 +63,8 @@ def test_score_bigrams_high_byte_weighting() -> None:
     if high_pairs:
         # Construct data from high-byte pairs in the model
         high_data = bytes(b for pair in high_pairs[:20] for b in pair)
-        high_score = score_bigrams(high_data, encoding, models)
-        ascii_score = score_bigrams(ascii_data, encoding, models)
+        high_score, _ = score_best_language(high_data, encoding)
+        ascii_score, _ = score_best_language(ascii_data, encoding)
         # Both should be valid floats
         assert isinstance(high_score, float)
         assert isinstance(ascii_score, float)
