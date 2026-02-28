@@ -6,11 +6,14 @@ annotations.
 """
 
 import importlib.resources
+import math
 import struct
 
 _MODEL_CACHE: dict[str, bytearray] | None = None
 # Pre-grouped index: encoding name -> [(lang, model), ...]
 _ENC_INDEX: dict[str, list[tuple[str | None, bytearray]]] | None = None
+# Cached L2 norms for all models, keyed by id(model)
+_MODEL_NORMS: dict[int, float] | None = None
 
 
 def load_models() -> dict[str, bytearray]:
@@ -80,6 +83,26 @@ def _get_enc_index() -> dict[str, list[tuple[str | None, bytearray]]]:
     return index
 
 
+def _get_model_norms() -> dict[int, float]:
+    """Return cached L2 norms for all models, keyed by id(model)."""
+    global _MODEL_NORMS  # noqa: PLW0603
+    if _MODEL_NORMS is not None:
+        return _MODEL_NORMS
+    models = load_models()
+    norms: dict[int, float] = {}
+    for model in models.values():
+        mid = id(model)
+        if mid not in norms:
+            sq_sum = 0
+            for i in range(65536):
+                v = model[i]
+                if v:
+                    sq_sum += v * v
+            norms[mid] = math.sqrt(sq_sum)
+    _MODEL_NORMS = norms
+    return norms
+
+
 class BigramProfile:
     """Pre-computed bigram frequency distribution for a data sample.
 
@@ -92,13 +115,14 @@ class BigramProfile:
     inner loop only needs a single dict traversal with no branching.
     """
 
-    __slots__ = ("weight_sum", "weighted_freq")
+    __slots__ = ("input_norm", "weight_sum", "weighted_freq")
 
     def __init__(self, data: bytes) -> None:
         total_bigrams = len(data) - 1
         if total_bigrams <= 0:
             self.weighted_freq: dict[int, int] = {}
             self.weight_sum: int = 0
+            self.input_norm: float = 0.0
             return
 
         freq: dict[int, int] = {}
@@ -116,16 +140,21 @@ class BigramProfile:
                 w_sum += 1
         self.weighted_freq = freq
         self.weight_sum = w_sum
+        self.input_norm = math.sqrt(sum(v * v for v in freq.values()))
 
 
 def _score_with_profile(profile: BigramProfile, model: bytearray) -> float:
-    """Score a pre-computed bigram profile against a single model."""
-    if profile.weight_sum == 0:
+    """Score a pre-computed bigram profile against a single model using cosine similarity."""
+    if profile.input_norm == 0.0:
         return 0.0
-    score = 0
+    norms = _get_model_norms()
+    model_norm = norms.get(id(model), 0.0)
+    if model_norm == 0.0:
+        return 0.0
+    dot = 0
     for idx, wcount in profile.weighted_freq.items():
-        score += model[idx] * wcount
-    return score / (255 * profile.weight_sum)
+        dot += model[idx] * wcount
+    return dot / (model_norm * profile.input_norm)
 
 
 def score_bigrams(
