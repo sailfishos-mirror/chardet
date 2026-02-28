@@ -22,20 +22,11 @@ def score_candidates(
 
     for enc in candidates:
         s, lang = score_best_language(data, enc.name, profile=profile)
-        scores.append((enc.name, s, lang))
+        if s > 0.0:
+            scores.append((enc.name, s, lang))
 
-    # Sort by score descending
     scores.sort(key=lambda x: x[1], reverse=True)
-
-    # Normalize to confidence values
-    max_score = scores[0][1] if scores else 0.0
-    results = []
-    for name, s, lang in scores:
-        if s <= 0.0:
-            continue
-        confidence = s / max_score if max_score > 0 else 0.0
-        results.append(
-            DetectionResult(encoding=name, confidence=confidence, language=lang)
-        )
-
-    return results
+    return [
+        DetectionResult(encoding=name, confidence=s, language=lang)
+        for name, s, lang in scores
+    ]
