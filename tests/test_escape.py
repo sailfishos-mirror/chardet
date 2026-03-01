@@ -119,3 +119,21 @@ def test_utf7_empty_shift() -> None:
     data = b"price: 10+- tax"
     result = detect_escape_encoding(data)
     assert result is None
+
+
+def test_utf7_rejects_url_with_plus() -> None:
+    data = b"https://www.google.com/search?q=hello+ABC-DEF"
+    result = detect_escape_encoding(data)
+    assert result is None
+
+
+def test_utf7_rejects_short_base64_in_text() -> None:
+    data = b"x+ABC-y"
+    result = detect_escape_encoding(data)
+    assert result is None
+
+
+def test_utf7_rejects_mime_boundary() -> None:
+    data = b"--boundary+ABCdef123-end"
+    result = detect_escape_encoding(data)
+    assert result is None

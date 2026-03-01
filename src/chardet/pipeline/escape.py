@@ -44,15 +44,54 @@ _UTF7_BASE64: frozenset[int] = frozenset(
     b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 )
 
+# Lookup table mapping each Base64 byte to its 6-bit value (0-63).
+_B64_DECODE: dict[int, int] = {}
+for _i, _c in enumerate(
+    b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+):
+    _B64_DECODE[_c] = _i
+
+
+def _is_valid_utf7_b64(b64_bytes: bytes) -> bool:
+    """Check if base64 bytes decode to valid UTF-16BE with correct padding.
+
+    A valid UTF-7 shifted sequence must:
+    1. Contain at least 3 Base64 characters (18 bits, enough for one 16-bit
+       UTF-16 code unit).
+    2. Have zero-valued trailing padding bits (the unused low bits of the last
+       Base64 sextet after the last complete 16-bit code unit).
+
+    This rejects accidental ``+<alphanum>-`` patterns found in URLs, MIME
+    boundaries, and other ASCII data.
+    """
+    n = len(b64_bytes)
+    if n < 3:  # Need at least 18 bits for one UTF-16 code unit
+        return False
+    total_bits = n * 6
+    if total_bits < 16:
+        return False
+    # Check that padding bits (trailing bits after last complete code unit)
+    # are zero.
+    padding_bits = total_bits % 16
+    if padding_bits > 0:
+        last_val = _B64_DECODE.get(b64_bytes[-1], -1)
+        if last_val < 0:
+            return False
+        # The low `padding_bits` of the last sextet must be zero
+        mask = (1 << padding_bits) - 1
+        if last_val & mask:
+            return False
+    return True
+
 
 def _has_valid_utf7_sequences(data: bytes) -> bool:
     """Check that *data* contains at least one valid UTF-7 shifted sequence.
 
     A valid shifted sequence is ``+<base64 chars>-`` where the base64 portion
-    is at least 3 characters long (the minimum for one UTF-16 code unit:
-    16 bits -> 3 Base64 sextets).  The explicit ``-`` terminator is required to
-    avoid false positives from timezone offsets, URLs, and similar patterns.
-    The sequence ``+-`` is a literal plus sign and is **not** counted.
+    decodes to valid UTF-16BE with correct zero-padding bits.  The explicit
+    ``-`` terminator is required to avoid false positives from timezone offsets,
+    URLs, and similar patterns.  The sequence ``+-`` is a literal plus sign and
+    is **not** counted.
     """
     start = 0
     while True:
@@ -64,15 +103,15 @@ def _has_valid_utf7_sequences(data: bytes) -> bool:
         if pos < len(data) and data[pos] == ord("-"):
             start = pos + 1
             continue
-        # Count consecutive Base64 characters
-        b64_len = 0
+        # Collect consecutive Base64 characters
         i = pos
         while i < len(data) and data[i] in _UTF7_BASE64:
-            b64_len += 1
             i += 1
-        # Require at least 3 Base64 chars AND an explicit '-' terminator
+        b64_len = i - pos
+        # Require valid Base64 content AND an explicit '-' terminator
         if b64_len >= 3 and i < len(data) and data[i] == ord("-"):
-            return True
+            if _is_valid_utf7_b64(data[pos:i]):
+                return True
         start = i if i > pos else pos
 
 
