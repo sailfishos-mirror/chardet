@@ -36,14 +36,19 @@ pip install chardet
 import chardet
 
 # Detect encoding of a byte string
-result = chardet.detect("Привет мир".encode("windows-1251"))
+result = chardet.detect("これは日本語のテストです。文字コードの検出を行います。".encode("euc-jp"))
 print(result)
-# {'encoding': 'windows-1251', 'confidence': 0.98, 'language': 'Russian'}
+# {'encoding': 'euc-jp', 'confidence': 1.0, 'language': 'ja'}
 
 # Get all candidate encodings ranked by confidence
-results = chardet.detect_all("日本語テスト".encode("euc-jp"))
+text = "Le café est une boisson très populaire en France et dans le monde entier."
+results = chardet.detect_all(text.encode("windows-1252"))
 for r in results:
     print(r["encoding"], r["confidence"])
+# windows-1252 0.44
+# windows-1250 0.32
+# windows-1254 0.27
+# windows-1257 0.25
 ```
 
 ### Streaming Detection
@@ -72,10 +77,13 @@ from chardet import detect
 from chardet.enums import EncodingEra
 
 # Only consider modern web encodings (the default)
-detect("café".encode("utf-8"), encoding_era=EncodingEra.MODERN_WEB)
+detect("Cześć, jak się masz? Dziękuję bardzo za pomoc.".encode("utf-8"))
+# {'encoding': 'utf-8', 'confidence': 0.99, 'language': 'pl'}
 
 # Include legacy encodings too
-detect("Ölçü".encode("iso-8859-9"), encoding_era=EncodingEra.ALL)
+detect("Η Αθήνα είναι η πρωτεύουσα και μεγαλύτερη πόλη της Ελλάδας.".encode("iso-8859-7"),
+       encoding_era=EncodingEra.ALL)
+# {'encoding': 'iso-8859-7', 'confidence': 0.52, 'language': 'el'}
 ```
 
 ## CLI
