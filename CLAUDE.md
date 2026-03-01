@@ -47,6 +47,16 @@ uv run python scripts/diagnose_accuracy.py  # detailed accuracy diagnostics
 uv run python scripts/compare_detectors.py  # compare against original chardet
 ```
 
+### Documentation
+```bash
+uv sync --group docs                          # install Sphinx, Furo, etc.
+uv run sphinx-build docs docs/_build          # build HTML docs
+uv run sphinx-build -W docs docs/_build       # build with warnings as errors
+uv run python scripts/generate_encoding_table.py > docs/supported-encodings.rst  # regenerate encoding table
+```
+
+Docs use Sphinx with Furo theme. API reference is auto-generated from source docstrings via autodoc. Published to ReadTheDocs on tag push (`.readthedocs.yaml`). Source files are in `docs/`; `docs/plans/` is excluded from the build.
+
 ### Building with mypyc (optional)
 ```bash
 HATCH_BUILD_HOOK_ENABLE_MYPYC=true uv build  # compile hot-path modules
