@@ -1,8 +1,9 @@
-"""Early detection of escape-sequence-based encodings (ISO-2022, HZ-GB-2312).
+"""Early detection of escape-sequence-based encodings (ISO-2022, HZ-GB-2312, UTF-7).
 
-These encodings use ESC (0x1B) or tilde (~) sequences to switch character sets.
-They must be detected before binary detection (ESC is a control byte) and before
-ASCII detection (HZ-GB-2312 uses only printable ASCII bytes plus tildes).
+These encodings use ESC (0x1B), tilde (~), or plus (+) sequences to switch
+character sets.  They must be detected before binary detection (ESC is a control
+byte) and before ASCII detection (HZ-GB-2312 and UTF-7 use only printable ASCII
+bytes plus their respective shift markers).
 
 Note: ``from __future__ import annotations`` is intentionally omitted because
 this module is compiled with mypyc, which does not support PEP 563 string
@@ -38,13 +39,50 @@ def _has_valid_hz_regions(data: bytes) -> bool:
         start = end + 2
 
 
+# Base64 alphabet used inside UTF-7 shifted sequences (+<Base64>-)
+_UTF7_BASE64: frozenset[int] = frozenset(
+    b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+)
+
+
+def _has_valid_utf7_sequences(data: bytes) -> bool:
+    """Check that *data* contains at least one valid UTF-7 shifted sequence.
+
+    A valid shifted sequence is ``+<base64 chars>-`` where the base64 portion
+    is at least 3 characters long (the minimum for one UTF-16 code unit:
+    16 bits -> 3 Base64 sextets).  The explicit ``-`` terminator is required to
+    avoid false positives from timezone offsets, URLs, and similar patterns.
+    The sequence ``+-`` is a literal plus sign and is **not** counted.
+    """
+    start = 0
+    while True:
+        pos = data.find(ord("+"), start)
+        if pos == -1:
+            return False
+        pos += 1  # skip the '+'
+        # +- is a literal plus, not a shifted sequence
+        if pos < len(data) and data[pos] == ord("-"):
+            start = pos + 1
+            continue
+        # Count consecutive Base64 characters
+        b64_len = 0
+        i = pos
+        while i < len(data) and data[i] in _UTF7_BASE64:
+            b64_len += 1
+            i += 1
+        # Require at least 3 Base64 chars AND an explicit '-' terminator
+        if b64_len >= 3 and i < len(data) and data[i] == ord("-"):
+            return True
+        start = i if i > pos else pos
+
+
 def detect_escape_encoding(data: bytes) -> DetectionResult | None:
-    """Detect ISO-2022 and HZ-GB-2312 from escape/tilde sequences.
+    """Detect ISO-2022, HZ-GB-2312, and UTF-7 from escape/tilde/plus sequences.
 
     :param data: The raw byte data to examine.
     :returns: A :class:`DetectionResult` if an escape encoding is found, or ``None``.
     """
-    if b"\x1b" not in data and b"~" not in data:
+    if b"\x1b" not in data and b"~" not in data and b"+" not in data:
         return None
 
     # ISO-2022-JP: ESC sequences for JIS X 0208 / JIS X 0201
@@ -70,6 +108,14 @@ def detect_escape_encoding(data: bytes) -> DetectionResult | None:
             encoding="hz-gb-2312",
             confidence=DETERMINISTIC_CONFIDENCE,
             language="Chinese",
+        )
+
+    # UTF-7: plus-sign shifts into Base64-encoded Unicode
+    if b"+" in data and _has_valid_utf7_sequences(data):
+        return DetectionResult(
+            encoding="utf-7",
+            confidence=DETERMINISTIC_CONFIDENCE,
+            language=None,
         )
 
     return None

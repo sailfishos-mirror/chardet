@@ -81,3 +81,41 @@ def test_random_bytes_returns_none() -> None:
     data = bytes(range(256))
     result = detect_escape_encoding(data)
     assert result is None
+
+
+def test_utf7_basic() -> None:
+    # "Hello, 世界" encoded as UTF-7
+    data = "Hello, 世界".encode("utf-7")
+    result = detect_escape_encoding(data)
+    assert result is not None
+    assert result.encoding == "utf-7"
+    assert result.confidence == 0.95
+
+
+def test_utf7_shifted_sequence() -> None:
+    # UTF-7 with explicit +<Base64>- regions
+    data = b"Hello +AGkAbgB0AGUAbgBzAGU-"
+    result = detect_escape_encoding(data)
+    assert result is not None
+    assert result.encoding == "utf-7"
+
+
+def test_utf7_literal_plus() -> None:
+    # +- is the UTF-7 escape for literal '+', not a shifted sequence
+    data = b"2+- 2 = 4"
+    result = detect_escape_encoding(data)
+    assert result is None
+
+
+def test_utf7_plain_ascii_with_plus() -> None:
+    # A stray + in ASCII text should not trigger UTF-7 detection
+    data = b"C++ is a programming language"
+    result = detect_escape_encoding(data)
+    assert result is None
+
+
+def test_utf7_empty_shift() -> None:
+    # +- followed by nothing is just a literal plus, not UTF-7
+    data = b"price: 10+- tax"
+    result = detect_escape_encoding(data)
+    assert result is None
