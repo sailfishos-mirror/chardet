@@ -15,15 +15,15 @@ from chardet.pipeline import PipelineContext
 from chardet.registry import EncodingInfo
 
 # ---------------------------------------------------------------------------
-# Per-encoding single-pass analysers
+# Per-encoding single-pass analyzers
 #
 # Each function walks the data once, computing three metrics simultaneously:
 #   - pair_ratio: valid multi-byte pairs / lead bytes  (structural score)
 #   - mb_bytes:   count of non-ASCII bytes in valid multi-byte sequences
 #   - lead_diversity: count of distinct lead byte values in valid pairs
 #
-# These are kept as separate functions (rather than a single parameterised
-# analyser) so that mypyc can inline the byte-range constants into each
+# These are kept as separate functions (rather than a single parameterized
+# analyzer) so that mypyc can inline the byte-range constants into each
 # function's tight loop.
 # ---------------------------------------------------------------------------
 
@@ -285,10 +285,10 @@ def _analyze_johab(
 
 
 # ---------------------------------------------------------------------------
-# Dispatch table: encoding name -> analyser function
+# Dispatch table: encoding name -> analyzer function
 # ---------------------------------------------------------------------------
 
-_ANALYSERS: dict[str, Callable[[bytes], tuple[float, int, int]]] = {
+_ANALYZERS: dict[str, Callable[[bytes], tuple[float, int, int]]] = {
     "shift_jis": _analyze_shift_jis,
     "cp932": _analyze_shift_jis,
     "euc-jp": _analyze_euc_jp,
@@ -308,10 +308,10 @@ def _get_analysis(
     cached = ctx.analysis_cache.get(key)
     if cached is not None:
         return cached
-    analyser = _ANALYSERS.get(name)
-    if analyser is None:
+    analyzer = _ANALYZERS.get(name)
+    if analyzer is None:
         return None
-    result = analyser(data)
+    result = analyzer(data)
     ctx.analysis_cache[key] = result
     return result
 
