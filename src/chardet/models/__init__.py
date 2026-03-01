@@ -10,6 +10,8 @@ import math
 import struct
 import threading
 
+from chardet.registry import REGISTRY
+
 #: Weight applied to non-ASCII bigrams during profile construction.
 #: Must be kept in sync with usage in pipeline/confusion.py.
 NON_ASCII_BIGRAM_WEIGHT: int = 8
@@ -22,54 +24,13 @@ _ENC_INDEX_LOCK = threading.Lock()
 # Cached L2 norms for all models, keyed by id(model)
 _MODEL_NORMS: dict[int, float] | None = None
 _MODEL_NORMS_LOCK = threading.Lock()
-# Encodings that map to exactly one language.  Includes gb2312 which has no
-# bigram model of its own but is unambiguously Chinese.
+# Encodings that map to exactly one language, derived from the registry.
 _SINGLE_LANG_MAP: dict[str, str] = {
-    "big5": "zh",
-    "cp1006": "ur",
-    "cp1026": "tr",
-    "cp1125": "uk",
-    "cp273": "de",
-    "cp424": "he",
-    "cp737": "el",
-    "cp856": "he",
-    "cp857": "tr",
-    "cp860": "pt",
-    "cp861": "is",
-    "cp862": "he",
-    "cp863": "fr",
-    "cp864": "ar",
-    "cp869": "el",
-    "cp874": "th",
-    "cp875": "el",
-    "cp932": "ja",
-    "cp949": "ko",
-    "euc-jp": "ja",
-    "euc-kr": "ko",
-    "gb18030": "zh",
-    "gb2312": "zh",
-    "hz-gb-2312": "zh",
-    "iso-2022-jp": "ja",
-    "iso-2022-kr": "ko",
-    "iso-8859-7": "el",
-    "iso-8859-8": "he",
-    "iso-8859-9": "tr",
-    "johab": "ko",
-    "koi8-r": "ru",
-    "koi8-t": "tg",
-    "koi8-u": "uk",
-    "kz-1048": "kk",
-    "mac-greek": "el",
-    "mac-iceland": "is",
-    "mac-turkish": "tr",
-    "ptcp154": "kk",
-    "shift_jis": "ja",
-    "tis-620": "th",
-    "windows-1253": "el",
-    "windows-1254": "tr",
-    "windows-1255": "he",
-    "windows-1258": "vi",
+    enc.name: enc.languages[0] for enc in REGISTRY if len(enc.languages) == 1
 }
+# gb2312 is not in the registry (detector returns gb18030 instead) but
+# needs a language mapping for accuracy test evaluation.
+_SINGLE_LANG_MAP["gb2312"] = "zh"
 
 
 def load_models() -> dict[str, bytearray]:
