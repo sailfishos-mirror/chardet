@@ -37,11 +37,11 @@ import chardet
 
 # Plain ASCII is reported as its superset Windows-1252 by default
 chardet.detect(b"Hello, world!")
-# {'encoding': 'Windows-1252', 'confidence': 1.0, 'language': 'pl'}
+# {'encoding': 'Windows-1252', 'confidence': 1.0, 'language': 'en'}
 
 # UTF-8 with typographic punctuation
 chardet.detect("It\u2019s a lovely day \u2014 let\u2019s grab coffee.".encode("utf-8"))
-# {'encoding': 'utf-8', 'confidence': 0.99, 'language': 'hu'}
+# {'encoding': 'utf-8', 'confidence': 0.99, 'language': 'es'}
 
 # Japanese EUC-JP
 chardet.detect("これは日本語のテストです。文字コードの検出を行います。".encode("euc-jp"))

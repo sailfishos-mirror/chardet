@@ -1,4 +1,4 @@
-training_date: "2026-03-01T21:10:27Z"
+training_date: "2026-03-01T22:19:34Z"
 max_samples: 15000
 models:
   ar/cp720:
@@ -342,6 +342,72 @@ models:
     encoding: windows-1253
     samples_used: 25000
     bigram_entries: 1325
+    source: culturax
+  en/cp037:
+    language: en
+    encoding: cp037
+    samples_used: 15000
+    bigram_entries: 795
+    source: culturax
+  en/cp437:
+    language: en
+    encoding: cp437
+    samples_used: 15000
+    bigram_entries: 796
+    source: culturax
+  en/cp500:
+    language: en
+    encoding: cp500
+    samples_used: 15000
+    bigram_entries: 795
+    source: culturax
+  en/cp850:
+    language: en
+    encoding: cp850
+    samples_used: 15000
+    bigram_entries: 795
+    source: culturax
+  en/cp858:
+    language: en
+    encoding: cp858
+    samples_used: 15000
+    bigram_entries: 795
+    source: culturax
+  en/hp-roman8:
+    language: en
+    encoding: hp-roman8
+    samples_used: 15000
+    bigram_entries: 796
+    source: culturax
+  en/iso-8859-1:
+    language: en
+    encoding: iso-8859-1
+    samples_used: 15000
+    bigram_entries: 795
+    source: culturax
+  en/iso-8859-15:
+    language: en
+    encoding: iso-8859-15
+    samples_used: 15000
+    bigram_entries: 795
+    source: culturax
+  en/mac-roman:
+    language: en
+    encoding: mac-roman
+    samples_used: 15000
+    bigram_entries: 795
+    source: culturax
+  en/utf-8:
+    language: en
+    encoding: utf-8
+    samples_used: 15000
+    bigram_entries: 796
+    source: culturax
+  en/windows-1252:
+    language: en
+    encoding: windows-1252
+    samples_used: 15000
+    bigram_entries: 795
     source: culturax
   eo/iso-8859-3:
     language: eo

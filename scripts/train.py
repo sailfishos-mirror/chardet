@@ -48,6 +48,7 @@ print = functools.partial(print, flush=True)  # noqa: A001
 # represent — no English fallbacks for non-English encodings.
 
 _WESTERN_EUROPEAN_LANGS = [
+    "en",
     "fr",
     "de",
     "es",
@@ -73,6 +74,7 @@ _ALL_LANGS = [
     "da",
     "de",
     "el",
+    "en",
     "eo",
     "es",
     "et",
@@ -181,9 +183,9 @@ ENCODING_LANG_MAP: dict[str, list[str]] = {
     # HP legacy
     "hp-roman8": _WESTERN_EUROPEAN_LANGS,
     # DOS Western European
-    "cp437": ["fr", "de", "es", "pt", "it", "nl", "da", "sv"],
-    "cp850": ["fr", "de", "es", "pt", "it", "nl", "da", "sv"],
-    "cp858": ["fr", "de", "es", "pt", "it", "nl", "da", "sv"],
+    "cp437": ["en", "fr", "de", "es", "pt", "it", "nl", "da", "sv"],
+    "cp850": ["en", "fr", "de", "es", "pt", "it", "nl", "da", "sv"],
+    "cp858": ["en", "fr", "de", "es", "pt", "it", "nl", "da", "sv"],
     # Language-specific Western European
     "cp860": ["pt"],
     "cp861": ["is"],
@@ -209,6 +211,7 @@ ENCODING_LANG_MAP: dict[str, list[str]] = {
     "iso-8859-10": ["is", "fi"],
     # EBCDIC — trained on languages these codepages were used with
     "cp037": [
+        "en",
         "fr",
         "de",
         "es",
@@ -225,6 +228,7 @@ ENCODING_LANG_MAP: dict[str, list[str]] = {
         "tr",
     ],
     "cp500": [
+        "en",
         "fr",
         "de",
         "es",
