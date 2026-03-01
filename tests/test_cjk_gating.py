@@ -69,7 +69,9 @@ def test_real_korean_still_detected():
 
 def test_german_macroman_not_detected_as_cjk() -> None:
     """German mac-roman text must not be detected as cp932."""
-    test_file = Path("tests/data/macroman-german/culturax_mC4_83756.txt")
+    test_file = (
+        Path(__file__).parent / "data" / "macroman-german" / "culturax_mC4_83756.txt"
+    )
     if not test_file.exists():
         pytest.skip("Test data not available")
     data = test_file.read_bytes()

@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 import pytest
 from train import deserialize_models, serialize_models
 
-from chardet.models import load_models, score_best_language
+from chardet.models import BigramProfile, load_models, score_best_language
 
 
 def test_load_models_returns_dict() -> None:
@@ -70,6 +72,32 @@ def test_score_best_language_high_byte_weighting() -> None:
         assert isinstance(ascii_score, float)
         assert 0.0 <= high_score <= 1.0
         assert 0.0 <= ascii_score <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# BigramProfile tests
+# ---------------------------------------------------------------------------
+
+
+def test_bigram_profile_empty() -> None:
+    p = BigramProfile(b"")
+    assert p.weight_sum == 0
+    assert len(p.weighted_freq) == 0
+
+
+def test_bigram_profile_single_byte() -> None:
+    p = BigramProfile(b"A")
+    assert p.weight_sum == 0
+
+
+def test_bigram_profile_ascii_weight() -> None:
+    p = BigramProfile(b"AB")
+    assert p.weight_sum == 1
+
+
+def test_bigram_profile_high_byte_weight() -> None:
+    p = BigramProfile(b"\xc3\xa9")
+    assert p.weight_sum == 8
 
 
 # ---------------------------------------------------------------------------

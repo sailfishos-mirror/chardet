@@ -16,11 +16,11 @@ prek install               # set up pre-commit hooks (ruff lint+format, trailing
 
 ### Testing
 ```bash
-uv run pytest                              # run all tests (excludes benchmarks)
-uv run pytest tests/test_api.py            # run a specific test file
-uv run pytest tests/test_api.py::test_detect_empty  # run a single test
-uv run pytest -m benchmark                 # run benchmark tests only
-uv run pytest -x                           # stop on first failure
+uv run python -m pytest                              # run all tests (excludes benchmarks)
+uv run python -m pytest tests/test_api.py            # run a specific test file
+uv run python -m pytest tests/test_api.py::test_detect_empty  # run a single test
+uv run python -m pytest -m benchmark                 # run benchmark tests only
+uv run python -m pytest -x                           # stop on first failure
 ```
 
 Test data is auto-cloned from `chardet/test-data` GitHub repo on first run (cached in `tests/data/`, gitignored). Accuracy tests are dynamically parametrized from this data via `conftest.py`.

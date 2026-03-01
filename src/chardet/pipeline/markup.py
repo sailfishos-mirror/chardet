@@ -5,10 +5,9 @@ from __future__ import annotations
 import codecs
 import re
 
-from chardet.pipeline import DetectionResult
+from chardet.pipeline import DETERMINISTIC_CONFIDENCE, DetectionResult
 
 _SCAN_LIMIT = 4096
-_MARKUP_CONFIDENCE = 0.95
 
 _XML_ENCODING_RE = re.compile(
     rb"""<\?xml[^>]+encoding\s*=\s*['"]([^'"]+)['"]""", re.IGNORECASE
@@ -62,7 +61,7 @@ def detect_markup_charset(data: bytes) -> DetectionResult | None:
             if encoding is not None and _validate_bytes(data, encoding):
                 return DetectionResult(
                     encoding=encoding,
-                    confidence=_MARKUP_CONFIDENCE,
+                    confidence=DETERMINISTIC_CONFIDENCE,
                     language=None,
                 )
 

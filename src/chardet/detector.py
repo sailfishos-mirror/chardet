@@ -5,7 +5,8 @@ from __future__ import annotations
 import warnings
 from typing import ClassVar
 
-from chardet._utils import _resolve_rename, _validate_max_bytes
+from chardet import _utils
+from chardet._utils import DEFAULT_MAX_BYTES, _resolve_rename, _validate_max_bytes
 from chardet.enums import EncodingEra, LanguageFilter
 from chardet.equivalences import PREFERRED_SUPERSET, apply_legacy_rename
 from chardet.pipeline import DetectionResult
@@ -16,6 +17,7 @@ from chardet.pipeline.orchestrator import run_pipeline
 from chardet.pipeline.utf8 import detect_utf8
 
 _NONE_RESULT = DetectionResult(encoding=None, confidence=0.0, language=None)
+_NONE_DICT: dict[str, str | float | None] = _NONE_RESULT.to_dict()
 
 # Minimum bytes before running deterministic checks (avoids repeated work
 # on tiny feed() calls).
@@ -29,7 +31,7 @@ class UniversalDetector:
     encoding from byte streams.  Compatible with the chardet 6.x API.
     """
 
-    MINIMUM_THRESHOLD = 0.20
+    MINIMUM_THRESHOLD = _utils.MINIMUM_THRESHOLD
     # Exposed for backward compatibility with chardet 6.x callers that
     # reference UniversalDetector.LEGACY_MAP directly.
     LEGACY_MAP: ClassVar[dict[str, str]] = dict(PREFERRED_SUPERSET)
@@ -39,7 +41,7 @@ class UniversalDetector:
         lang_filter: LanguageFilter = LanguageFilter.ALL,
         should_rename_legacy: bool | None = None,
         encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
-        max_bytes: int = 200_000,
+        max_bytes: int = DEFAULT_MAX_BYTES,
     ) -> None:
         """Initialize the detector.
 
@@ -68,7 +70,7 @@ class UniversalDetector:
         self._buffer = bytearray()
         self._done = False
         self._closed = False
-        self._result: dict[str, str | float | None] | None = None
+        self._result: DetectionResult | None = None
         self._has_non_ascii = False
         self._last_checked: int = 0
         self._bom_checked = False
@@ -104,7 +106,7 @@ class UniversalDetector:
             self._bom_checked = True
             bom_result = detect_bom(bytes(self._buffer[:4]))
             if bom_result is not None:
-                self._result = bom_result.to_dict()
+                self._result = bom_result
                 self._done = True
                 return
 
@@ -124,7 +126,7 @@ class UniversalDetector:
         # Escape-sequence encodings (ISO-2022, HZ-GB-2312)
         escape_result = detect_escape_encoding(buf)
         if escape_result is not None:
-            self._result = escape_result.to_dict()
+            self._result = escape_result
             self._done = True
             return
 
@@ -133,7 +135,7 @@ class UniversalDetector:
         if not self._has_non_ascii and buf_len >= _MIN_INCREMENTAL_CHECK:
             ascii_result = detect_ascii(buf)
             if ascii_result is not None:
-                self._result = ascii_result.to_dict()
+                self._result = ascii_result
                 self._done = True
                 return
 
@@ -141,7 +143,7 @@ class UniversalDetector:
         if self._has_non_ascii:
             utf8_result = detect_utf8(buf)
             if utf8_result is not None:
-                self._result = utf8_result.to_dict()
+                self._result = utf8_result
                 self._done = True
                 return
 
@@ -161,10 +163,8 @@ class UniversalDetector:
                 results = run_pipeline(
                     data, self._encoding_era, max_bytes=self._max_bytes
                 )
-                self._result = results[0].to_dict()
+                self._result = results[0]
                 self._done = True
-            if self._rename_legacy and self._result is not None:
-                apply_legacy_rename(self._result)
         return self.result
 
     def reset(self) -> None:
@@ -186,5 +186,8 @@ class UniversalDetector:
     def result(self) -> dict[str, str | float | None]:
         """The current best detection result."""
         if self._result is not None:
-            return self._result
-        return _NONE_RESULT.to_dict()
+            d = self._result.to_dict()
+            if self._rename_legacy:
+                apply_legacy_rename(d)
+            return d
+        return dict(_NONE_DICT)

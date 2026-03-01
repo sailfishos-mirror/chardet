@@ -1,4 +1,6 @@
 # tests/test_enums.py
+from __future__ import annotations
+
 import enum
 
 from chardet.enums import EncodingEra

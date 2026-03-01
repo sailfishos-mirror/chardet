@@ -5,6 +5,8 @@ from __future__ import annotations
 import sys
 import threading
 
+import pytest
+
 from chardet import detect
 from chardet.enums import EncodingEra
 
@@ -75,6 +77,7 @@ def test_concurrent_detect_high_concurrency():
     assert not errors, "Thread-safety violations:\n" + "\n".join(errors[:10])
 
 
+@pytest.mark.serial
 def test_cold_cache_concurrent_init():
     """Race on first-call cache initialization from a cold state.
 
@@ -82,6 +85,9 @@ def test_cold_cache_concurrent_init():
     has many threads simultaneously call detect().  This stresses the
     locking on the cache population path — the most dangerous codepath
     for thread safety.
+
+    Marked ``serial`` because the global cache mutations are not safe to
+    run concurrently with other tests that call ``detect()``.
     """
     import chardet.models as _models
     import chardet.pipeline.confusion as _confusion

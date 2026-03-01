@@ -1,4 +1,8 @@
 # tests/test_registry.py
+from __future__ import annotations
+
+import pytest
+
 from chardet.enums import EncodingEra
 from chardet.registry import REGISTRY, EncodingInfo, get_candidates
 
@@ -6,12 +10,8 @@ from chardet.registry import REGISTRY, EncodingInfo, get_candidates
 def test_encoding_info_is_frozen():
     info = REGISTRY[0]
     assert isinstance(info, EncodingInfo)
-    try:
+    with pytest.raises(AttributeError):
         info.name = "something"  # type: ignore[misc]
-        msg = "Should not be able to mutate frozen dataclass"
-        raise AssertionError(msg)
-    except AttributeError:
-        pass
 
 
 def test_registry_is_tuple():

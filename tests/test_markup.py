@@ -1,4 +1,6 @@
 # tests/test_markup.py
+from __future__ import annotations
+
 from chardet.pipeline.markup import detect_markup_charset
 
 

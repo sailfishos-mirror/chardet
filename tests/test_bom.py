@@ -1,4 +1,6 @@
 # tests/test_bom.py
+from __future__ import annotations
+
 from chardet.pipeline import DetectionResult
 from chardet.pipeline.bom import detect_bom
 

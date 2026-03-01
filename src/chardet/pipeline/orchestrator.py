@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from chardet._utils import DEFAULT_MAX_BYTES
 from chardet.models import (
     BigramProfile,
     has_model_variants,
     infer_language,
     score_best_language,
 )
-from chardet.pipeline import DetectionResult, PipelineContext
+from chardet.pipeline import DETERMINISTIC_CONFIDENCE, DetectionResult, PipelineContext
 from chardet.pipeline.ascii import detect_ascii
 from chardet.pipeline.binary import is_binary
 from chardet.pipeline.bom import detect_bom
@@ -19,6 +20,7 @@ from chardet.pipeline.escape import detect_escape_encoding
 from chardet.pipeline.markup import detect_markup_charset
 from chardet.pipeline.statistical import score_candidates
 from chardet.pipeline.structural import (
+    _HIGH_BYTES,
     compute_lead_byte_diversity,
     compute_multibyte_byte_coverage,
     compute_structural_score,
@@ -32,12 +34,9 @@ if TYPE_CHECKING:
     from chardet.enums import EncodingEra
     from chardet.registry import EncodingInfo
 
-# Byte table for fast non-ASCII counting (C-speed via bytes.translate).
-# Intentionally duplicated in structural.py — each mypyc-compiled module
-# needs its own copy to avoid cross-module global lookups.
-_HIGH_BYTES: bytes = bytes(range(0x80, 0x100))
-
-_BINARY_RESULT = DetectionResult(encoding=None, confidence=0.95, language=None)
+_BINARY_RESULT = DetectionResult(
+    encoding=None, confidence=DETERMINISTIC_CONFIDENCE, language=None
+)
 _EMPTY_RESULT = DetectionResult(encoding="utf-8", confidence=0.10, language=None)
 _FALLBACK_RESULT = DetectionResult(
     encoding="windows-1252", confidence=0.10, language=None
@@ -443,7 +442,7 @@ def _fill_language(
 def _run_pipeline_core(
     data: bytes,
     encoding_era: EncodingEra,
-    max_bytes: int = 200_000,
+    max_bytes: int = DEFAULT_MAX_BYTES,
 ) -> list[DetectionResult]:
     """Core pipeline logic. Returns list of results sorted by confidence."""
     ctx = PipelineContext()
@@ -550,7 +549,7 @@ def _run_pipeline_core(
 def run_pipeline(
     data: bytes,
     encoding_era: EncodingEra,
-    max_bytes: int = 200_000,
+    max_bytes: int = DEFAULT_MAX_BYTES,
 ) -> list[DetectionResult]:
     """Run the full detection pipeline.
 

@@ -1,4 +1,6 @@
 # tests/test_detector.py
+from __future__ import annotations
+
 import pytest
 
 from chardet.detector import UniversalDetector
@@ -74,7 +76,8 @@ def test_done_after_ascii_feed():
     detector = UniversalDetector()
     detector.feed(b"Hello world, this is enough ASCII data for detection. " * 2)
     assert detector.done is True
-    assert detector.result["encoding"] == "ascii"
+    # Default era (MODERN_WEB) renames ascii → Windows-1252
+    assert detector.result["encoding"] == "Windows-1252"
 
 
 def test_done_after_utf8_feed():

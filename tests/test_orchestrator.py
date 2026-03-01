@@ -1,4 +1,6 @@
 # tests/test_orchestrator.py
+from __future__ import annotations
+
 from chardet.enums import EncodingEra
 from chardet.pipeline import DetectionResult
 from chardet.pipeline.orchestrator import run_pipeline

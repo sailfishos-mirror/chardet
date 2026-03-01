@@ -9,9 +9,7 @@ this module is compiled with mypyc, which does not support PEP 563 string
 annotations.
 """
 
-from chardet.pipeline import DetectionResult
-
-_ESCAPE_CONFIDENCE = 0.95
+from chardet.pipeline import DETERMINISTIC_CONFIDENCE, DetectionResult
 
 
 def _has_valid_hz_regions(data: bytes) -> bool:
@@ -46,23 +44,32 @@ def detect_escape_encoding(data: bytes) -> DetectionResult | None:
     :param data: The raw byte data to examine.
     :returns: A :class:`DetectionResult` if an escape encoding is found, or ``None``.
     """
+    if b"\x1b" not in data and b"~" not in data:
+        return None
+
     # ISO-2022-JP: ESC sequences for JIS X 0208 / JIS X 0201
     if b"\x1b$B" in data or b"\x1b$@" in data or b"\x1b(J" in data:
         return DetectionResult(
-            encoding="iso-2022-jp", confidence=_ESCAPE_CONFIDENCE, language="Japanese"
+            encoding="iso-2022-jp",
+            confidence=DETERMINISTIC_CONFIDENCE,
+            language="Japanese",
         )
 
     # ISO-2022-KR: ESC sequence for KS C 5601
     if b"\x1b$)C" in data:
         return DetectionResult(
-            encoding="iso-2022-kr", confidence=_ESCAPE_CONFIDENCE, language="Korean"
+            encoding="iso-2022-kr",
+            confidence=DETERMINISTIC_CONFIDENCE,
+            language="Korean",
         )
 
     # HZ-GB-2312: tilde escapes for GB2312
     # Require valid GB2312 byte pairs (0x21-0x7E range) between ~{ and ~} markers.
     if b"~{" in data and b"~}" in data and _has_valid_hz_regions(data):
         return DetectionResult(
-            encoding="hz-gb-2312", confidence=_ESCAPE_CONFIDENCE, language="Chinese"
+            encoding="hz-gb-2312",
+            confidence=DETERMINISTIC_CONFIDENCE,
+            language="Chinese",
         )
 
     return None

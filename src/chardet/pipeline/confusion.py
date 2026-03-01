@@ -184,8 +184,7 @@ def resolve_by_category_voting(
     """
     votes_a = 0
     votes_b = 0
-    data_bytes = set(data)
-    relevant = data_bytes & diff_bytes
+    relevant = frozenset(data) & diff_bytes
     if not relevant:
         return None
     for bv in relevant:
@@ -222,9 +221,10 @@ def resolve_by_bigram_rescore(
     :returns: The winning encoding name, or ``None`` if tied.
     """
     from chardet.models import (
+        NON_ASCII_BIGRAM_WEIGHT,
         BigramProfile,
-        _get_enc_index,
-        _score_with_profile,
+        get_enc_index,
+        score_with_profile,
     )
 
     if len(data) < 2:
@@ -238,7 +238,7 @@ def resolve_by_bigram_rescore(
         if b1 not in diff_bytes and b2 not in diff_bytes:
             continue
         idx = (b1 << 8) | b2
-        weight = 8 if (b1 > 0x7F or b2 > 0x7F) else 1
+        weight = NON_ASCII_BIGRAM_WEIGHT if (b1 > 0x7F or b2 > 0x7F) else 1
         freq[idx] = freq.get(idx, 0) + weight
         w_sum += weight
 
@@ -247,20 +247,20 @@ def resolve_by_bigram_rescore(
 
     profile = BigramProfile.from_weighted_freq(freq, w_sum)
 
-    index = _get_enc_index()
+    index = get_enc_index()
 
     best_a = 0.0
     variants_a = index.get(enc_a)
     if variants_a:
         for _, model in variants_a:
-            s = _score_with_profile(profile, model)
+            s = score_with_profile(profile, model)
             best_a = max(best_a, s)
 
     best_b = 0.0
     variants_b = index.get(enc_b)
     if variants_b:
         for _, model in variants_b:
-            s = _score_with_profile(profile, model)
+            s = score_with_profile(profile, model)
             best_b = max(best_b, s)
 
     if best_a > best_b:

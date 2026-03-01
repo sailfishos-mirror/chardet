@@ -1,4 +1,6 @@
 # tests/test_validity.py
+from __future__ import annotations
+
 from chardet.enums import EncodingEra
 from chardet.pipeline.validity import filter_by_validity
 from chardet.registry import get_candidates

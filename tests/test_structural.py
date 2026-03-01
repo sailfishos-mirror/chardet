@@ -1,5 +1,7 @@
 """Tests for Stage 2b: Multi-byte structural probing."""
 
+from __future__ import annotations
+
 from chardet.pipeline import PipelineContext
 from chardet.pipeline.structural import compute_structural_score
 from chardet.registry import REGISTRY

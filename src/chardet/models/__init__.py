@@ -10,6 +10,10 @@ import math
 import struct
 import threading
 
+#: Weight applied to non-ASCII bigrams during profile construction.
+#: Must be kept in sync with usage in pipeline/confusion.py.
+NON_ASCII_BIGRAM_WEIGHT: int = 8
+
 _MODEL_CACHE: dict[str, bytearray] | None = None
 _MODEL_CACHE_LOCK = threading.Lock()
 # Pre-grouped index: encoding name -> [(lang, model), ...]
@@ -103,10 +107,16 @@ def load_models() -> dict[str, bytearray]:
             for _ in range(num_encodings):
                 (name_len,) = struct.unpack_from("!I", data, offset)
                 offset += 4
+                if name_len > 256:
+                    msg = f"corrupt models.bin: name_len={name_len} exceeds 256"
+                    raise ValueError(msg)
                 name = data[offset : offset + name_len].decode("utf-8")
                 offset += name_len
                 (num_entries,) = struct.unpack_from("!I", data, offset)
                 offset += 4
+                if num_entries > 65536:
+                    msg = f"corrupt models.bin: num_entries={num_entries} exceeds 65536"
+                    raise ValueError(msg)
 
                 table = bytearray(65536)
                 for _ in range(num_entries):
@@ -122,7 +132,7 @@ def load_models() -> dict[str, bytearray]:
         return models
 
 
-def _get_enc_index() -> dict[str, list[tuple[str | None, bytearray]]]:
+def get_enc_index() -> dict[str, list[tuple[str | None, bytearray]]]:
     """Return a pre-grouped index mapping encoding name -> [(lang, model), ...]."""
     global _ENC_INDEX  # noqa: PLW0603
     if _ENC_INDEX is not None:
@@ -159,7 +169,7 @@ def has_model_variants(encoding: str) -> bool:
     :param encoding: The canonical encoding name.
     :returns: ``True`` if bigram models exist for this encoding.
     """
-    return encoding in _get_enc_index()
+    return encoding in get_enc_index()
 
 
 def _get_model_norms() -> dict[int, float]:
@@ -213,14 +223,15 @@ class BigramProfile:
 
         freq: dict[int, int] = {}
         w_sum = 0
+        hi_w = NON_ASCII_BIGRAM_WEIGHT
         _get = freq.get
         for i in range(total_bigrams):
             b1 = data[i]
             b2 = data[i + 1]
             idx = (b1 << 8) | b2
             if b1 > 0x7F or b2 > 0x7F:
-                freq[idx] = _get(idx, 0) + 8
-                w_sum += 8
+                freq[idx] = _get(idx, 0) + hi_w
+                w_sum += hi_w
             else:
                 freq[idx] = _get(idx, 0) + 1
                 w_sum += 1
@@ -245,12 +256,20 @@ class BigramProfile:
         return profile
 
 
-def _score_with_profile(profile: BigramProfile, model: bytearray) -> float:
+def score_with_profile(profile: BigramProfile, model: bytearray) -> float:
     """Score a pre-computed bigram profile against a single model using cosine similarity."""
     if profile.input_norm == 0.0:
         return 0.0
     norms = _get_model_norms()
-    model_norm = norms.get(id(model), 0.0)
+    model_norm = norms.get(id(model))
+    if model_norm is None:
+        # Fallback: compute on the fly if id() miss (e.g. rare startup race).
+        sq_sum = 0
+        for i in range(65536):
+            v = model[i]
+            if v:
+                sq_sum += v * v
+        model_norm = math.sqrt(sq_sum)
     if model_norm == 0.0:
         return 0.0
     dot = 0
@@ -281,7 +300,7 @@ def score_best_language(
     if not data:
         return 0.0, None
 
-    index = _get_enc_index()
+    index = get_enc_index()
     variants = index.get(encoding)
     if variants is None:
         return 0.0, None
@@ -292,7 +311,7 @@ def score_best_language(
     best_score = 0.0
     best_lang: str | None = None
     for lang, model in variants:
-        s = _score_with_profile(profile, model)
+        s = score_with_profile(profile, model)
         if s > best_score:
             best_score = s
             best_lang = lang

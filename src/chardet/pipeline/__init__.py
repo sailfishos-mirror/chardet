@@ -5,6 +5,10 @@ from __future__ import annotations
 import dataclasses
 from dataclasses import field
 
+#: Confidence for deterministic (non-BOM) detection stages.
+#: Used by escape, markup, utf1632, and binary stages.
+DETERMINISTIC_CONFIDENCE: float = 0.95
+
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class DetectionResult:

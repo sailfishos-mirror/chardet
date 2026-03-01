@@ -86,18 +86,16 @@ PREFERRED_SUPERSET: dict[str, str] = {
 
 def apply_legacy_rename(
     result: dict[str, str | float | None],
-) -> dict[str, str | float | None]:
+) -> None:
     """Replace the encoding name with its preferred Windows/CP superset.
 
-    Modifies the ``"encoding"`` value in *result* in-place and returns it.
+    Modifies the ``"encoding"`` value in *result* in-place.
 
     :param result: A detection result dict containing an ``"encoding"`` key.
-    :returns: The same dict with the encoding name replaced, if applicable.
     """
     enc = result.get("encoding")
     if isinstance(enc, str):
         result["encoding"] = PREFERRED_SUPERSET.get(enc.lower(), enc)
-    return result
 
 
 # Bidirectional equivalents -- byte-order variants only.

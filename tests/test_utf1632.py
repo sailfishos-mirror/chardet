@@ -3,8 +3,8 @@
 
 from __future__ import annotations
 
-from chardet.pipeline import DetectionResult
-from chardet.pipeline.utf1632 import _PATTERN_CONFIDENCE, detect_utf1632_patterns
+from chardet.pipeline import DETERMINISTIC_CONFIDENCE, DetectionResult
+from chardet.pipeline.utf1632 import detect_utf1632_patterns
 
 # ---------------------------------------------------------------------------
 # UTF-16-LE detection
@@ -18,7 +18,7 @@ def test_utf16_le_ascii_text() -> None:
     result = detect_utf1632_patterns(data)
     assert result is not None
     assert result.encoding == "utf-16-le"
-    assert result.confidence == _PATTERN_CONFIDENCE
+    assert result.confidence == DETERMINISTIC_CONFIDENCE
     assert result.language is None
 
 
@@ -29,7 +29,7 @@ def test_utf16_le_longer_text() -> None:
     result = detect_utf1632_patterns(data)
     assert result is not None
     assert result.encoding == "utf-16-le"
-    assert result.confidence == _PATTERN_CONFIDENCE
+    assert result.confidence == DETERMINISTIC_CONFIDENCE
 
 
 # ---------------------------------------------------------------------------
@@ -44,7 +44,7 @@ def test_utf16_be_ascii_text() -> None:
     result = detect_utf1632_patterns(data)
     assert result is not None
     assert result.encoding == "utf-16-be"
-    assert result.confidence == _PATTERN_CONFIDENCE
+    assert result.confidence == DETERMINISTIC_CONFIDENCE
     assert result.language is None
 
 
@@ -55,7 +55,7 @@ def test_utf16_be_longer_text() -> None:
     result = detect_utf1632_patterns(data)
     assert result is not None
     assert result.encoding == "utf-16-be"
-    assert result.confidence == _PATTERN_CONFIDENCE
+    assert result.confidence == DETERMINISTIC_CONFIDENCE
 
 
 # ---------------------------------------------------------------------------
@@ -70,7 +70,7 @@ def test_utf32_le_ascii_text() -> None:
     result = detect_utf1632_patterns(data)
     assert result is not None
     assert result.encoding == "utf-32-le"
-    assert result.confidence == _PATTERN_CONFIDENCE
+    assert result.confidence == DETERMINISTIC_CONFIDENCE
     assert result.language is None
 
 
@@ -81,7 +81,7 @@ def test_utf32_le_longer_text() -> None:
     result = detect_utf1632_patterns(data)
     assert result is not None
     assert result.encoding == "utf-32-le"
-    assert result.confidence == _PATTERN_CONFIDENCE
+    assert result.confidence == DETERMINISTIC_CONFIDENCE
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +96,7 @@ def test_utf32_be_ascii_text() -> None:
     result = detect_utf1632_patterns(data)
     assert result is not None
     assert result.encoding == "utf-32-be"
-    assert result.confidence == _PATTERN_CONFIDENCE
+    assert result.confidence == DETERMINISTIC_CONFIDENCE
     assert result.language is None
 
 
@@ -107,7 +107,7 @@ def test_utf32_be_longer_text() -> None:
     result = detect_utf1632_patterns(data)
     assert result is not None
     assert result.encoding == "utf-32-be"
-    assert result.confidence == _PATTERN_CONFIDENCE
+    assert result.confidence == DETERMINISTIC_CONFIDENCE
 
 
 # ---------------------------------------------------------------------------
@@ -376,7 +376,7 @@ def test_result_is_detection_result_instance() -> None:
     assert isinstance(result, DetectionResult)
     assert result == DetectionResult(
         encoding="utf-16-le",
-        confidence=_PATTERN_CONFIDENCE,
+        confidence=DETERMINISTIC_CONFIDENCE,
         language=None,
     )
 

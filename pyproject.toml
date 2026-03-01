@@ -70,6 +70,7 @@ addopts = [
 ]
 markers = [
     "benchmark: marks tests as benchmarks (deselect with '-m \"not benchmark\"')",
+    "serial: marks tests that must not run concurrently with others",
 ]
 
 [tool.ruff]

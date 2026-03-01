@@ -5,12 +5,12 @@ import subprocess
 import sys
 from typing import TYPE_CHECKING
 
+import pytest
+
 from chardet.cli import main
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    import pytest
 
 
 def test_cli_detects_file(tmp_path: Path):
@@ -88,18 +88,23 @@ def test_cli_multiple_files(tmp_path: Path):
 
 
 def test_cli_nonexistent_file(capsys: pytest.CaptureFixture[str]) -> None:
-    main(["nonexistent_file_xyz.txt"])
+    with pytest.raises(SystemExit, match="1"):
+        main(["nonexistent_file_xyz.txt"])
     captured = capsys.readouterr()
     assert "nonexistent_file_xyz.txt" in captured.err
 
 
-def test_cli_legacy_flag(tmp_path: Path):
+def test_cli_legacy_flag(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
     f = tmp_path / "test.txt"
     f.write_bytes(b"Hello world, enough text for detection. " * 3)
     main(["--legacy", str(f)])
+    captured = capsys.readouterr()
+    assert "with confidence" in captured.out
 
 
-def test_cli_encoding_era_flag(tmp_path: Path):
+def test_cli_encoding_era_flag(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
     f = tmp_path / "test.txt"
     f.write_bytes(b"Hello world, enough text for detection. " * 3)
     main(["-e", "modern_web", str(f)])
+    captured = capsys.readouterr()
+    assert "with confidence" in captured.out

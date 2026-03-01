@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from chardet.pipeline import DetectionResult
 from chardet.pipeline.ascii import detect_ascii
 

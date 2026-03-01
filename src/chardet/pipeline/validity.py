@@ -1,4 +1,9 @@
-"""Stage 2a: Byte sequence validity filtering."""
+"""Stage 2a: Byte sequence validity filtering.
+
+Note: ``from __future__ import annotations`` is intentionally omitted because
+this module is compiled with mypyc, which does not support PEP 563 string
+annotations.
+"""
 
 from chardet.registry import EncodingInfo
 

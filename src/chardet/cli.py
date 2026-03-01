@@ -7,10 +7,20 @@ import sys
 from pathlib import Path
 
 import chardet
+from chardet._utils import DEFAULT_MAX_BYTES
 from chardet.enums import EncodingEra
 
 _ERA_NAMES = [e.name.lower() for e in EncodingEra if e.bit_count() == 1] + ["all"]
-_DEFAULT_MAX_BYTES = 200_000
+
+
+def _print_result(
+    result: dict[str, str | float | None], label: str, *, minimal: bool
+) -> None:
+    """Print a detection result to stdout."""
+    if minimal:
+        print(result["encoding"])
+    else:
+        print(f"{label}: {result['encoding']} with confidence {result['confidence']}")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -47,27 +57,23 @@ def main(argv: list[str] | None = None) -> None:
         era = EncodingEra.MODERN_WEB
 
     if args.files:
+        errors = 0
         for filepath in args.files:
             try:
                 with Path(filepath).open("rb") as f:
-                    data = f.read(_DEFAULT_MAX_BYTES)
+                    data = f.read(DEFAULT_MAX_BYTES)
             except OSError as e:
                 print(f"chardetect: {filepath}: {e}", file=sys.stderr)
+                errors += 1
                 continue
             result = chardet.detect(data, encoding_era=era)
-            if args.minimal:
-                print(result["encoding"])
-            else:
-                print(
-                    f"{filepath}: {result['encoding']} with confidence {result['confidence']}"
-                )
+            _print_result(result, filepath, minimal=args.minimal)
+        if errors == len(args.files):
+            sys.exit(1)
     else:
-        data = sys.stdin.buffer.read(_DEFAULT_MAX_BYTES)
+        data = sys.stdin.buffer.read(DEFAULT_MAX_BYTES)
         result = chardet.detect(data, encoding_era=era)
-        if args.minimal:
-            print(result["encoding"])
-        else:
-            print(f"stdin: {result['encoding']} with confidence {result['confidence']}")
+        _print_result(result, "stdin", minimal=args.minimal)
 
 
 if __name__ == "__main__":

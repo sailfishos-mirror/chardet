@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
-import warnings
-
-from chardet._utils import _resolve_rename, _validate_max_bytes
+from chardet._utils import (
+    _DEFAULT_CHUNK_SIZE,
+    DEFAULT_MAX_BYTES,
+    MINIMUM_THRESHOLD,
+    _resolve_rename,
+    _validate_max_bytes,
+    _warn_deprecated_chunk_size,
+)
 from chardet.detector import UniversalDetector
 from chardet.enums import EncodingEra, LanguageFilter
 from chardet.equivalences import apply_legacy_rename
@@ -15,29 +20,18 @@ __all__ = [
     "EncodingEra",
     "LanguageFilter",
     "UniversalDetector",
+    "__version__",
     "detect",
     "detect_all",
 ]
-
-MINIMUM_THRESHOLD = 0.20
-
-
-def _warn_deprecated_chunk_size(chunk_size: int, stacklevel: int = 3) -> None:
-    """Emit a deprecation warning if *chunk_size* differs from the default."""
-    if chunk_size != 65_536:
-        warnings.warn(
-            "chunk_size is not used in this version of chardet and will be ignored",
-            DeprecationWarning,
-            stacklevel=stacklevel,
-        )
 
 
 def detect(
     byte_str: bytes | bytearray,
     should_rename_legacy: bool | None = None,
     encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
-    chunk_size: int = 65_536,
-    max_bytes: int = 200_000,
+    chunk_size: int = _DEFAULT_CHUNK_SIZE,
+    max_bytes: int = DEFAULT_MAX_BYTES,
 ) -> dict[str, str | float | None]:
     """Detect the encoding of the given byte string.
 
@@ -70,8 +64,8 @@ def detect_all(  # noqa: PLR0913
     ignore_threshold: bool = False,
     should_rename_legacy: bool | None = None,
     encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
-    chunk_size: int = 65_536,
-    max_bytes: int = 200_000,
+    chunk_size: int = _DEFAULT_CHUNK_SIZE,
+    max_bytes: int = DEFAULT_MAX_BYTES,
 ) -> list[dict[str, str | float | None]]:
     """Detect all possible encodings of the given byte string.
 

@@ -52,34 +52,3 @@ def test_correct_encoding_scores_highest():
     # windows-1251 should be among the top results
     top_names = [r.encoding for r in results[:3]]
     assert "windows-1251" in top_names
-
-
-from chardet.models import BigramProfile, score_best_language  # noqa: E402
-
-
-def test_bigram_profile_empty():
-    p = BigramProfile(b"")
-    assert p.weight_sum == 0
-    assert len(p.weighted_freq) == 0
-
-
-def test_bigram_profile_single_byte():
-    p = BigramProfile(b"A")
-    assert p.weight_sum == 0
-
-
-def test_bigram_profile_ascii_weight():
-    p = BigramProfile(b"AB")
-    assert p.weight_sum == 1
-
-
-def test_bigram_profile_high_byte_weight():
-    p = BigramProfile(b"\xc3\xa9")
-    assert p.weight_sum == 8
-
-
-def test_score_best_language_returns_language():
-    data = "Привет мир, это тест".encode("windows-1251")
-    score, lang = score_best_language(data, "windows-1251")
-    assert score > 0.0
-    assert lang is not None

@@ -11,10 +11,7 @@ annotations.
 
 import unicodedata
 
-from chardet.pipeline import DetectionResult
-
-# Confidence for pattern-based detection (less than BOM's 1.0)
-_PATTERN_CONFIDENCE = 0.95
+from chardet.pipeline import DETERMINISTIC_CONFIDENCE, DetectionResult
 
 # How many bytes to sample for pattern analysis
 _SAMPLE_SIZE = 4096
@@ -83,7 +80,7 @@ def _check_utf32(data: bytes) -> DetectionResult | None:
             if _looks_like_text(text):
                 return DetectionResult(
                     encoding="utf-32-be",
-                    confidence=_PATTERN_CONFIDENCE,
+                    confidence=DETERMINISTIC_CONFIDENCE,
                     language=None,
                 )
         except (UnicodeDecodeError, ValueError):
@@ -100,7 +97,7 @@ def _check_utf32(data: bytes) -> DetectionResult | None:
             if _looks_like_text(text):
                 return DetectionResult(
                     encoding="utf-32-le",
-                    confidence=_PATTERN_CONFIDENCE,
+                    confidence=DETERMINISTIC_CONFIDENCE,
                     language=None,
                 )
         except (UnicodeDecodeError, ValueError):
@@ -157,7 +154,7 @@ def _check_utf16(data: bytes) -> DetectionResult | None:
             if _looks_like_text(text):
                 return DetectionResult(
                     encoding=encoding,
-                    confidence=_PATTERN_CONFIDENCE,
+                    confidence=DETERMINISTIC_CONFIDENCE,
                     language=None,
                 )
         except (UnicodeDecodeError, ValueError):
@@ -182,7 +179,7 @@ def _check_utf16(data: bytes) -> DetectionResult | None:
     if best_encoding is not None and best_quality >= 0.5:
         return DetectionResult(
             encoding=best_encoding,
-            confidence=_PATTERN_CONFIDENCE,
+            confidence=DETERMINISTIC_CONFIDENCE,
             language=None,
         )
 
@@ -201,7 +198,7 @@ def _looks_like_text(text: str) -> bool:
 def _text_quality(text: str, limit: int = 500) -> float:
     """Score how much *text* looks like real human-readable content.
 
-    Returns a score roughly in the range [0, 1.5].  Higher values indicate
+    Returns a score in the range [-1.0, 1.6].  Higher values indicate
     more natural text.  A score of -1.0 means the content is almost certainly
     not valid text (too many control characters or combining marks).
 

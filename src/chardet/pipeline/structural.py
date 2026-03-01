@@ -21,12 +21,14 @@ from chardet.registry import EncodingInfo
 #   - pair_ratio: valid multi-byte pairs / lead bytes  (structural score)
 #   - mb_bytes:   count of non-ASCII bytes in valid multi-byte sequences
 #   - lead_diversity: count of distinct lead byte values in valid pairs
+#
+# These are kept as separate functions (rather than a single parameterised
+# analyser) so that mypyc can inline the byte-range constants into each
+# function's tight loop.
 # ---------------------------------------------------------------------------
 
 # Byte table for fast non-ASCII counting (C-speed via bytes.translate).
 # Deleting all bytes >= 0x80 and comparing lengths gives the non-ASCII count.
-# Intentionally duplicated in orchestrator.py — each mypyc-compiled module
-# needs its own copy to avoid cross-module global lookups.
 _HIGH_BYTES: bytes = bytes(range(0x80, 0x100))
 
 
