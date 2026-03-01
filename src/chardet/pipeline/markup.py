@@ -42,12 +42,13 @@ def detect_markup_charset(data: bytes) -> DetectionResult | None:
     """Scan the first bytes of *data* for an HTML/XML charset declaration.
 
     Checks for:
+
     1. ``<?xml ... encoding="..."?>``
     2. ``<meta charset="...">``
     3. ``<meta http-equiv="Content-Type" content="...; charset=...">``
 
-    Returns a `DetectionResult` with confidence 0.95 if a valid encoding is
-    found, or ``None`` otherwise.
+    :param data: The raw byte data to scan.
+    :returns: A :class:`DetectionResult` with confidence 0.95, or ``None``.
     """
     if not data:
         return None

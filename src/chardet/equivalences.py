@@ -22,7 +22,11 @@ import unicodedata
 
 
 def normalize_encoding_name(name: str) -> str:
-    """Normalize encoding name for comparison."""
+    """Normalize encoding name for comparison.
+
+    :param name: The encoding name to normalize.
+    :returns: The canonical codec name, or a lowered/stripped fallback.
+    """
     try:
         return codecs.lookup(name).name
     except LookupError:
@@ -86,6 +90,9 @@ def apply_legacy_rename(
     """Replace the encoding name with its preferred Windows/CP superset.
 
     Modifies the ``"encoding"`` value in *result* in-place and returns it.
+
+    :param result: A detection result dict containing an ``"encoding"`` key.
+    :returns: The same dict with the encoding name replaced, if applicable.
     """
     enc = result.get("encoding")
     if isinstance(enc, str):
@@ -109,6 +116,7 @@ _NORMALIZED_SUPERSETS: dict[str, frozenset[str]] = {
 
 
 def _build_bidir_index() -> dict[str, frozenset[str]]:
+    """Build the bidirectional equivalence lookup index."""
     result: dict[str, frozenset[str]] = {}
     for group in BIDIRECTIONAL_GROUPS:
         normed = frozenset(normalize_encoding_name(n) for n in group)
@@ -124,9 +132,14 @@ def is_correct(expected: str, detected: str | None) -> bool:
     """Check whether *detected* is an acceptable answer for *expected*.
 
     Acceptable means:
+
     1. Exact match (after normalization), OR
     2. Both belong to the same bidirectional byte-order group, OR
     3. *detected* is a known superset of *expected*.
+
+    :param expected: The expected encoding name.
+    :param detected: The detected encoding name, or ``None``.
+    :returns: ``True`` if the detection is acceptable.
     """
     if detected is None:
         return False
@@ -184,6 +197,7 @@ def is_equivalent_detection(data: bytes, expected: str, detected: str | None) ->
     """Check whether *detected* produces functionally identical text to *expected*.
 
     Returns ``True`` when:
+
     1. *detected* is not ``None`` and both encoding names normalize to the same
        codec, OR
     2. Decoding *data* with both encodings yields identical strings, OR
@@ -193,6 +207,12 @@ def is_equivalent_detection(data: bytes, expected: str, detected: str | None) ->
 
     Returns ``False`` if *detected* is ``None``, either encoding is unknown,
     or either encoding cannot decode *data*.
+
+    :param data: The raw byte data that was detected.
+    :param expected: The expected encoding name.
+    :param detected: The detected encoding name, or ``None``.
+    :returns: ``True`` if decoding with *detected* yields functionally identical
+        text to decoding with *expected*.
     """
     if detected is None:
         return False

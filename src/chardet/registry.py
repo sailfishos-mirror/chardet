@@ -24,7 +24,11 @@ _CANDIDATES_CACHE_LOCK = threading.Lock()
 
 
 def get_candidates(era: EncodingEra) -> tuple[EncodingInfo, ...]:
-    """Return registry entries matching the given era filter."""
+    """Return registry entries matching the given era filter.
+
+    :param era: Bit flags specifying which encoding eras to include.
+    :returns: A tuple of matching :class:`EncodingInfo` entries.
+    """
     key = int(era)
     result = _CANDIDATES_CACHE.get(key)
     if result is not None:

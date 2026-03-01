@@ -14,6 +14,10 @@ _DEFAULT_MAX_BYTES = 200_000
 
 
 def main(argv: list[str] | None = None) -> None:
+    """Run the ``chardetect`` command-line tool.
+
+    :param argv: Command-line arguments.  Defaults to ``sys.argv[1:]``.
+    """
     parser = argparse.ArgumentParser(description="Detect character encoding of files.")
     parser.add_argument("files", nargs="*", help="Files to detect encoding of")
     parser.add_argument(

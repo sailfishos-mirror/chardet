@@ -9,7 +9,14 @@ from chardet.pipeline import DetectionResult
 
 
 def detect_utf8(data: bytes) -> DetectionResult | None:
-    """Validate UTF-8 byte structure. Returns result only if multi-byte sequences found."""
+    """Validate UTF-8 byte structure.
+
+    Returns a result only if multi-byte sequences are found (pure ASCII
+    is handled by the ASCII stage).
+
+    :param data: The raw byte data to examine.
+    :returns: A :class:`DetectionResult` for UTF-8, or ``None``.
+    """
     if not data:
         return None
 

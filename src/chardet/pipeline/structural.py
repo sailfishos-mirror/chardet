@@ -322,10 +322,15 @@ def _get_analysis(
 def compute_structural_score(
     data: bytes, encoding_info: EncodingInfo, ctx: PipelineContext
 ) -> float:
-    """Return 0.0-1.0 indicating how well *data* matches the encoding's structure.
+    """Return 0.0--1.0 indicating how well *data* matches the encoding's structure.
 
-    For single-byte encodings (``is_multibyte is False``), always returns 0.0.
-    For empty data, always returns 0.0.
+    For single-byte encodings, always returns 0.0.  For empty data, always
+    returns 0.0.
+
+    :param data: The raw byte data to analyze.
+    :param encoding_info: Metadata for the encoding to probe.
+    :param ctx: Pipeline context for caching analysis results.
+    :returns: A structural fit score between 0.0 and 1.0.
     """
     if not data or not encoding_info.is_multibyte:
         return 0.0
@@ -347,14 +352,14 @@ def compute_multibyte_byte_coverage(
 
     Genuine CJK text has nearly all non-ASCII bytes paired into valid
     multi-byte sequences (coverage close to 1.0), while Latin text with
-    scattered high bytes has many "orphan" bytes that don't form valid pairs
-    (coverage well below 1.0).
+    scattered high bytes has many orphan bytes (coverage well below 1.0).
 
-    If *non_ascii_count* is provided (>= 0), it is used directly instead of
-    recomputing from the data.
-
-    Returns 0.0 for single-byte encodings, empty data, or data with no
-    non-ASCII bytes.
+    :param data: The raw byte data to analyze.
+    :param encoding_info: Metadata for the encoding to probe.
+    :param ctx: Pipeline context for caching analysis results.
+    :param non_ascii_count: Pre-computed count of non-ASCII bytes, or ``-1``
+        to compute from *data*.
+    :returns: A coverage ratio between 0.0 and 1.0.
     """
     if not data or not encoding_info.is_multibyte:
         return 0.0
@@ -383,8 +388,12 @@ def compute_lead_byte_diversity(
 
     Genuine CJK text uses lead bytes from across the encoding's full
     repertoire.  European text falsely matching a CJK structural scorer
-    clusters lead bytes in a narrow band (e.g. 0xC0-0xDF for accented
-    Latin characters).
+    clusters lead bytes in a narrow band.
+
+    :param data: The raw byte data to analyze.
+    :param encoding_info: Metadata for the encoding to probe.
+    :param ctx: Pipeline context for caching analysis results.
+    :returns: The number of distinct lead byte values found.
     """
     if not data or not encoding_info.is_multibyte:
         return 0

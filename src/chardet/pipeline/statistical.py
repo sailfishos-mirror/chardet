@@ -13,7 +13,12 @@ from chardet.registry import EncodingInfo
 def score_candidates(
     data: bytes, candidates: tuple[EncodingInfo, ...]
 ) -> list[DetectionResult]:
-    """Score all candidates and return results sorted by confidence descending."""
+    """Score all candidates and return results sorted by confidence descending.
+
+    :param data: The raw byte data to score.
+    :param candidates: Encoding candidates to evaluate.
+    :returns: A list of :class:`DetectionResult` sorted by confidence.
+    """
     if not data or not candidates:
         return []
 

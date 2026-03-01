@@ -8,11 +8,21 @@ from dataclasses import field
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class DetectionResult:
+    """A single encoding detection result.
+
+    Frozen dataclass holding the encoding name, confidence score, and
+    optional language identifier returned by the detection pipeline.
+    """
+
     encoding: str | None
     confidence: float
     language: str | None
 
     def to_dict(self) -> dict[str, str | float | None]:
+        """Convert this result to a plain dict.
+
+        :returns: A dict with ``'encoding'``, ``'confidence'``, and ``'language'`` keys.
+        """
         return {
             "encoding": self.encoding,
             "confidence": self.confidence,

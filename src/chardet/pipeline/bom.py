@@ -18,7 +18,11 @@ _UTF32_BOMS: frozenset[bytes] = frozenset({b"\x00\x00\xfe\xff", b"\xff\xfe\x00\x
 
 
 def detect_bom(data: bytes) -> DetectionResult | None:
-    """Check for a BOM at the start of data. Returns result or None."""
+    """Check for a byte order mark at the start of *data*.
+
+    :param data: The raw byte data to examine.
+    :returns: A :class:`DetectionResult` with confidence 1.0, or ``None``.
+    """
     for bom_bytes, encoding in _BOMS:
         if data.startswith(bom_bytes):
             # UTF-32 BOMs overlap with UTF-16 BOMs (e.g. FF FE 00 00 starts

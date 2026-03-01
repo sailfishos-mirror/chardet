@@ -34,8 +34,10 @@ _UTF16_MIN_NULL_FRACTION = 0.03
 def detect_utf1632_patterns(data: bytes) -> DetectionResult | None:
     """Detect UTF-32 or UTF-16 encoding from null-byte patterns.
 
-    Returns a DetectionResult if a strong pattern is found, otherwise None.
     UTF-32 is checked before UTF-16 since UTF-32 patterns are more specific.
+
+    :param data: The raw byte data to examine.
+    :returns: A :class:`DetectionResult` if a strong pattern is found, or ``None``.
     """
     sample = data[:_SAMPLE_SIZE]
 

@@ -6,7 +6,12 @@ from chardet.registry import EncodingInfo
 def filter_by_validity(
     data: bytes, candidates: tuple[EncodingInfo, ...]
 ) -> tuple[EncodingInfo, ...]:
-    """Filter candidates to only those where data decodes without errors."""
+    """Filter candidates to only those where *data* decodes without errors.
+
+    :param data: The raw byte data to test.
+    :param candidates: Encoding candidates to validate.
+    :returns: The subset of *candidates* that can decode *data*.
+    """
     if not data:
         return candidates
 

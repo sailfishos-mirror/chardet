@@ -63,7 +63,11 @@ _CONFUSION_CACHE_LOCK = threading.Lock()
 
 
 def deserialize_confusion_data_from_bytes(data: bytes) -> DistinguishingMaps:
-    """Load confusion group data from raw bytes."""
+    """Load confusion group data from raw bytes.
+
+    :param data: The raw binary content of a confusion.bin file.
+    :returns: A :data:`DistinguishingMaps` dictionary keyed by encoding pairs.
+    """
     result: DistinguishingMaps = {}
     offset = 0
     (num_pairs,) = struct.unpack_from("!H", data, offset)
@@ -99,7 +103,10 @@ def deserialize_confusion_data_from_bytes(data: bytes) -> DistinguishingMaps:
 
 
 def load_confusion_data() -> DistinguishingMaps:
-    """Load confusion group data from the bundled confusion.bin file."""
+    """Load confusion group data from the bundled confusion.bin file.
+
+    :returns: A :data:`DistinguishingMaps` dictionary keyed by encoding pairs.
+    """
     global _CONFUSION_CACHE  # noqa: PLW0603
     if _CONFUSION_CACHE is not None:
         return _CONFUSION_CACHE
@@ -166,6 +173,14 @@ def resolve_by_category_voting(
     general category under each encoding. The encoding whose interpretation
     has the higher category preference score gets a vote. The encoding with
     more votes wins.
+
+    :param data: The raw byte data to examine.
+    :param enc_a: First encoding name.
+    :param enc_b: Second encoding name.
+    :param diff_bytes: Byte values where the two encodings differ.
+    :param categories: Mapping of byte value to ``(cat_a, cat_b)`` Unicode
+        general category pairs.
+    :returns: The winning encoding name, or ``None`` if tied.
     """
     votes_a = 0
     votes_b = 0
@@ -199,6 +214,12 @@ def resolve_by_bigram_rescore(
     Builds a focused bigram profile containing only bigrams where at least one
     byte is a distinguishing byte, then scores both encodings against their
     best language model.
+
+    :param data: The raw byte data to examine.
+    :param enc_a: First encoding name.
+    :param enc_b: Second encoding name.
+    :param diff_bytes: Byte values where the two encodings differ.
+    :returns: The winning encoding name, or ``None`` if tied.
     """
     from chardet.models import (
         BigramProfile,
@@ -273,10 +294,16 @@ def resolve_confusion_groups(
     applies the specified resolution strategy to determine the winner.
 
     Strategies:
-    - "category": Unicode category voting only
-    - "bigram": Distinguishing-bigram re-scoring only
-    - "hybrid": Both strategies; bigram wins on disagreement
-    - "none": No resolution (passthrough)
+
+    - ``"category"``: Unicode category voting only
+    - ``"bigram"``: Distinguishing-bigram re-scoring only
+    - ``"hybrid"``: Both strategies; bigram wins on disagreement
+    - ``"none"``: No resolution (passthrough)
+
+    :param data: The raw byte data to examine.
+    :param results: Detection results sorted by confidence descending.
+    :param strategy: Resolution strategy to apply.
+    :returns: A reordered list of :class:`DetectionResult` with the winner first.
     """
     if strategy == "none" or len(results) < 2:
         return results

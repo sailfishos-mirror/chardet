@@ -23,6 +23,12 @@ _MIN_INCREMENTAL_CHECK = 64
 
 
 class UniversalDetector:
+    """Streaming character encoding detector.
+
+    Implements a feed/close pattern for incremental detection of character
+    encoding from byte streams.  Compatible with the chardet 6.x API.
+    """
+
     MINIMUM_THRESHOLD = 0.20
     # Exposed for backward compatibility with chardet 6.x callers that
     # reference UniversalDetector.LEGACY_MAP directly.
@@ -35,6 +41,19 @@ class UniversalDetector:
         encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
         max_bytes: int = 200_000,
     ) -> None:
+        """Initialize the detector.
+
+        :param lang_filter: Deprecated -- accepted for backward compatibility
+            but has no effect.  A warning is emitted when set to anything
+            other than :attr:`LanguageFilter.ALL`.
+        :param should_rename_legacy: If ``True``, remap legacy encoding names
+            to their modern equivalents.  If ``None`` (the default), renaming
+            is applied only when *encoding_era* is
+            :attr:`EncodingEra.MODERN_WEB`.
+        :param encoding_era: Restrict candidate encodings to the given era.
+        :param max_bytes: Maximum number of bytes to buffer from
+            :meth:`feed` calls before stopping accumulation.
+        """
         if lang_filter != LanguageFilter.ALL:
             warnings.warn(
                 "lang_filter is not implemented in this version of chardet "
@@ -55,6 +74,15 @@ class UniversalDetector:
         self._bom_checked = False
 
     def feed(self, byte_str: bytes | bytearray) -> None:
+        """Feed a chunk of bytes to the detector.
+
+        Data is accumulated in an internal buffer until :meth:`close` is
+        called or the detector determines the encoding early.
+
+        :param byte_str: The next chunk of bytes to examine.
+        :raises ValueError: If called after :meth:`close` without a
+            :meth:`reset`.
+        """
         if self._closed:
             msg = "feed() called after close() without reset()"
             raise ValueError(msg)
@@ -118,6 +146,14 @@ class UniversalDetector:
                 return
 
     def close(self) -> dict[str, str | float | None]:
+        """Finalize detection and return the best result.
+
+        Runs the full detection pipeline on any buffered data that was not
+        resolved during incremental :meth:`feed` calls.
+
+        :returns: A dictionary with keys ``"encoding"``, ``"confidence"``,
+            and ``"language"``.
+        """
         if not self._closed:
             self._closed = True
             if self._result is None:
@@ -132,6 +168,7 @@ class UniversalDetector:
         return self.result
 
     def reset(self) -> None:
+        """Reset the detector to its initial state for reuse."""
         self._buffer = bytearray()
         self._done = False
         self._closed = False
@@ -142,10 +179,12 @@ class UniversalDetector:
 
     @property
     def done(self) -> bool:
+        """Whether detection is complete and no more data is needed."""
         return self._done
 
     @property
     def result(self) -> dict[str, str | float | None]:
+        """The current best detection result."""
         if self._result is not None:
             return self._result
         return _NONE_RESULT.to_dict()

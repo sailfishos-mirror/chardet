@@ -72,6 +72,8 @@ def load_models() -> dict[str, bytearray]:
 
     Each model is a bytearray of length 65536 (256*256).
     Index: (b1 << 8) | b2 -> weight (0-255).
+
+    :returns: A dict mapping model key strings to 65536-byte lookup tables.
     """
     global _MODEL_CACHE  # noqa: PLW0603
     if _MODEL_CACHE is not None:
@@ -142,12 +144,21 @@ def _get_enc_index() -> dict[str, list[tuple[str | None, bytearray]]]:
 
 
 def infer_language(encoding: str) -> str | None:
-    """Return the language for a single-language encoding, or None."""
+    """Return the language for a single-language encoding, or None.
+
+    :param encoding: The canonical encoding name.
+    :returns: An ISO 639-1 language code, or ``None`` if the encoding is
+        multi-language.
+    """
     return _SINGLE_LANG_MAP.get(encoding)
 
 
 def has_model_variants(encoding: str) -> bool:
-    """Return True if the encoding has language variants in the model index."""
+    """Return True if the encoding has language variants in the model index.
+
+    :param encoding: The canonical encoding name.
+    :returns: ``True`` if bigram models exist for this encoding.
+    """
     return encoding in _get_enc_index()
 
 
@@ -189,6 +200,10 @@ class BigramProfile:
     __slots__ = ("input_norm", "weight_sum", "weighted_freq")
 
     def __init__(self, data: bytes) -> None:
+        """Compute the bigram frequency distribution for *data*.
+
+        :param data: The raw byte data to profile.
+        """
         total_bigrams = len(data) - 1
         if total_bigrams <= 0:
             self.weighted_freq: dict[int, int] = {}
@@ -217,7 +232,12 @@ class BigramProfile:
     def from_weighted_freq(
         cls, weighted_freq: dict[int, int], weight_sum: int
     ) -> "BigramProfile":
-        """Create a BigramProfile from pre-computed weighted frequencies."""
+        """Create a BigramProfile from pre-computed weighted frequencies.
+
+        :param weighted_freq: Mapping of bigram index to weighted count.
+        :param weight_sum: The total sum of all weights.
+        :returns: A new :class:`BigramProfile` instance.
+        """
         profile = cls(b"")
         profile.weighted_freq = weighted_freq
         profile.weight_sum = weight_sum
@@ -251,6 +271,12 @@ def score_best_language(
 
     If *profile* is provided, it is reused instead of recomputing the bigram
     frequency distribution from *data*.
+
+    :param data: The raw byte data to score.
+    :param encoding: The canonical encoding name to match against.
+    :param profile: Optional pre-computed :class:`BigramProfile` to reuse.
+    :returns: A ``(score, language)`` tuple with the best cosine-similarity
+        score and the corresponding language code (or ``None``).
     """
     if not data:
         return 0.0, None

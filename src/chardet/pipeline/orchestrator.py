@@ -552,7 +552,13 @@ def run_pipeline(
     encoding_era: EncodingEra,
     max_bytes: int = 200_000,
 ) -> list[DetectionResult]:
-    """Run the full detection pipeline. Returns list of results sorted by confidence."""
+    """Run the full detection pipeline.
+
+    :param data: The raw byte data to analyze.
+    :param encoding_era: Filter candidates to a specific era of encodings.
+    :param max_bytes: Maximum number of bytes to process.
+    :returns: A list of :class:`DetectionResult` sorted by confidence descending.
+    """
     results = _run_pipeline_core(data, encoding_era, max_bytes)
     # Language scoring uses only the first 2 KB — bigrams converge quickly
     # and this keeps Tier 3 (48-model scoring) fast even on large inputs.

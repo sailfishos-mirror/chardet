@@ -23,6 +23,7 @@ MINIMUM_THRESHOLD = 0.20
 
 
 def _warn_deprecated_chunk_size(chunk_size: int, stacklevel: int = 3) -> None:
+    """Emit a deprecation warning if *chunk_size* differs from the default."""
     if chunk_size != 65_536:
         warnings.warn(
             "chunk_size is not used in this version of chardet and will be ignored",
@@ -42,6 +43,17 @@ def detect(
 
     Parameters match chardet 6.x for backward compatibility.
     *chunk_size* is accepted but has no effect.
+
+    :param byte_str: The byte sequence to detect encoding for.
+    :param should_rename_legacy: If ``True``, remap legacy encoding names to
+        their modern equivalents.  If ``None`` (the default), renaming is
+        applied only when *encoding_era* is :attr:`EncodingEra.MODERN_WEB`.
+    :param encoding_era: Restrict candidate encodings to the given era.
+    :param chunk_size: Deprecated -- accepted for backward compatibility but
+        has no effect.
+    :param max_bytes: Maximum number of bytes to examine from *byte_str*.
+    :returns: A dictionary with keys ``"encoding"``, ``"confidence"``, and
+        ``"language"``.
     """
     _warn_deprecated_chunk_size(chunk_size)
     _validate_max_bytes(max_bytes)
@@ -70,6 +82,19 @@ def detect_all(  # noqa: PLR0913
     <= MINIMUM_THRESHOLD (0.20) are filtered out.  If all results are below
     the threshold, the full unfiltered list is returned as a fallback so the
     caller always receives at least one result.
+
+    :param byte_str: The byte sequence to detect encoding for.
+    :param ignore_threshold: If ``True``, return all candidate encodings
+        regardless of confidence score.
+    :param should_rename_legacy: If ``True``, remap legacy encoding names to
+        their modern equivalents.  If ``None`` (the default), renaming is
+        applied only when *encoding_era* is :attr:`EncodingEra.MODERN_WEB`.
+    :param encoding_era: Restrict candidate encodings to the given era.
+    :param chunk_size: Deprecated -- accepted for backward compatibility but
+        has no effect.
+    :param max_bytes: Maximum number of bytes to examine from *byte_str*.
+    :returns: A list of dictionaries, each with keys ``"encoding"``,
+        ``"confidence"``, and ``"language"``, sorted by descending confidence.
     """
     _warn_deprecated_chunk_size(chunk_size)
     _validate_max_bytes(max_bytes)

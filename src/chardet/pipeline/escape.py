@@ -41,7 +41,11 @@ def _has_valid_hz_regions(data: bytes) -> bool:
 
 
 def detect_escape_encoding(data: bytes) -> DetectionResult | None:
-    """Detect ISO-2022 and HZ-GB-2312 from escape/tilde sequences."""
+    """Detect ISO-2022 and HZ-GB-2312 from escape/tilde sequences.
+
+    :param data: The raw byte data to examine.
+    :returns: A :class:`DetectionResult` if an escape encoding is found, or ``None``.
+    """
     # ISO-2022-JP: ESC sequences for JIS X 0208 / JIS X 0201
     if b"\x1b$B" in data or b"\x1b$@" in data or b"\x1b(J" in data:
         return DetectionResult(

@@ -13,7 +13,12 @@ _BINARY_DELETE = bytes(range(0x09)) + bytes(range(0x0E, 0x20))
 
 
 def is_binary(data: bytes, max_bytes: int = 200_000) -> bool:
-    """Return True if data appears to be binary (not text) content."""
+    """Return ``True`` if *data* appears to be binary (not text) content.
+
+    :param data: The raw byte data to examine.
+    :param max_bytes: Maximum number of bytes to scan.
+    :returns: ``True`` if the data is classified as binary.
+    """
     data = data[:max_bytes]
     if not data:
         return False
