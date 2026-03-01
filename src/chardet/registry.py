@@ -17,6 +17,7 @@ class EncodingInfo:
     era: EncodingEra
     is_multibyte: bool
     python_codec: str
+    languages: tuple[str, ...]
 
 
 _CANDIDATES_CACHE: dict[int, tuple[EncodingInfo, ...]] = {}
@@ -53,6 +54,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="ascii",
+        languages=(),
     ),
     EncodingInfo(
         name="utf-8",
@@ -60,6 +62,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="utf-8",
+        languages=(),
     ),
     EncodingInfo(
         name="utf-8-sig",
@@ -67,6 +70,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="utf-8-sig",
+        languages=(),
     ),
     EncodingInfo(
         name="utf-16",
@@ -74,6 +78,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="utf-16",
+        languages=(),
     ),
     EncodingInfo(
         name="utf-16-be",
@@ -81,6 +86,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="utf-16-be",
+        languages=(),
     ),
     EncodingInfo(
         name="utf-16-le",
@@ -88,6 +94,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="utf-16-le",
+        languages=(),
     ),
     EncodingInfo(
         name="utf-32",
@@ -95,6 +102,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="utf-32",
+        languages=(),
     ),
     EncodingInfo(
         name="utf-32-be",
@@ -102,6 +110,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="utf-32-be",
+        languages=(),
     ),
     EncodingInfo(
         name="utf-32-le",
@@ -109,6 +118,15 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="utf-32-le",
+        languages=(),
+    ),
+    EncodingInfo(
+        name="utf-7",
+        aliases=("utf7",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=False,
+        python_codec="utf-7",
+        languages=(),
     ),
     # CJK - Modern Web
     EncodingInfo(
@@ -117,6 +135,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
         python_codec="big5",
+        languages=("zh",),
     ),
     EncodingInfo(
         name="cp932",
@@ -124,6 +143,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
         python_codec="cp932",
+        languages=("ja",),
     ),
     EncodingInfo(
         name="cp949",
@@ -131,6 +151,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
         python_codec="cp949",
+        languages=("ko",),
     ),
     EncodingInfo(
         name="euc-jp",
@@ -138,6 +159,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
         python_codec="euc-jp",
+        languages=("ja",),
     ),
     EncodingInfo(
         name="euc-kr",
@@ -145,6 +167,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
         python_codec="euc-kr",
+        languages=("ko",),
     ),
     EncodingInfo(
         name="gb18030",
@@ -152,6 +175,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
         python_codec="gb18030",
+        languages=("zh",),
     ),
     EncodingInfo(
         name="hz-gb-2312",
@@ -159,6 +183,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
         python_codec="hz",
+        languages=("zh",),
     ),
     EncodingInfo(
         name="iso-2022-jp",
@@ -166,6 +191,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
         python_codec="iso2022-jp",
+        languages=("ja",),
     ),
     EncodingInfo(
         name="iso-2022-kr",
@@ -173,6 +199,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
         python_codec="iso2022-kr",
+        languages=("ko",),
     ),
     EncodingInfo(
         name="shift_jis",
@@ -180,6 +207,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
         python_codec="shift_jis",
+        languages=("ja",),
     ),
     # Windows code pages - Modern Web
     EncodingInfo(
@@ -188,6 +216,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="cp874",
+        languages=("th",),
     ),
     EncodingInfo(
         name="windows-1250",
@@ -195,6 +224,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="cp1250",
+        languages=("pl", "cs", "hu", "hr", "ro", "sk", "sl"),
     ),
     EncodingInfo(
         name="windows-1251",
@@ -202,6 +232,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="cp1251",
+        languages=("ru", "bg", "uk", "sr", "mk", "be"),
     ),
     EncodingInfo(
         name="windows-1252",
@@ -209,6 +240,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="cp1252",
+        languages=("en", "fr", "de", "es", "pt", "it", "nl", "da", "sv", "no", "fi", "is", "id", "ms"),
     ),
     EncodingInfo(
         name="windows-1253",
@@ -216,6 +248,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="cp1253",
+        languages=("el",),
     ),
     EncodingInfo(
         name="windows-1254",
@@ -223,6 +256,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="cp1254",
+        languages=("tr",),
     ),
     EncodingInfo(
         name="windows-1255",
@@ -230,6 +264,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="cp1255",
+        languages=("he",),
     ),
     EncodingInfo(
         name="windows-1256",
@@ -237,6 +272,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="cp1256",
+        languages=("ar", "fa"),
     ),
     EncodingInfo(
         name="windows-1257",
@@ -244,6 +280,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="cp1257",
+        languages=("et", "lt", "lv"),
     ),
     EncodingInfo(
         name="windows-1258",
@@ -251,6 +288,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="cp1258",
+        languages=("vi",),
     ),
     # KOI8 - Modern Web
     EncodingInfo(
@@ -259,6 +297,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="koi8-r",
+        languages=("ru",),
     ),
     EncodingInfo(
         name="koi8-u",
@@ -266,6 +305,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="koi8-u",
+        languages=("uk",),
     ),
     # TIS-620 - Modern Web
     EncodingInfo(
@@ -274,6 +314,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="tis-620",
+        languages=("th",),
     ),
     # === LEGACY_ISO ===
     EncodingInfo(
@@ -282,6 +323,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
         python_codec="iso-8859-1",
+        languages=("en", "fr", "de", "es", "pt", "it", "nl", "da", "sv", "no", "fi", "is", "id", "ms"),
     ),
     EncodingInfo(
         name="iso-8859-2",
@@ -289,6 +331,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
         python_codec="iso-8859-2",
+        languages=("pl", "cs", "hu", "hr", "ro", "sk", "sl"),
     ),
     EncodingInfo(
         name="iso-8859-3",
@@ -296,6 +339,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
         python_codec="iso-8859-3",
+        languages=("eo", "mt", "tr"),
     ),
     EncodingInfo(
         name="iso-8859-4",
@@ -303,6 +347,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
         python_codec="iso-8859-4",
+        languages=("et", "lt", "lv"),
     ),
     EncodingInfo(
         name="iso-8859-5",
@@ -310,6 +355,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
         python_codec="iso-8859-5",
+        languages=("ru", "bg", "uk", "sr", "mk", "be"),
     ),
     EncodingInfo(
         name="iso-8859-6",
@@ -317,6 +363,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
         python_codec="iso-8859-6",
+        languages=("ar", "fa"),
     ),
     EncodingInfo(
         name="iso-8859-7",
@@ -324,6 +371,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
         python_codec="iso-8859-7",
+        languages=("el",),
     ),
     EncodingInfo(
         name="iso-8859-8",
@@ -331,6 +379,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
         python_codec="iso-8859-8",
+        languages=("he",),
     ),
     EncodingInfo(
         name="iso-8859-9",
@@ -338,6 +387,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
         python_codec="iso-8859-9",
+        languages=("tr",),
     ),
     EncodingInfo(
         name="iso-8859-10",
@@ -345,6 +395,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
         python_codec="iso-8859-10",
+        languages=("is", "fi"),
     ),
     EncodingInfo(
         name="iso-8859-13",
@@ -352,6 +403,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
         python_codec="iso-8859-13",
+        languages=("et", "lt", "lv"),
     ),
     EncodingInfo(
         name="iso-8859-14",
@@ -359,6 +411,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
         python_codec="iso-8859-14",
+        languages=("cy", "ga", "br", "gd"),
     ),
     EncodingInfo(
         name="iso-8859-15",
@@ -366,6 +419,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
         python_codec="iso-8859-15",
+        languages=("en", "fr", "de", "es", "pt", "it", "nl", "da", "sv", "no", "fi", "is", "id", "ms"),
     ),
     EncodingInfo(
         name="iso-8859-16",
@@ -373,6 +427,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
         python_codec="iso-8859-16",
+        languages=("ro", "pl", "hr", "hu", "sk", "sl"),
     ),
     # Johab - Legacy ISO per chardet 6.0.0
     EncodingInfo(
@@ -381,6 +436,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=True,
         python_codec="johab",
+        languages=("ko",),
     ),
     # === LEGACY_MAC ===
     EncodingInfo(
@@ -389,6 +445,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_MAC,
         is_multibyte=False,
         python_codec="mac-cyrillic",
+        languages=("ru", "bg", "uk", "sr", "mk", "be"),
     ),
     EncodingInfo(
         name="mac-greek",
@@ -396,6 +453,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_MAC,
         is_multibyte=False,
         python_codec="mac-greek",
+        languages=("el",),
     ),
     EncodingInfo(
         name="mac-iceland",
@@ -403,6 +461,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_MAC,
         is_multibyte=False,
         python_codec="mac-iceland",
+        languages=("is",),
     ),
     EncodingInfo(
         name="mac-latin2",
@@ -410,6 +469,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_MAC,
         is_multibyte=False,
         python_codec="mac-latin2",
+        languages=("pl", "cs", "hu", "hr", "sk", "sl"),
     ),
     EncodingInfo(
         name="mac-roman",
@@ -417,6 +477,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_MAC,
         is_multibyte=False,
         python_codec="mac-roman",
+        languages=("en", "fr", "de", "es", "pt", "it", "nl", "da", "sv", "no", "fi", "is", "id", "ms"),
     ),
     EncodingInfo(
         name="mac-turkish",
@@ -424,6 +485,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_MAC,
         is_multibyte=False,
         python_codec="mac-turkish",
+        languages=("tr",),
     ),
     # === LEGACY_REGIONAL ===
     EncodingInfo(
@@ -432,6 +494,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=False,
         python_codec="cp720",
+        languages=("ar", "fa"),
     ),
     EncodingInfo(
         name="cp1006",
@@ -439,6 +502,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=False,
         python_codec="cp1006",
+        languages=("ur",),
     ),
     EncodingInfo(
         name="cp1125",
@@ -446,6 +510,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=False,
         python_codec="cp1125",
+        languages=("uk",),
     ),
     EncodingInfo(
         name="koi8-t",
@@ -453,6 +518,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=False,
         python_codec="koi8-t",
+        languages=("tg",),
     ),
     EncodingInfo(
         name="kz-1048",
@@ -460,6 +526,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=False,
         python_codec="kz1048",
+        languages=("kk",),
     ),
     EncodingInfo(
         name="ptcp154",
@@ -467,6 +534,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=False,
         python_codec="ptcp154",
+        languages=("kk",),
     ),
     EncodingInfo(
         name="hp-roman8",
@@ -474,6 +542,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=False,
         python_codec="hp-roman8",
+        languages=("en", "fr", "de", "es", "pt", "it", "nl", "da", "sv", "no", "fi", "is", "id", "ms"),
     ),
     # === DOS ===
     EncodingInfo(
@@ -482,6 +551,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.DOS,
         is_multibyte=False,
         python_codec="cp437",
+        languages=("en", "fr", "de", "es", "pt", "it", "nl", "da", "sv", "fi"),
     ),
     EncodingInfo(
         name="cp737",
@@ -489,6 +559,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.DOS,
         is_multibyte=False,
         python_codec="cp737",
+        languages=("el",),
     ),
     EncodingInfo(
         name="cp775",
@@ -496,6 +567,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.DOS,
         is_multibyte=False,
         python_codec="cp775",
+        languages=("et", "lt", "lv"),
     ),
     EncodingInfo(
         name="cp850",
@@ -503,6 +575,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.DOS,
         is_multibyte=False,
         python_codec="cp850",
+        languages=("en", "fr", "de", "es", "pt", "it", "nl", "da", "sv", "no", "fi", "is", "id", "ms"),
     ),
     EncodingInfo(
         name="cp852",
@@ -510,6 +583,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.DOS,
         is_multibyte=False,
         python_codec="cp852",
+        languages=("pl", "cs", "hu", "hr", "sk", "sl"),
     ),
     EncodingInfo(
         name="cp855",
@@ -517,6 +591,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.DOS,
         is_multibyte=False,
         python_codec="cp855",
+        languages=("ru", "bg", "uk", "sr", "mk", "be"),
     ),
     EncodingInfo(
         name="cp856",
@@ -524,6 +599,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.DOS,
         is_multibyte=False,
         python_codec="cp856",
+        languages=("he",),
     ),
     EncodingInfo(
         name="cp857",
@@ -531,6 +607,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.DOS,
         is_multibyte=False,
         python_codec="cp857",
+        languages=("tr",),
     ),
     EncodingInfo(
         name="cp858",
@@ -538,6 +615,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.DOS,
         is_multibyte=False,
         python_codec="cp858",
+        languages=("en", "fr", "de", "es", "pt", "it", "nl", "da", "sv", "no", "fi", "is", "id", "ms"),
     ),
     EncodingInfo(
         name="cp860",
@@ -545,6 +623,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.DOS,
         is_multibyte=False,
         python_codec="cp860",
+        languages=("pt",),
     ),
     EncodingInfo(
         name="cp861",
@@ -552,6 +631,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.DOS,
         is_multibyte=False,
         python_codec="cp861",
+        languages=("is",),
     ),
     EncodingInfo(
         name="cp862",
@@ -559,6 +639,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.DOS,
         is_multibyte=False,
         python_codec="cp862",
+        languages=("he",),
     ),
     EncodingInfo(
         name="cp863",
@@ -566,6 +647,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.DOS,
         is_multibyte=False,
         python_codec="cp863",
+        languages=("fr",),
     ),
     EncodingInfo(
         name="cp864",
@@ -573,6 +655,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.DOS,
         is_multibyte=False,
         python_codec="cp864",
+        languages=("ar",),
     ),
     EncodingInfo(
         name="cp865",
@@ -580,6 +663,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.DOS,
         is_multibyte=False,
         python_codec="cp865",
+        languages=("da", "no"),
     ),
     EncodingInfo(
         name="cp866",
@@ -587,6 +671,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.DOS,
         is_multibyte=False,
         python_codec="cp866",
+        languages=("ru", "bg", "uk", "sr", "mk", "be"),
     ),
     EncodingInfo(
         name="cp869",
@@ -594,6 +679,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.DOS,
         is_multibyte=False,
         python_codec="cp869",
+        languages=("el",),
     ),
     # === MAINFRAME ===
     EncodingInfo(
@@ -602,6 +688,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MAINFRAME,
         is_multibyte=False,
         python_codec="cp037",
+        languages=("en", "fr", "de", "es", "pt", "it", "nl", "da", "sv", "no", "fi", "is", "id", "ms", "tr"),
     ),
     EncodingInfo(
         name="cp424",
@@ -609,6 +696,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MAINFRAME,
         is_multibyte=False,
         python_codec="cp424",
+        languages=("he",),
     ),
     EncodingInfo(
         name="cp500",
@@ -616,6 +704,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MAINFRAME,
         is_multibyte=False,
         python_codec="cp500",
+        languages=("en", "fr", "de", "es", "pt", "it", "nl", "da", "sv", "no", "fi", "is", "id", "ms"),
     ),
     EncodingInfo(
         name="cp875",
@@ -623,6 +712,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MAINFRAME,
         is_multibyte=False,
         python_codec="cp875",
+        languages=("el",),
     ),
     EncodingInfo(
         name="cp1026",
@@ -630,6 +720,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MAINFRAME,
         is_multibyte=False,
         python_codec="cp1026",
+        languages=("tr",),
     ),
     EncodingInfo(
         name="cp273",
@@ -637,5 +728,6 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         era=EncodingEra.MAINFRAME,
         is_multibyte=False,
         python_codec="cp273",
+        languages=("de",),
     ),
 )
