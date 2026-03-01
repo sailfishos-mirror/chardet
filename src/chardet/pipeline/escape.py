@@ -40,16 +40,11 @@ def _has_valid_hz_regions(data: bytes) -> bool:
 
 
 # Base64 alphabet used inside UTF-7 shifted sequences (+<Base64>-)
-_UTF7_BASE64: frozenset[int] = frozenset(
-    b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-)
+_B64_CHARS: bytes = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+_UTF7_BASE64: frozenset[int] = frozenset(_B64_CHARS)
 
 # Lookup table mapping each Base64 byte to its 6-bit value (0-63).
-_B64_DECODE: dict[int, int] = {}
-for _i, _c in enumerate(
-    b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-):
-    _B64_DECODE[_c] = _i
+_B64_DECODE: dict[int, int] = {c: i for i, c in enumerate(_B64_CHARS)}
 
 
 def _is_valid_utf7_b64(b64_bytes: bytes) -> bool:
@@ -68,8 +63,6 @@ def _is_valid_utf7_b64(b64_bytes: bytes) -> bool:
     if n < 3:  # Need at least 18 bits for one UTF-16 code unit
         return False
     total_bits = n * 6
-    if total_bits < 16:
-        return False
     # Check that padding bits (trailing bits after last complete code unit)
     # are zero.
     padding_bits = total_bits % 16
@@ -109,10 +102,9 @@ def _has_valid_utf7_sequences(data: bytes) -> bool:
             i += 1
         b64_len = i - pos
         # Require valid Base64 content AND an explicit '-' terminator
-        if b64_len >= 3 and i < len(data) and data[i] == ord("-"):
-            if _is_valid_utf7_b64(data[pos:i]):
-                return True
-        start = i if i > pos else pos
+        if b64_len >= 3 and i < len(data) and data[i] == ord("-") and _is_valid_utf7_b64(data[pos:i]):
+            return True
+        start = max(pos, i)
 
 
 def detect_escape_encoding(data: bytes) -> DetectionResult | None:
