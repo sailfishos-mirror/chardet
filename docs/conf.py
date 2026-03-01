@@ -3,7 +3,7 @@
 import chardet
 
 project = "chardet"
-copyright = "2025, chardet contributors"
+copyright = "2025-2026, chardet contributors"
 author = "chardet contributors"
 release = chardet.__version__
 version = ".".join(release.split(".")[:2])

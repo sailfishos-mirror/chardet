@@ -25,13 +25,14 @@ How do I increase accuracy?
   may be the second candidate. :func:`chardet.detect_all` returns all
   candidates ranked by confidence.
 
-What changed from chardet 5.x?
--------------------------------
+What changed from older chardet versions?
+------------------------------------------
 
-chardet 6.x was a major rewrite:
+This version is a ground-up rewrite of chardet:
 
-- Dramatically improved accuracy (96.4% vs 68.0%)
-- 29x faster than chardet 6.0.0, 5.5x faster than chardet 5.2.0
+- Dramatically improved accuracy (96.4% vs 94.5% in chardet 6.0.0, 68.0%
+  in chardet 5.2.0)
+- 29x faster than chardet 6.0.0
 - Encoding era system (:class:`~chardet.EncodingEra`) for filtering
   candidates
 - Language detection for every file (90.9% accuracy)
