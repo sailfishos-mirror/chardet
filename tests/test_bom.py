@@ -54,3 +54,28 @@ def test_utf32_le_checked_before_utf16_le():
     result = detect_bom(data)
     assert result is not None
     assert result.encoding == "utf-32-le"
+
+
+def test_utf32_le_bom_only():
+    # Bare UTF-32-LE BOM with no payload is valid (0 % 4 == 0)
+    result = detect_bom(b"\xff\xfe\x00\x00")
+    assert result is not None
+    assert result.encoding == "utf-32-le"
+
+
+def test_utf32_le_bom_falls_through_to_utf16_when_payload_not_aligned():
+    # FF FE 00 00 30 00 looks like UTF-32-LE BOM, but the remaining
+    # 2 bytes are not a valid UTF-32 code unit (need multiple of 4).
+    # Should fall through to UTF-16-LE BOM instead.
+    data = b"\xff\xfe\x00\x000\x00"
+    result = detect_bom(data)
+    assert result is not None
+    assert result.encoding == "utf-16-le"
+
+
+def test_utf32_be_bom_falls_through_when_payload_not_aligned():
+    # Same logic for UTF-32-BE: payload must be a multiple of 4 bytes
+    data = b"\x00\x00\xfe\xff\x00\x48"  # 2-byte payload, not aligned
+    result = detect_bom(data)
+    # No UTF-16-BE fallback here (00 00 FE FF doesn't start with FE FF)
+    assert result is None

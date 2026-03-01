@@ -198,11 +198,11 @@ def _should_demote(encoding: str, data: bytes) -> bool:
 # scattered high bytes look like lead bytes but rarely form valid pairs).
 _CJK_MIN_MB_RATIO = 0.05
 # Minimum number of non-ASCII bytes required for a CJK candidate to survive
-# gating.  Files with very few high bytes can accidentally form valid
-# multi-byte pairs and score 1.0 structurally; requiring a minimum count
-# prevents these tiny-sample false positives.  The lowest true-positive CJK
-# file in the test suite has 8 non-ASCII bytes (EUC-JP).
-_CJK_MIN_NON_ASCII = 6
+# gating.  Very short inputs are validated by the other gates (structural
+# pair ratio, byte coverage) and by coverage-aware boosting in statistical
+# scoring — so we keep this threshold low to let even 1-character CJK
+# inputs compete.
+_CJK_MIN_NON_ASCII = 2
 # Minimum ratio of non-ASCII bytes that must participate in valid multi-byte
 # sequences for a CJK candidate to survive gating.  Genuine CJK text has
 # nearly all non-ASCII bytes in valid pairs (coverage >= 0.95); Latin text
@@ -265,6 +265,7 @@ def _gate_cjk_candidates(
             byte_coverage = compute_multibyte_byte_coverage(
                 data, enc, ctx, non_ascii_count=ctx.non_ascii_count
             )
+            ctx.mb_coverage[enc.name] = byte_coverage
             if byte_coverage < _CJK_MIN_BYTE_COVERAGE:
                 continue  # Most high bytes are orphans -> not CJK
             if ctx.non_ascii_count >= _CJK_DIVERSITY_MIN_NON_ASCII:
@@ -279,6 +280,7 @@ def _score_structural_candidates(
     data: bytes,
     structural_scores: list[tuple[str, float]],
     valid_candidates: tuple[EncodingInfo, ...],
+    ctx: PipelineContext,
 ) -> list[DetectionResult]:
     """Score structurally-valid CJK candidates using statistical bigrams.
 
@@ -286,13 +288,36 @@ def _score_structural_candidates(
     scoring differentiates them (e.g. euc-jp vs big5 for Japanese data).
     Single-byte candidates are also scored and included so that the caller
     can compare CJK vs single-byte confidence.
+
+    Multi-byte candidates with high byte coverage (>= 0.95) receive a
+    confidence boost proportional to coverage.  When nearly all non-ASCII
+    bytes form valid multi-byte pairs, the structural evidence is strong
+    and should increase the candidate's ranking relative to single-byte
+    alternatives whose bigram models may score higher on small samples.
     """
     enc_lookup = {e.name: e for e in valid_candidates if e.is_multibyte}
     valid_mb = tuple(
         enc_lookup[name] for name, _sc in structural_scores if name in enc_lookup
     )
     single_byte = tuple(e for e in valid_candidates if not e.is_multibyte)
-    return list(score_candidates(data, (*valid_mb, *single_byte)))
+    results = list(score_candidates(data, (*valid_mb, *single_byte)))
+
+    # Boost multi-byte candidates with high byte coverage.
+    boosted: list[DetectionResult] = []
+    for r in results:
+        coverage = ctx.mb_coverage.get(r.encoding, 0.0) if r.encoding else 0.0
+        if coverage >= 0.95:
+            boosted.append(
+                DetectionResult(
+                    encoding=r.encoding,
+                    confidence=r.confidence * (1 + coverage),
+                    language=r.language,
+                )
+            )
+        else:
+            boosted.append(r)
+    boosted.sort(key=lambda x: x.confidence, reverse=True)
+    return boosted
 
 
 def _demote_niche_latin(
@@ -447,8 +472,15 @@ def _run_pipeline_core(
     if escape_result is not None:
         return [escape_result]
 
-    # Stage 0: Binary detection
-    if is_binary(data, max_bytes=max_bytes):
+    # Pre-check UTF-8 to prevent false binary classification.  Valid UTF-8
+    # with multi-byte sequences can contain control bytes (e.g. ESC for ANSI
+    # codes) that would otherwise exceed the binary threshold.  We compute
+    # the result now but return it at the normal pipeline position (after
+    # markup) so that explicit charset declarations still take precedence.
+    utf8_precheck = detect_utf8(data)
+
+    # Stage 0: Binary detection (skip when data is valid multi-byte UTF-8)
+    if utf8_precheck is None and is_binary(data, max_bytes=max_bytes):
         return [_BINARY_RESULT]
 
     # Stage 1b: Markup charset extraction (before ASCII/UTF-8 so explicit
@@ -463,10 +495,9 @@ def _run_pipeline_core(
     if ascii_result is not None:
         return [ascii_result]
 
-    # Stage 1d: UTF-8 structural validation
-    utf8_result = detect_utf8(data)
-    if utf8_result is not None:
-        return [utf8_result]
+    # Stage 1d: UTF-8 structural validation (use pre-computed result)
+    if utf8_precheck is not None:
+        return [utf8_precheck]
 
     # Stage 2a: Byte validity filtering
     candidates = get_candidates(encoding_era)
@@ -500,7 +531,7 @@ def _run_pipeline_core(
         _, best_score = structural_scores[0]
         if best_score >= _STRUCTURAL_CONFIDENCE_THRESHOLD:
             results = _score_structural_candidates(
-                data, structural_scores, valid_candidates
+                data, structural_scores, valid_candidates, ctx
             )
             results = resolve_confusion_groups(data, results)
             results = _demote_niche_latin(data, results)

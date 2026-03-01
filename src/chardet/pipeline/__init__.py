@@ -35,3 +35,4 @@ class PipelineContext:
     )
     non_ascii_count: int = -1
     mb_scores: dict[str, float] = field(default_factory=dict)
+    mb_coverage: dict[str, float] = field(default_factory=dict)

@@ -14,10 +14,20 @@ _BOMS: tuple[tuple[bytes, str], ...] = (
     (b"\xff\xfe", "utf-16-le"),
 )
 
+_UTF32_BOMS: frozenset[bytes] = frozenset({b"\x00\x00\xfe\xff", b"\xff\xfe\x00\x00"})
+
 
 def detect_bom(data: bytes) -> DetectionResult | None:
     """Check for a BOM at the start of data. Returns result or None."""
     for bom_bytes, encoding in _BOMS:
         if data.startswith(bom_bytes):
+            # UTF-32 BOMs overlap with UTF-16 BOMs (e.g. FF FE 00 00 starts
+            # with the UTF-16-LE BOM FF FE).  Validate that the payload after
+            # a UTF-32 BOM is a valid number of UTF-32 code units (multiple of
+            # 4 bytes).  If not, skip to let the shorter UTF-16 BOM match.
+            if bom_bytes in _UTF32_BOMS:
+                payload_len = len(data) - len(bom_bytes)
+                if payload_len % 4 != 0:
+                    continue
             return DetectionResult(encoding=encoding, confidence=1.0, language=None)
     return None

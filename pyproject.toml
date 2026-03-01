@@ -16,6 +16,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -56,7 +57,7 @@ include = [
 mypy-args = ["--ignore-missing-imports"]
 options = { debug_level = "0" }
 
-[tool.pytest.ini_options]
+[tool.pytest]
 testpaths = ["tests", "scripts/tests"]
 pythonpath = ["scripts"]
 python_files = ["test_*.py"]
