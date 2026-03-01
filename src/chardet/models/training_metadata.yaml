@@ -1,4 +1,4 @@
-training_date: "2026-02-28T20:54:36Z"
+training_date: "2026-03-01T21:10:27Z"
 max_samples: 15000
 models:
   ar/cp720:
@@ -193,6 +193,12 @@ models:
     samples_used: 25000
     bigram_entries: 788
     source: culturax
+  da/hp-roman8:
+    language: da
+    encoding: hp-roman8
+    samples_used: 25000
+    bigram_entries: 788
+    source: culturax
   da/iso-8859-1:
     language: da
     encoding: iso-8859-1
@@ -229,6 +235,12 @@ models:
     samples_used: 25000
     bigram_entries: 904
     source: culturax
+  de/cp273:
+    language: de
+    encoding: cp273
+    samples_used: 25000
+    bigram_entries: 904
+    source: culturax
   de/cp437:
     language: de
     encoding: cp437
@@ -252,6 +264,12 @@ models:
     encoding: cp858
     samples_used: 25000
     bigram_entries: 903
+    source: culturax
+  de/hp-roman8:
+    language: de
+    encoding: hp-roman8
+    samples_used: 25000
+    bigram_entries: 904
     source: culturax
   de/iso-8859-1:
     language: de
@@ -367,6 +385,12 @@ models:
     samples_used: 25000
     bigram_entries: 801
     source: culturax
+  es/hp-roman8:
+    language: es
+    encoding: hp-roman8
+    samples_used: 25000
+    bigram_entries: 801
+    source: culturax
   es/iso-8859-1:
     language: es
     encoding: iso-8859-1
@@ -463,6 +487,12 @@ models:
     samples_used: 25000
     bigram_entries: 723
     source: culturax
+  fi/hp-roman8:
+    language: fi
+    encoding: hp-roman8
+    samples_used: 25000
+    bigram_entries: 723
+    source: culturax
   fi/iso-8859-1:
     language: fi
     encoding: iso-8859-1
@@ -532,6 +562,12 @@ models:
   fr/cp863:
     language: fr
     encoding: cp863
+    samples_used: 25000
+    bigram_entries: 700
+    source: culturax
+  fr/hp-roman8:
+    language: fr
+    encoding: hp-roman8
     samples_used: 25000
     bigram_entries: 700
     source: culturax
@@ -709,6 +745,12 @@ models:
     samples_used: 25000
     bigram_entries: 536
     source: culturax
+  id/hp-roman8:
+    language: id
+    encoding: hp-roman8
+    samples_used: 25000
+    bigram_entries: 536
+    source: culturax
   id/iso-8859-1:
     language: id
     encoding: iso-8859-1
@@ -754,6 +796,12 @@ models:
   is/cp861:
     language: is
     encoding: cp861
+    samples_used: 25000
+    bigram_entries: 1016
+    source: culturax
+  is/hp-roman8:
+    language: is
+    encoding: hp-roman8
     samples_used: 25000
     bigram_entries: 1016
     source: culturax
@@ -828,6 +876,12 @@ models:
     encoding: cp858
     samples_used: 25000
     bigram_entries: 661
+    source: culturax
+  it/hp-roman8:
+    language: it
+    encoding: hp-roman8
+    samples_used: 25000
+    bigram_entries: 662
     source: culturax
   it/iso-8859-1:
     language: it
@@ -1045,6 +1099,12 @@ models:
     samples_used: 25000
     bigram_entries: 673
     source: culturax
+  ms/hp-roman8:
+    language: ms
+    encoding: hp-roman8
+    samples_used: 25000
+    bigram_entries: 673
+    source: culturax
   ms/iso-8859-1:
     language: ms
     encoding: iso-8859-1
@@ -1117,6 +1177,12 @@ models:
     samples_used: 25000
     bigram_entries: 694
     source: culturax
+  nl/hp-roman8:
+    language: nl
+    encoding: hp-roman8
+    samples_used: 25000
+    bigram_entries: 694
+    source: culturax
   nl/iso-8859-1:
     language: nl
     encoding: iso-8859-1
@@ -1164,6 +1230,12 @@ models:
     encoding: cp865
     samples_used: 25000
     bigram_entries: 803
+    source: culturax
+  no/hp-roman8:
+    language: no
+    encoding: hp-roman8
+    samples_used: 25000
+    bigram_entries: 802
     source: culturax
   no/iso-8859-1:
     language: no
@@ -1264,6 +1336,12 @@ models:
   pt/cp860:
     language: pt
     encoding: cp860
+    samples_used: 25000
+    bigram_entries: 829
+    source: culturax
+  pt/hp-roman8:
+    language: pt
+    encoding: hp-roman8
     samples_used: 25000
     bigram_entries: 829
     source: culturax
@@ -1488,6 +1566,12 @@ models:
     encoding: cp858
     samples_used: 25000
     bigram_entries: 915
+    source: culturax
+  sv/hp-roman8:
+    language: sv
+    encoding: hp-roman8
+    samples_used: 25000
+    bigram_entries: 917
     source: culturax
   sv/iso-8859-1:
     language: sv
