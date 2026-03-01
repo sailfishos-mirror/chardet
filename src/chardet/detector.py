@@ -10,18 +10,10 @@ from chardet._utils import DEFAULT_MAX_BYTES, _resolve_rename, _validate_max_byt
 from chardet.enums import EncodingEra, LanguageFilter
 from chardet.equivalences import PREFERRED_SUPERSET, apply_legacy_rename
 from chardet.pipeline import DetectionResult
-from chardet.pipeline.ascii import detect_ascii
-from chardet.pipeline.bom import detect_bom
-from chardet.pipeline.escape import detect_escape_encoding
 from chardet.pipeline.orchestrator import run_pipeline
-from chardet.pipeline.utf8 import detect_utf8
 
 _NONE_RESULT = DetectionResult(encoding=None, confidence=0.0, language=None)
 _NONE_DICT: dict[str, str | float | None] = _NONE_RESULT.to_dict()
-
-# Minimum bytes before running deterministic checks (avoids repeated work
-# on tiny feed() calls).
-_MIN_INCREMENTAL_CHECK = 64
 
 
 class UniversalDetector:
@@ -29,6 +21,10 @@ class UniversalDetector:
 
     Implements a feed/close pattern for incremental detection of character
     encoding from byte streams.  Compatible with the chardet 6.x API.
+
+    All detection is performed by the same pipeline used by
+    :func:`chardet.detect` and :func:`chardet.detect_all`, ensuring
+    consistent results regardless of which API is used.
     """
 
     MINIMUM_THRESHOLD = _utils.MINIMUM_THRESHOLD
@@ -71,15 +67,13 @@ class UniversalDetector:
         self._done = False
         self._closed = False
         self._result: DetectionResult | None = None
-        self._has_non_ascii = False
-        self._last_checked: int = 0
-        self._bom_checked = False
 
     def feed(self, byte_str: bytes | bytearray) -> None:
         """Feed a chunk of bytes to the detector.
 
-        Data is accumulated in an internal buffer until :meth:`close` is
-        called or the detector determines the encoding early.
+        Data is accumulated in an internal buffer.  Once *max_bytes* have
+        been buffered, :attr:`done` is set to ``True`` and further data is
+        ignored until :meth:`reset` is called.
 
         :param byte_str: The next chunk of bytes to examine.
         :raises ValueError: If called after :meth:`close` without a
@@ -93,78 +87,23 @@ class UniversalDetector:
         remaining = self._max_bytes - len(self._buffer)
         if remaining > 0:
             self._buffer.extend(byte_str[:remaining])
-        self._try_incremental_detect()
-
-    def _try_incremental_detect(self) -> None:
-        """Run fast deterministic checks on the buffer to enable early done."""
-        buf_len = len(self._buffer)
-        if self._result is not None or buf_len < 4:
-            return
-
-        # BOM detection — only needs first 4 bytes, never changes answer
-        if not self._bom_checked:
-            self._bom_checked = True
-            bom_result = detect_bom(bytes(self._buffer[:4]))
-            if bom_result is not None:
-                self._result = bom_result
-                self._done = True
-                return
-
-        # Avoid re-checking on every tiny feed; only recheck after enough new
-        # data has arrived.
-        if buf_len - self._last_checked < _MIN_INCREMENTAL_CHECK:
-            return
-        prev_checked = self._last_checked
-        self._last_checked = buf_len
-
-        buf = bytes(self._buffer)
-
-        # Track whether any non-ASCII byte has been seen (only scan new bytes)
-        if not self._has_non_ascii:
-            self._has_non_ascii = any(b > 0x7F for b in self._buffer[prev_checked:])
-
-        # Escape-sequence encodings (ISO-2022, HZ-GB-2312)
-        escape_result = detect_escape_encoding(buf)
-        if escape_result is not None:
-            self._result = escape_result
+        if len(self._buffer) >= self._max_bytes:
             self._done = True
-            return
-
-        # Pure ASCII (only confident if we haven't seen non-ASCII and have
-        # enough data)
-        if not self._has_non_ascii and buf_len >= _MIN_INCREMENTAL_CHECK:
-            ascii_result = detect_ascii(buf)
-            if ascii_result is not None:
-                self._result = ascii_result
-                self._done = True
-                return
-
-        # UTF-8 structural validation
-        if self._has_non_ascii:
-            utf8_result = detect_utf8(buf)
-            if utf8_result is not None:
-                self._result = utf8_result
-                self._done = True
-                return
 
     def close(self) -> dict[str, str | float | None]:
         """Finalize detection and return the best result.
 
-        Runs the full detection pipeline on any buffered data that was not
-        resolved during incremental :meth:`feed` calls.
+        Runs the full detection pipeline on the buffered data.
 
         :returns: A dictionary with keys ``"encoding"``, ``"confidence"``,
             and ``"language"``.
         """
         if not self._closed:
             self._closed = True
-            if self._result is None:
-                data = bytes(self._buffer)
-                results = run_pipeline(
-                    data, self._encoding_era, max_bytes=self._max_bytes
-                )
-                self._result = results[0]
-                self._done = True
+            data = bytes(self._buffer)
+            results = run_pipeline(data, self._encoding_era, max_bytes=self._max_bytes)
+            self._result = results[0]
+            self._done = True
         return self.result
 
     def reset(self) -> None:
@@ -173,9 +112,6 @@ class UniversalDetector:
         self._done = False
         self._closed = False
         self._result = None
-        self._has_non_ascii = False
-        self._last_checked = 0
-        self._bom_checked = False
 
     @property
     def done(self) -> bool:

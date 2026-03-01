@@ -16,8 +16,9 @@ of control characters that don't match any known text encoding.
 How do I increase accuracy?
 ----------------------------
 
-- **Provide more data.** The more bytes chardet can examine, the more
-  accurate the result. The default limit is 200,000 bytes.
+- **Provide more data.** The default limit of 200,000 bytes is generous
+  and most detections converge well within that.  If you are passing very
+  short strings (under a few hundred bytes), providing more data may help.
 - **Broaden the encoding era.** By default, chardet only considers modern
   web encodings. If your data may use legacy encodings, pass
   ``encoding_era=EncodingEra.ALL``.
@@ -80,6 +81,10 @@ thread-safe and can be called concurrently from any number of threads.
 
 :class:`~chardet.UniversalDetector` instances are **not** thread-safe.
 Create one instance per thread when using the streaming API.
+
+``UniversalDetector`` uses the same detection pipeline as ``detect()``
+and ``detect_all()``, so results are identical regardless of which API
+you use.
 
 Does chardet work on PyPy?
 ---------------------------
