@@ -27,6 +27,7 @@ classifiers = [
 Homepage = "https://github.com/chardet/chardet"
 Repository = "https://github.com/chardet/chardet"
 "Bug Tracker" = "https://github.com/chardet/chardet/issues"
+Documentation = "https://chardet.readthedocs.io"
 
 [project.scripts]
 chardetect = "chardet.cli:main"
@@ -158,6 +159,10 @@ ignore = [
 "src/chardet/cli.py" = [
     "T201",    # CLI prints output to stdout
 ]
+"docs/conf.py" = [
+    "INP001",  # not a package
+    "A001",    # copyright shadows builtin
+]
 # mypyc-compiled modules cannot use `from __future__ import annotations`
 "src/chardet/models/__init__.py" = ["FA100"]
 "src/chardet/pipeline/structural.py" = ["FA100"]
@@ -194,4 +199,9 @@ dev = [
     "pytest-cov>=7.0.0",
     "pytest-xdist>=3.5.0",
     "ruff>=0.15.2",
+]
+docs = [
+    "sphinx>=8.0",
+    "furo>=2024.1.29",
+    "sphinx-copybutton>=0.5.2",
 ]
