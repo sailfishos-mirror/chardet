@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from chardet._utils import DEFAULT_MAX_BYTES
+from chardet.enums import EncodingEra
 from chardet.models import (
     BigramProfile,
     has_model_variants,
@@ -28,11 +27,7 @@ from chardet.pipeline.structural import (
 from chardet.pipeline.utf8 import detect_utf8
 from chardet.pipeline.utf1632 import detect_utf1632_patterns
 from chardet.pipeline.validity import filter_by_validity
-from chardet.registry import get_candidates
-
-if TYPE_CHECKING:
-    from chardet.enums import EncodingEra
-    from chardet.registry import EncodingInfo
+from chardet.registry import EncodingInfo, get_candidates
 
 _BINARY_RESULT = DetectionResult(
     encoding=None, confidence=DETERMINISTIC_CONFIDENCE, language=None

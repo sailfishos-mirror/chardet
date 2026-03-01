@@ -94,6 +94,9 @@ ignore = [
     "PLR0911", # too many return statements
     "PLR0912", # too many branches
     "PERF203", # try-except in loop
+    "TC001",   # TYPE_CHECKING guards add complexity for negligible import savings
+    "TC002",   # (same rationale)
+    "TC003",   # (same rationale)
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -163,7 +166,7 @@ ignore = [
 "src/chardet/pipeline/utf1632.py" = ["FA100"]
 "src/chardet/pipeline/utf8.py" = ["FA100"]
 "src/chardet/pipeline/escape.py" = ["FA100"]
-"src/chardet/pipeline/confusion.py" = ["PLC0415"]  # delayed import avoids circular dependency
+
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"

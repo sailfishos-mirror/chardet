@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from train import _build_one_model, _worker_text_cache
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def test_build_one_model_returns_tuple(tmp_path: Path) -> None:

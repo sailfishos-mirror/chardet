@@ -3,14 +3,11 @@ from __future__ import annotations
 
 import subprocess
 import sys
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 
 from chardet.cli import main
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def test_cli_detects_file(tmp_path: Path):

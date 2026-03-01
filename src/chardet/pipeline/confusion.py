@@ -9,12 +9,17 @@ Build-time computation (``compute_confusion_groups``, ``compute_distinguishing_m
 
 from __future__ import annotations
 
+import importlib.resources
 import struct
 import threading
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from chardet.pipeline import DetectionResult
+from chardet.models import (
+    NON_ASCII_BIGRAM_WEIGHT,
+    BigramProfile,
+    get_enc_index,
+    score_with_profile,
+)
+from chardet.pipeline import DetectionResult
 
 # Type alias for the distinguishing map structure:
 # Maps (enc_a, enc_b) -> (distinguishing_byte_set, {byte_val: (cat_a, cat_b)})
@@ -113,8 +118,6 @@ def load_confusion_data() -> DistinguishingMaps:
     with _CONFUSION_CACHE_LOCK:
         if _CONFUSION_CACHE is not None:
             return _CONFUSION_CACHE
-        import importlib.resources
-
         ref = importlib.resources.files("chardet.models").joinpath("confusion.bin")
         raw = ref.read_bytes()
         if not raw:
@@ -220,13 +223,6 @@ def resolve_by_bigram_rescore(
     :param diff_bytes: Byte values where the two encodings differ.
     :returns: The winning encoding name, or ``None`` if tied.
     """
-    from chardet.models import (
-        NON_ASCII_BIGRAM_WEIGHT,
-        BigramProfile,
-        get_enc_index,
-        score_with_profile,
-    )
-
     if len(data) < 2:
         return None
 

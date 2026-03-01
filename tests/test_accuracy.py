@@ -8,16 +8,13 @@ pytest_generate_tests hook. Run with `pytest -n auto` for parallel execution.
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from utils import normalize_language
 
 import chardet
 from chardet.enums import EncodingEra
 from chardet.equivalences import is_correct, is_equivalent_detection
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def test_detect(expected_encoding: str, language: str, test_file_path: Path) -> None:
