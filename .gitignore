@@ -20,3 +20,7 @@ tests/data/
 .claude/settings.local.json
 .worktrees/
 uv.lock
+docs/_build/
+docs/_static/
+docs/_templates/
+docs/api/generated/
