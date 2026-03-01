@@ -191,6 +191,21 @@ exclude_lines = [
     "if TYPE_CHECKING:",
 ]
 
+[tool.cibuildwheel]
+build = "cp310-* cp311-* cp312-* cp313-* cp314-*"
+skip = "*-musllinux_*"
+build-frontend = "build[uv]"
+test-command = "python -c \"import chardet; print(chardet.detect(b'hello world'))\""
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64", "aarch64"]
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
+
 [dependency-groups]
 dev = [
     "datasets>=4.6.0",
