@@ -468,6 +468,13 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         is_multibyte=False,
         python_codec="ptcp154",
     ),
+    EncodingInfo(
+        name="hp-roman8",
+        aliases=("roman8", "r8", "csHPRoman8"),
+        era=EncodingEra.LEGACY_REGIONAL,
+        is_multibyte=False,
+        python_codec="hp-roman8",
+    ),
     # === DOS ===
     EncodingInfo(
         name="cp437",

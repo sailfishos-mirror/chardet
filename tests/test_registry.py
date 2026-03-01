@@ -85,6 +85,13 @@ def test_registry_cp273_is_mainframe():
     assert cp273.python_codec == "cp273"
 
 
+def test_registry_hp_roman8_is_legacy_regional():
+    hp = next(e for e in REGISTRY if e.name == "hp-roman8")
+    assert EncodingEra.LEGACY_REGIONAL in hp.era
+    assert hp.is_multibyte is False
+    assert hp.python_codec == "hp-roman8"
+
+
 def test_python_codec_is_valid():
     import codecs
 

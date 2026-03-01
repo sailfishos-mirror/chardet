@@ -178,6 +178,8 @@ ENCODING_LANG_MAP: dict[str, list[str]] = {
     "windows-1252": _WESTERN_EUROPEAN_LANGS,
     "iso-8859-15": _WESTERN_EUROPEAN_LANGS,
     "mac-roman": _WESTERN_EUROPEAN_LANGS,
+    # HP legacy
+    "hp-roman8": _WESTERN_EUROPEAN_LANGS,
     # DOS Western European
     "cp437": ["fr", "de", "es", "pt", "it", "nl", "da", "sv"],
     "cp850": ["fr", "de", "es", "pt", "it", "nl", "da", "sv"],
