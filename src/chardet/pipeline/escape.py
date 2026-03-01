@@ -146,8 +146,10 @@ def detect_escape_encoding(data: bytes) -> DetectionResult | None:
             language="Chinese",
         )
 
-    # UTF-7: plus-sign shifts into Base64-encoded Unicode
-    if has_plus and _has_valid_utf7_sequences(data):
+    # UTF-7: plus-sign shifts into Base64-encoded Unicode.
+    # UTF-7 is a 7-bit encoding (RFC 2152): every byte must be in 0x00-0x7F.
+    # Data with any byte > 0x7F cannot be UTF-7.
+    if has_plus and max(data) < 0x80 and _has_valid_utf7_sequences(data):
         return DetectionResult(
             encoding="utf-7",
             confidence=DETERMINISTIC_CONFIDENCE,
