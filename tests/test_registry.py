@@ -98,3 +98,47 @@ def test_python_codec_is_valid():
     for enc in REGISTRY:
         codec_info = codecs.lookup(enc.python_codec)
         assert codec_info is not None, f"Invalid codec: {enc.python_codec}"
+
+
+def test_languages_field_exists():
+    """Every EncodingInfo has a languages tuple."""
+    for enc in REGISTRY:
+        assert isinstance(enc.languages, tuple), f"{enc.name} missing languages"
+        for lang in enc.languages:
+            assert isinstance(lang, str), f"{enc.name} has non-str language: {lang}"
+            assert len(lang) == 2, f"{enc.name} has non-ISO-639-1 language: {lang}"
+
+
+def test_single_language_encodings():
+    """Spot-check single-language encodings."""
+    by_name = {e.name: e for e in REGISTRY}
+    assert by_name["shift_jis"].languages == ("ja",)
+    assert by_name["euc-kr"].languages == ("ko",)
+    assert by_name["gb18030"].languages == ("zh",)
+    assert by_name["cp273"].languages == ("de",)
+    assert by_name["koi8-r"].languages == ("ru",)
+
+
+def test_multi_language_encodings():
+    """Spot-check multi-language encodings."""
+    by_name = {e.name: e for e in REGISTRY}
+    assert "en" in by_name["windows-1252"].languages
+    assert "fr" in by_name["windows-1252"].languages
+    assert "ru" in by_name["windows-1251"].languages
+    assert "bg" in by_name["windows-1251"].languages
+
+
+def test_language_agnostic_encodings():
+    """Unicode and ASCII encodings have empty languages tuple."""
+    by_name = {e.name: e for e in REGISTRY}
+    assert by_name["ascii"].languages == ()
+    assert by_name["utf-8"].languages == ()
+    assert by_name["utf-7"].languages == ()
+    assert by_name["utf-16"].languages == ()
+
+
+def test_utf7_in_registry():
+    """utf-7 is in the registry as MODERN_WEB."""
+    by_name = {e.name: e for e in REGISTRY}
+    assert "utf-7" in by_name
+    assert EncodingEra.MODERN_WEB in by_name["utf-7"].era
