@@ -244,3 +244,24 @@ def test_detect_bytearray_input():
 def test_detect_all_bytearray_input():
     results = chardet.detect_all(bytearray(b"Hello world"))
     assert len(results) >= 1
+
+
+# --- New encoding tests ---
+
+
+def test_detect_utf7():
+    data = "Hello, 世界!".encode("utf-7")
+    result = chardet.detect(data)
+    assert result["encoding"] == "utf-7"
+
+
+def test_detect_cp273():
+    data = "Grüße aus Deutschland".encode("cp273")
+    result = chardet.detect(data, encoding_era=EncodingEra.ALL)
+    assert result["encoding"] is not None
+
+
+def test_detect_hp_roman8():
+    data = "café résumé naïve".encode("hp-roman8")
+    result = chardet.detect(data, encoding_era=EncodingEra.ALL)
+    assert result["encoding"] is not None
