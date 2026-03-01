@@ -35,9 +35,16 @@ pip install chardet
 ```python
 import chardet
 
-# Detect encoding of a byte string
-result = chardet.detect("これは日本語のテストです。文字コードの検出を行います。".encode("euc-jp"))
-print(result)
+# Plain ASCII is reported as its superset Windows-1252 by default
+chardet.detect(b"Hello, world!")
+# {'encoding': 'Windows-1252', 'confidence': 1.0, 'language': 'pl'}
+
+# UTF-8 with typographic punctuation
+chardet.detect("It\u2019s a lovely day \u2014 let\u2019s grab coffee.".encode("utf-8"))
+# {'encoding': 'utf-8', 'confidence': 0.99, 'language': 'hu'}
+
+# Japanese EUC-JP
+chardet.detect("これは日本語のテストです。文字コードの検出を行います。".encode("euc-jp"))
 # {'encoding': 'euc-jp', 'confidence': 1.0, 'language': 'ja'}
 
 # Get all candidate encodings ranked by confidence
