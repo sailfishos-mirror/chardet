@@ -259,9 +259,16 @@ def test_detect_cp273():
     data = "Grüße aus Deutschland".encode("cp273")
     result = chardet.detect(data, encoding_era=EncodingEra.ALL)
     assert result["encoding"] is not None
+    # Should detect an EBCDIC encoding (cp273 or a close variant)
+    assert result["encoding"].startswith("cp")
 
 
 def test_detect_hp_roman8():
-    data = "café résumé naïve".encode("hp-roman8")
+    data = (
+        "Les élèves français étudient la littérature européenne avec "
+        "enthousiasme. Après les études, ils préfèrent dîner dans un "
+        "café où ils discutent de philosophie et dégustent des crêpes "
+        "flambées accompagnées de thé à la menthe."
+    ).encode("hp-roman8")
     result = chardet.detect(data, encoding_era=EncodingEra.ALL)
-    assert result["encoding"] is not None
+    assert result["encoding"] == "hp-roman8"

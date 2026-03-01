@@ -114,11 +114,15 @@ def detect_escape_encoding(data: bytes) -> DetectionResult | None:
     :param data: The raw byte data to examine.
     :returns: A :class:`DetectionResult` if an escape encoding is found, or ``None``.
     """
-    if b"\x1b" not in data and b"~" not in data and b"+" not in data:
+    has_esc = b"\x1b" in data
+    has_tilde = b"~" in data
+    has_plus = b"+" in data
+
+    if not has_esc and not has_tilde and not has_plus:
         return None
 
     # ISO-2022-JP: ESC sequences for JIS X 0208 / JIS X 0201
-    if b"\x1b$B" in data or b"\x1b$@" in data or b"\x1b(J" in data:
+    if has_esc and (b"\x1b$B" in data or b"\x1b$@" in data or b"\x1b(J" in data):
         return DetectionResult(
             encoding="iso-2022-jp",
             confidence=DETERMINISTIC_CONFIDENCE,
@@ -126,7 +130,7 @@ def detect_escape_encoding(data: bytes) -> DetectionResult | None:
         )
 
     # ISO-2022-KR: ESC sequence for KS C 5601
-    if b"\x1b$)C" in data:
+    if has_esc and b"\x1b$)C" in data:
         return DetectionResult(
             encoding="iso-2022-kr",
             confidence=DETERMINISTIC_CONFIDENCE,
@@ -135,7 +139,7 @@ def detect_escape_encoding(data: bytes) -> DetectionResult | None:
 
     # HZ-GB-2312: tilde escapes for GB2312
     # Require valid GB2312 byte pairs (0x21-0x7E range) between ~{ and ~} markers.
-    if b"~{" in data and b"~}" in data and _has_valid_hz_regions(data):
+    if has_tilde and b"~{" in data and b"~}" in data and _has_valid_hz_regions(data):
         return DetectionResult(
             encoding="hz-gb-2312",
             confidence=DETERMINISTIC_CONFIDENCE,
@@ -143,7 +147,7 @@ def detect_escape_encoding(data: bytes) -> DetectionResult | None:
         )
 
     # UTF-7: plus-sign shifts into Base64-encoded Unicode
-    if b"+" in data and _has_valid_utf7_sequences(data):
+    if has_plus and _has_valid_utf7_sequences(data):
         return DetectionResult(
             encoding="utf-7",
             confidence=DETERMINISTIC_CONFIDENCE,
