@@ -624,4 +624,11 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         is_multibyte=False,
         python_codec="cp1026",
     ),
+    EncodingInfo(
+        name="cp273",
+        aliases=(),
+        era=EncodingEra.MAINFRAME,
+        is_multibyte=False,
+        python_codec="cp273",
+    ),
 )

@@ -78,6 +78,13 @@ def test_multibyte_encodings_flagged():
     assert iso_8859_1.is_multibyte is False
 
 
+def test_registry_cp273_is_mainframe():
+    cp273 = next(e for e in REGISTRY if e.name == "cp273")
+    assert EncodingEra.MAINFRAME in cp273.era
+    assert cp273.is_multibyte is False
+    assert cp273.python_codec == "cp273"
+
+
 def test_python_codec_is_valid():
     import codecs
 

@@ -29,6 +29,7 @@ _SINGLE_LANG_MAP: dict[str, str] = {
     "cp1006": "ur",
     "cp1026": "tr",
     "cp1125": "uk",
+    "cp273": "de",
     "cp424": "he",
     "cp737": "el",
     "cp856": "he",

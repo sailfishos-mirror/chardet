@@ -237,6 +237,7 @@ ENCODING_LANG_MAP: dict[str, list[str]] = {
         "id",
         "ms",
     ],
+    "cp273": ["de"],
     # Universal Unicode encoding — trained on all languages for language detection
     "utf-8": _ALL_LANGS,
 }
