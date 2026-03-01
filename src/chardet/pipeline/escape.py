@@ -126,7 +126,7 @@ def detect_escape_encoding(data: bytes) -> DetectionResult | None:
         return DetectionResult(
             encoding="iso-2022-jp",
             confidence=DETERMINISTIC_CONFIDENCE,
-            language="Japanese",
+            language="ja",
         )
 
     # ISO-2022-KR: ESC sequence for KS C 5601
@@ -134,7 +134,7 @@ def detect_escape_encoding(data: bytes) -> DetectionResult | None:
         return DetectionResult(
             encoding="iso-2022-kr",
             confidence=DETERMINISTIC_CONFIDENCE,
-            language="Korean",
+            language="ko",
         )
 
     # HZ-GB-2312: tilde escapes for GB2312
@@ -143,7 +143,7 @@ def detect_escape_encoding(data: bytes) -> DetectionResult | None:
         return DetectionResult(
             encoding="hz-gb-2312",
             confidence=DETERMINISTIC_CONFIDENCE,
-            language="Chinese",
+            language="zh",
         )
 
     # UTF-7: plus-sign shifts into Base64-encoded Unicode.
