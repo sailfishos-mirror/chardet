@@ -87,16 +87,6 @@ ignore = [
     "D213",   # incompatible with D212
     # Formatter conflict
     "COM812", # trailing comma (ruff formatter handles this)
-    # Docstrings (add incrementally later)
-    "D100",
-    "D101",
-    "D102",
-    "D103",
-    "D104",
-    "D107",
-    # Return type annotations (add incrementally later)
-    "ANN201",
-    "ANN202",
     # Encoding-detection code characteristics
     "PLR2004", # magic value comparison (byte values/thresholds)
     "C901",    # complex structure
@@ -117,11 +107,17 @@ ignore = [
     "PERF401", # manual list comprehension (readability)
     "SLF001",  # private member access (whitebox testing of internals)
     "ARG001",  # unused function arguments (pytest fixtures)
+    # Docstrings and return types not required in tests
+    "D100", "D101", "D102", "D103", "D104", "D107",
+    "ANN201", "ANN202",
 ]
 "scripts/tests/**" = [
     "S101",    # assert is standard in tests
     "PT011",   # pytest.raises broad match acceptable
     "INP001",  # not a package
+    # Docstrings and return types not required in tests
+    "D100", "D101", "D102", "D103", "D104", "D107",
+    "ANN201", "ANN202",
 ]
 "scripts/**" = [
     "T201",    # print is the output mechanism
@@ -140,6 +136,9 @@ ignore = [
     "TRY300",  # try-consider-else style
     "PLR0915", # too many statements
     "FURB122", # f.write in loop (binary packing)
+    # Docstrings and return types not required in scripts
+    "D100", "D101", "D102", "D103", "D104", "D107",
+    "ANN201", "ANN202",
 ]
 "src/chardet/__init__.py" = [
     "FBT001",  # bool params match chardet 6.x public API for backward compat
@@ -164,6 +163,9 @@ ignore = [
 "src/chardet/pipeline/utf8.py" = ["FA100"]
 "src/chardet/pipeline/escape.py" = ["FA100"]
 "src/chardet/pipeline/confusion.py" = ["PLC0415"]  # delayed import avoids circular dependency
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
 
 [tool.ruff.format]
 quote-style = "double"
