@@ -7,10 +7,10 @@ from chardet.pipeline import DetectionResult, PipelineContext
 
 
 def test_detection_result_fields():
-    r = DetectionResult(encoding="utf-8", confidence=0.99, language="English")
+    r = DetectionResult(encoding="utf-8", confidence=0.99, language="en")
     assert r.encoding == "utf-8"
     assert r.confidence == 0.99
-    assert r.language == "English"
+    assert r.language == "en"
 
 
 def test_detection_result_to_dict():
