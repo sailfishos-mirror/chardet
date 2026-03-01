@@ -80,11 +80,10 @@ def _is_valid_utf7_b64(b64_bytes: bytes) -> bool:
 def _has_valid_utf7_sequences(data: bytes) -> bool:
     """Check that *data* contains at least one valid UTF-7 shifted sequence.
 
-    A valid shifted sequence is ``+<base64 chars>-`` where the base64 portion
-    decodes to valid UTF-16BE with correct zero-padding bits.  The explicit
-    ``-`` terminator is required to avoid false positives from timezone offsets,
-    URLs, and similar patterns.  The sequence ``+-`` is a literal plus sign and
-    is **not** counted.
+    A valid shifted sequence is ``+<base64 chars>`` terminated by either an
+    explicit ``-`` or any non-Base64 character (per RFC 2152).  The base64
+    portion must decode to valid UTF-16BE with correct zero-padding bits.
+    The sequence ``+-`` is a literal plus sign and is **not** counted.
     """
     start = 0
     while True:
@@ -101,8 +100,10 @@ def _has_valid_utf7_sequences(data: bytes) -> bool:
         while i < len(data) and data[i] in _UTF7_BASE64:
             i += 1
         b64_len = i - pos
-        # Require valid Base64 content AND an explicit '-' terminator
-        if b64_len >= 3 and i < len(data) and data[i] == ord("-") and _is_valid_utf7_b64(data[pos:i]):
+        # Accept if base64 content is valid UTF-16BE (padding bits check
+        # prevents false positives).  Terminator can be '-', any non-Base64
+        # byte, or end of data — all per RFC 2152.
+        if b64_len >= 3 and _is_valid_utf7_b64(data[pos:i]):
             return True
         start = max(pos, i)
 
