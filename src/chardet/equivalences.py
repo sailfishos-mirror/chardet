@@ -38,7 +38,7 @@ def normalize_encoding_name(name: str) -> str:
 # E.g., expected=ascii, detected=utf-8 -> correct (utf-8 ⊃ ascii).
 # But expected=utf-8, detected=ascii -> wrong (ascii ⊄ utf-8).
 #
-# Note: some subset keys (gb2312, iso-8859-11) are not in the detection
+# Note: some subset keys (iso-8859-11) are not in the detection
 # registry — the detector never returns them.  They appear here because
 # chardet test-suite expected values use these names, so the superset
 # mapping is needed for accuracy evaluation only.
@@ -47,12 +47,19 @@ SUPERSETS: dict[str, frozenset[str]] = {
     "tis-620": frozenset({"iso-8859-11", "cp874"}),
     "iso-8859-11": frozenset({"cp874"}),
     "gb2312": frozenset({"gb18030"}),
-    "shift_jis": frozenset({"cp932"}),
+    "gbk": frozenset({"gb18030"}),
+    "big5": frozenset({"big5hkscs", "cp950"}),
+    "shift_jis": frozenset({"cp932", "shift_jis_2004"}),
+    "shift-jisx0213": frozenset({"shift_jis_2004"}),
+    "euc-jp": frozenset({"euc-jis-2004"}),
+    "euc-jisx0213": frozenset({"euc-jis-2004"}),
     "euc-kr": frozenset({"cp949"}),
-    # Each Windows code page fills the C1 control range (0x80-0x9F) with
-    # printable characters.  For detection purposes this makes them acceptable
-    # supersets of their ISO counterparts (the remaining byte positions may
-    # differ slightly between the two, but the detection signal is equivalent).
+    "cp500": frozenset({"cp1140"}),
+    # ISO-2022-JP subsets: any branch variant is acceptable
+    "iso-2022-jp": frozenset({"iso2022-jp-2", "iso2022-jp-2004", "iso2022-jp-ext"}),
+    "iso2022-jp-1": frozenset({"iso2022-jp-2", "iso2022-jp-ext"}),
+    "iso2022-jp-3": frozenset({"iso2022-jp-2004"}),
+    # ISO/Windows superset pairs
     "iso-8859-1": frozenset({"windows-1252"}),
     "iso-8859-2": frozenset({"windows-1250"}),
     "iso-8859-5": frozenset({"windows-1251"}),
@@ -102,6 +109,7 @@ def apply_legacy_rename(
 BIDIRECTIONAL_GROUPS: tuple[tuple[str, ...], ...] = (
     ("utf-16", "utf-16-le", "utf-16-be"),
     ("utf-32", "utf-32-le", "utf-32-be"),
+    ("iso2022-jp-2", "iso2022-jp-2004", "iso2022-jp-ext"),
 )
 
 # Pre-built normalized lookups for fast comparison.

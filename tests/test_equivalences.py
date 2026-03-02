@@ -109,3 +109,25 @@ def test_apply_legacy_rename_none():
     d = {"encoding": None, "confidence": 0.0, "language": None}
     apply_legacy_rename(d)
     assert d["encoding"] is None
+
+
+def test_superset_equivalences_for_renamed_encodings() -> None:
+    # big5 expected, big5hkscs detected -> correct (superset)
+    assert is_correct("big5", "big5hkscs")
+    # euc-jp expected, euc-jis-2004 detected -> correct
+    assert is_correct("euc-jp", "euc-jis-2004")
+    # shift_jis expected, shift_jis_2004 detected -> correct
+    assert is_correct("shift_jis", "shift_jis_2004")
+    # cp500 expected, cp1140 detected -> correct
+    assert is_correct("cp500", "cp1140")
+    # iso-2022-jp expected, any branch -> correct
+    assert is_correct("iso-2022-jp", "iso2022-jp-2")
+    assert is_correct("iso-2022-jp", "iso2022-jp-2004")
+    assert is_correct("iso-2022-jp", "iso2022-jp-ext")
+
+
+def test_iso2022_jp_branches_bidirectional() -> None:
+    # All three branches should be interchangeable
+    assert is_correct("iso2022-jp-2", "iso2022-jp-2004")
+    assert is_correct("iso2022-jp-2004", "iso2022-jp-ext")
+    assert is_correct("iso2022-jp-ext", "iso2022-jp-2")
