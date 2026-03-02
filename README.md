@@ -6,7 +6,7 @@ Universal character encoding detector.
 [![Documentation](https://readthedocs.org/projects/chardet/badge/?version=latest)](https://chardet.readthedocs.io)
 
 chardet 7.0 is a ground-up, MIT-licensed rewrite of [chardet](https://github.com/chardet/chardet).
-Same package name, same public API — drop-in replacement for chardet 5.x/6.x.
+Same package name, same public API — drop-in replacement for chardet 5.x/6.x, just much faster and more accurate.
 Python 3.10+, zero runtime dependencies, works on PyPy.
 
 ## Why chardet 7.0?
@@ -15,17 +15,18 @@ Python 3.10+, zero runtime dependencies, works on PyPy.
 **5x faster** than charset-normalizer. **Language detection** for every
 result. **MIT licensed.**
 
-| | chardet 7.0 | chardet 6.0.0 | [charset-normalizer] |
-|---|:---:|:---:|:---:|
-| Accuracy (2,161 files) | **96.6%** | 94.5% | 89.0% |
-| Speed (pure Python) | **334 files/s** | 12 files/s | 66 files/s |
-| Language detection | **90.9%** | 47.0% | -- |
-| Peak memory | **22.5 MiB** | 16.4 MiB | 102.2 MiB |
-| Streaming detection | **yes** | yes | no |
-| Encoding era filtering | **yes** | no | no |
-| Supported encodings | 99 | 84 | 99 |
-| Optional mypyc compilation | **yes** | no | yes |
-| License | MIT | LGPL | MIT |
+|                             |   chardet 7.0   | chardet 6.0.0 | [charset-normalizer] |
+| --------------------------- | :-------------: | :-----------: | :------------------: |
+| Accuracy (2,161 files)      |    **96.6%**    |     94.5%     |        89.0%         |
+| Speed (pure Python)         | **334 files/s** |  12 files/s   |      66 files/s      |
+| Speed (mypyc compiled)      | **484 files/s** |      --       |      66 files/s      |
+| Language detection accuracy |    **90.9%**    |     47.0%     |          --          |
+| Peak memory                 |  **22.5 MiB**   |   16.4 MiB    |      102.2 MiB       |
+| Streaming detection         |     **yes**     |      yes      |          no          |
+| Encoding era filtering      |     **yes**     |      no       |          no          |
+| Supported encodings         |       99        |      84       |          99          |
+| Optional mypyc compilation  |     **yes**     |      no       |         yes          |
+| License                     |       MIT       |     LGPL      |         MIT          |
 
 [charset-normalizer]: https://github.com/jawah/charset_normalizer
 
