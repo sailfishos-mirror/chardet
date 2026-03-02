@@ -289,13 +289,13 @@ def _analyze_johab(
 # ---------------------------------------------------------------------------
 
 _ANALYZERS: dict[str, Callable[[bytes], tuple[float, int, int]]] = {
-    "shift_jis": _analyze_shift_jis,
+    "shift_jis_2004": _analyze_shift_jis,
     "cp932": _analyze_shift_jis,
-    "euc-jp": _analyze_euc_jp,
+    "euc-jis-2004": _analyze_euc_jp,
     "euc-kr": _analyze_euc_kr,
     "cp949": _analyze_euc_kr,
     "gb18030": _analyze_gb18030,
-    "big5": _analyze_big5,
+    "big5hkscs": _analyze_big5,
     "johab": _analyze_johab,
 }
 
