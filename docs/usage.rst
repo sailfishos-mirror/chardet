@@ -64,6 +64,15 @@ For large files or streaming data, use :class:`chardet.UniversalDetector`:
 Call :meth:`~chardet.UniversalDetector.reset` to reuse the detector for
 another file.
 
+The constructor accepts the same tuning parameters as :func:`~chardet.detect`:
+
+.. code-block:: python
+
+   detector = UniversalDetector(
+       encoding_era=EncodingEra.MODERN_WEB,  # restrict candidate encodings
+       max_bytes=50_000,                      # stop buffering after 50 KB
+   )
+
 Encoding Eras
 -------------
 
@@ -96,6 +105,26 @@ Available eras (can be combined with ``|``):
 - :attr:`~chardet.EncodingEra.DOS` — DOS codepages (CP437, CP850, etc.)
 - :attr:`~chardet.EncodingEra.MAINFRAME` — EBCDIC encodings
 
+Legacy Renaming
+---------------
+
+By default, chardet remaps legacy encoding names to their modern
+equivalents (e.g., ``"gb2312"`` becomes ``"gb18030"``). Set
+``should_rename_legacy=False`` to get the raw detection name:
+
+.. code-block:: python
+
+   # Default: legacy names are remapped
+   chardet.detect(data)
+   # {'encoding': 'gb18030', ...}
+
+   # Disable renaming to get the original detection name
+   chardet.detect(data, should_rename_legacy=False)
+   # {'encoding': 'gb2312', ...}
+
+This applies to :func:`~chardet.detect`, :func:`~chardet.detect_all`,
+and :class:`~chardet.UniversalDetector`.
+
 Limiting Bytes
 --------------
 
@@ -109,6 +138,21 @@ adjust:
 
 Smaller values are faster but may reduce accuracy for encodings that
 require more data to distinguish.
+
+Deprecated Parameters
+---------------------
+
+The following parameters are accepted for backward compatibility with
+chardet 5.x/6.x but have no effect:
+
+- ``chunk_size`` on :func:`~chardet.detect` and
+  :func:`~chardet.detect_all` — previously controlled how data was
+  chunked for streaming probers. A deprecation warning is emitted if a
+  non-default value is passed.
+- ``lang_filter`` on :class:`~chardet.UniversalDetector` — previously
+  restricted detection to specific language groups via
+  :class:`~chardet.LanguageFilter`. A deprecation warning is emitted if
+  set to anything other than :attr:`~chardet.LanguageFilter.ALL`.
 
 Command-Line Tool
 -----------------

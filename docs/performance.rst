@@ -20,7 +20,7 @@ Accuracy
    * - **chardet** (this version)
      - **2110/2179**
      - **96.8%**
-     - **342 files/s**
+     - **335 files/s**
    * - chardet 6.0.0
      - 2060/2179
      - 94.5%
@@ -28,7 +28,7 @@ Accuracy
    * - charset-normalizer
      - 1942/2179
      - 89.1%
-     - 65 files/s
+     - 66 files/s
    * - cchardet
      - 1245/2179
      - 57.1%
@@ -51,32 +51,32 @@ Speed
      - p90
      - p95
    * - cchardet
-     - 1,801
+     - 1,811
      - 0.55ms
      - 0.07ms
-     - 0.64ms
-     - 0.93ms
+     - 0.65ms
+     - 0.92ms
    * - **chardet** (this version)
-     - **342**
-     - **2.92ms**
-     - **1.08ms**
-     - **5.16ms**
-     - **5.97ms**
+     - **336**
+     - **2.98ms**
+     - **1.13ms**
+     - **5.32ms**
+     - **6.15ms**
    * - charset-normalizer
-     - 65
-     - 15.30ms
-     - 4.71ms
-     - 50.19ms
-     - 70.88ms
+     - 66
+     - 15.17ms
+     - 4.67ms
+     - 49.31ms
+     - 70.71ms
    * - chardet 6.0.0
      - 12
-     - 82.74ms
-     - 16.23ms
-     - 122.57ms
-     - 323.31ms
+     - 83.19ms
+     - 16.32ms
+     - 122.32ms
+     - 319.77ms
 
-chardet is **28x faster** than chardet 6.0.0 and **5.2x faster** than
-charset-normalizer. Its median latency (1.08ms) is the lowest among all
+chardet is **28x faster** than chardet 6.0.0 and **5.1x faster** than
+charset-normalizer. Its median latency (1.13ms) is the lowest among all
 pure-Python detectors.
 
 Memory
@@ -93,19 +93,19 @@ Memory
    * - **chardet** (this version)
      - **96 B**
      - **22.5 MiB**
-     - **96.0 MiB**
+     - **96.1 MiB**
    * - chardet 6.0.0
      - 96 B
      - 16.4 MiB
-     - 101.9 MiB
+     - 101.8 MiB
    * - charset-normalizer
      - 1.3 MiB
      - 101.8 MiB
-     - 266.8 MiB
+     - 265.7 MiB
    * - cchardet
-     - 23.7 KiB
-     - 27.3 KiB
-     - 63.0 MiB
+     - 23.6 KiB
+     - 27.2 KiB
+     - 62.8 MiB
 
 chardet uses negligible import memory (96 B), **4.5x less peak memory** than
 charset-normalizer, and **2.8x less RSS**.

@@ -32,7 +32,7 @@ What changed from older chardet versions?
 
 This version is a ground-up rewrite of chardet:
 
-- Dramatically improved accuracy (96.6% vs 94.5% in chardet 6.0.0, 68.0%
+- Dramatically improved accuracy (96.6% vs 94.5% in chardet 6.0.0, 68.2%
   in chardet 5.2.0)
 - 27x faster than chardet 6.0.0
 - Encoding era system (:class:`~chardet.EncodingEra`) for filtering
@@ -49,7 +49,7 @@ and ``UniversalDetector`` work the same way.
 How is chardet different from charset-normalizer?
 --------------------------------------------------
 
-`charset-normalizer <https://github.com/Ousret/charset_normalizer>`_ is
+`charset-normalizer <https://github.com/jawah/charset_normalizer>`_ is
 an alternative encoding detector. Key differences:
 
 - **Accuracy:** chardet achieves 96.6% vs charset-normalizer's 89.0% on

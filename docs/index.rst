@@ -12,8 +12,15 @@ byte strings and returns the detected encoding, confidence score, and language.
    print(result)
    # {'encoding': 'utf-8', 'confidence': 0.99, 'language': 'French'}
 
-chardet is a drop-in replacement for previous versions with the same package
-name and public API. Python 3.10+, zero runtime dependencies.
+chardet 7.0 is a ground-up, MIT-licensed rewrite — same package name, same
+public API, drop-in replacement for chardet 5.x/6.x. Python 3.10+, zero
+runtime dependencies, works on PyPy.
+
+- **96.8% accuracy** on 2,179 test files
+- **28x faster** than chardet 6.0.0
+- **Language detection** for every result (90.5% accuracy)
+- **99 encodings** across six encoding eras
+- **Thread-safe** ``detect()`` and ``detect_all()``
 
 .. toctree::
    :maxdepth: 2
@@ -25,3 +32,5 @@ name and public API. Python 3.10+, zero runtime dependencies.
    performance
    faq
    api/index
+   contributing
+   changelog

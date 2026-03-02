@@ -38,7 +38,7 @@ uv run ruff format .       # format
 
 ### Training Models
 ```bash
-uv run python scripts/train.py   # retrain bigram models from Wikipedia/HTML data
+uv run python scripts/train.py   # retrain bigram models from CulturaX/HTML data
 ```
 
 Training data is cached in `data/` (gitignored). Models are saved to `src/chardet/models/models.bin`.
@@ -118,4 +118,4 @@ Defines acceptable detection mismatches for accuracy testing: directional supers
 - `from __future__ import annotations` in all source files (except mypyc-compiled modules)
 - Frozen dataclasses with `slots=True` for data types
 - Era assignments in `registry.py` match chardet 6.0.0
-- Training data (Wikipedia/HTML) is never the same as evaluation data (chardet test suite)
+- Training data (CulturaX corpus + HTML) is never the same as evaluation data (chardet test suite)
