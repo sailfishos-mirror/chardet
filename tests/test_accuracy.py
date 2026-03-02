@@ -14,6 +14,7 @@ import pytest
 from utils import collect_test_files, get_data_dir, normalize_language
 
 import chardet
+from chardet.detector import UniversalDetector
 from chardet.enums import EncodingEra
 from chardet.equivalences import is_correct, is_equivalent_detection
 from chardet.registry import REGISTRY
@@ -237,4 +238,25 @@ def test_detect_era_filtered(
         f"expected={expected_encoding}, got={detected} "
         f"(era={era!r}, confidence={result['confidence']:.2f}, "
         f"language={language}, file={test_file_path.name})"
+    )
+
+
+@pytest.mark.parametrize(
+    ("expected_encoding", "language", "test_file_path"),
+    _make_params(frozenset()),
+)
+def test_detect_streaming_parity(
+    expected_encoding: str | None, language: str | None, test_file_path: Path
+) -> None:
+    """UniversalDetector.feed/close must match chardet.detect (GH-296)."""
+    data = test_file_path.read_bytes()
+    direct = chardet.detect(data, encoding_era=EncodingEra.ALL)
+
+    detector = UniversalDetector()
+    detector.feed(data)
+    streaming = detector.close()
+
+    assert direct == streaming, (
+        f"detect() != UniversalDetector for {test_file_path.name}: "
+        f"detect={direct}, streaming={streaming}"
     )
