@@ -71,7 +71,7 @@ def test_get_candidates_combined_eras():
 
 
 def test_multibyte_encodings_flagged():
-    shift_jis = next(e for e in REGISTRY if e.name == "shift_jis")
+    shift_jis = next(e for e in REGISTRY if e.name == "shift_jis_2004")
     assert shift_jis.is_multibyte is True
 
     iso_8859_1 = next(e for e in REGISTRY if e.name == "iso-8859-1")
@@ -112,7 +112,7 @@ def test_languages_field_exists():
 def test_single_language_encodings():
     """Spot-check single-language encodings."""
     by_name = {e.name: e for e in REGISTRY}
-    assert by_name["shift_jis"].languages == ("ja",)
+    assert by_name["shift_jis_2004"].languages == ("ja",)
     assert by_name["euc-kr"].languages == ("ko",)
     assert by_name["gb18030"].languages == ("zh",)
     assert by_name["cp273"].languages == ("de",)
@@ -142,3 +142,118 @@ def test_utf7_in_registry():
     by_name = {e.name: e for e in REGISTRY}
     assert "utf-7" in by_name
     assert EncodingEra.MODERN_WEB in by_name["utf-7"].era
+
+
+# === Task 1: big5 -> big5hkscs ===
+
+
+def test_big5_family_uses_broadest_superset():
+    """big5hkscs is the primary name; big5 is an alias."""
+    entry = next(e for e in REGISTRY if e.python_codec == "big5hkscs")
+    assert entry.name == "big5hkscs"
+    assert "big5" in entry.aliases
+    assert "big5-tw" in entry.aliases
+    assert "csbig5" in entry.aliases
+    assert "cp950" in entry.aliases
+    assert entry.is_multibyte is True
+    assert entry.languages == ("zh",)
+
+
+# === Task 2: gb18030 gets gb2312/gbk aliases ===
+
+
+def test_gb18030_has_subset_aliases():
+    """gb18030 includes gb2312 and gbk as aliases."""
+    entry = next(e for e in REGISTRY if e.name == "gb18030")
+    assert "gb2312" in entry.aliases
+    assert "gbk" in entry.aliases
+    assert "gb-18030" in entry.aliases
+
+
+# === Task 3: euc-jp -> euc-jis-2004 ===
+
+
+def test_euc_jp_family_uses_broadest_superset():
+    """euc-jis-2004 is the primary name; euc-jp is an alias."""
+    entry = next(e for e in REGISTRY if e.python_codec == "euc_jis_2004")
+    assert entry.name == "euc-jis-2004"
+    assert "euc-jp" in entry.aliases
+    assert "eucjp" in entry.aliases
+    assert "ujis" in entry.aliases
+    assert "u-jis" in entry.aliases
+    assert "euc-jisx0213" in entry.aliases
+    assert entry.is_multibyte is True
+    assert entry.languages == ("ja",)
+
+
+# === Task 4: shift_jis -> shift_jis_2004 ===
+
+
+def test_shift_jis_family_uses_broadest_superset():
+    """shift_jis_2004 is the primary name; shift_jis is an alias."""
+    entry = next(e for e in REGISTRY if e.python_codec == "shift_jis_2004")
+    assert entry.name == "shift_jis_2004"
+    assert "shift_jis" in entry.aliases
+    assert "sjis" in entry.aliases
+    assert "shiftjis" in entry.aliases
+    assert "s_jis" in entry.aliases
+    assert "shift-jisx0213" in entry.aliases
+    assert entry.is_multibyte is True
+    assert entry.languages == ("ja",)
+
+
+# === Task 5: iso-2022-jp split into 3 branches ===
+
+
+def test_iso2022_jp_split_into_branches():
+    """iso-2022-jp is split into jp-2, jp-2004, and jp-ext."""
+    by_name = {e.name: e for e in REGISTRY}
+
+    # iso-2022-jp should NOT be a primary name
+    assert "iso-2022-jp" not in by_name
+
+    # iso2022-jp-2 is the multinational branch and gets the old alias
+    jp2 = by_name["iso2022-jp-2"]
+    assert "iso-2022-jp" in jp2.aliases
+    assert "csiso2022jp" in jp2.aliases
+    assert "iso2022-jp-1" in jp2.aliases
+    assert jp2.python_codec == "iso2022_jp_2"
+    assert jp2.is_multibyte is True
+    assert jp2.languages == ("ja",)
+
+    # iso2022-jp-2004 is the modern Japanese branch
+    jp2004 = by_name["iso2022-jp-2004"]
+    assert "iso2022-jp-3" in jp2004.aliases
+    assert jp2004.python_codec == "iso2022_jp_2004"
+    assert jp2004.is_multibyte is True
+    assert jp2004.languages == ("ja",)
+
+    # iso2022-jp-ext is the katakana branch
+    jpext = by_name["iso2022-jp-ext"]
+    assert jpext.aliases == ()
+    assert jpext.python_codec == "iso2022_jp_ext"
+    assert jpext.is_multibyte is True
+    assert jpext.languages == ("ja",)
+
+
+# === Task 6a: cp500 -> cp1140 ===
+
+
+def test_cp500_flipped_to_cp1140():
+    """cp1140 is the primary name; cp500 is an alias."""
+    by_name = {e.name: e for e in REGISTRY}
+    assert "cp1140" in by_name
+    entry = by_name["cp1140"]
+    assert "cp500" in entry.aliases
+    assert entry.python_codec == "cp1140"
+    assert EncodingEra.MAINFRAME in entry.era
+
+
+# === Task 6b: tis-620 gets iso-8859-11 alias ===
+
+
+def test_tis620_has_iso8859_11_alias():
+    """tis-620 includes iso-8859-11 as an alias."""
+    entry = next(e for e in REGISTRY if e.name == "tis-620")
+    assert "iso-8859-11" in entry.aliases
+    assert "tis620" in entry.aliases

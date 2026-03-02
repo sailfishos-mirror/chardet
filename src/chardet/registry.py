@@ -130,11 +130,11 @@ REGISTRY: tuple[EncodingInfo, ...] = (
     ),
     # CJK - Modern Web
     EncodingInfo(
-        name="big5",
-        aliases=("big5-tw", "csbig5"),
+        name="big5hkscs",
+        aliases=("big5", "big5-tw", "csbig5", "cp950"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
-        python_codec="big5",
+        python_codec="big5hkscs",
         languages=("zh",),
     ),
     EncodingInfo(
@@ -154,11 +154,11 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         languages=("ko",),
     ),
     EncodingInfo(
-        name="euc-jp",
-        aliases=("eucjp", "ujis", "u-jis"),
+        name="euc-jis-2004",
+        aliases=("euc-jp", "eucjp", "ujis", "u-jis", "euc-jisx0213"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
-        python_codec="euc-jp",
+        python_codec="euc_jis_2004",
         languages=("ja",),
     ),
     EncodingInfo(
@@ -171,7 +171,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
     ),
     EncodingInfo(
         name="gb18030",
-        aliases=("gb-18030",),
+        aliases=("gb-18030", "gb2312", "gbk"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
         python_codec="gb18030",
@@ -186,11 +186,27 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         languages=("zh",),
     ),
     EncodingInfo(
-        name="iso-2022-jp",
-        aliases=("csiso2022jp",),
+        name="iso2022-jp-2",
+        aliases=("iso-2022-jp", "csiso2022jp", "iso2022-jp-1"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
-        python_codec="iso2022-jp",
+        python_codec="iso2022_jp_2",
+        languages=("ja",),
+    ),
+    EncodingInfo(
+        name="iso2022-jp-2004",
+        aliases=("iso2022-jp-3",),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=True,
+        python_codec="iso2022_jp_2004",
+        languages=("ja",),
+    ),
+    EncodingInfo(
+        name="iso2022-jp-ext",
+        aliases=(),
+        era=EncodingEra.MODERN_WEB,
+        is_multibyte=True,
+        python_codec="iso2022_jp_ext",
         languages=("ja",),
     ),
     EncodingInfo(
@@ -202,11 +218,11 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         languages=("ko",),
     ),
     EncodingInfo(
-        name="shift_jis",
-        aliases=("sjis", "shiftjis", "s_jis"),
+        name="shift_jis_2004",
+        aliases=("shift_jis", "sjis", "shiftjis", "s_jis", "shift-jisx0213"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
-        python_codec="shift_jis",
+        python_codec="shift_jis_2004",
         languages=("ja",),
     ),
     # Windows code pages - Modern Web
@@ -310,7 +326,7 @@ REGISTRY: tuple[EncodingInfo, ...] = (
     # TIS-620 - Modern Web
     EncodingInfo(
         name="tis-620",
-        aliases=("tis620",),
+        aliases=("tis620", "iso-8859-11"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
         python_codec="tis-620",
@@ -699,11 +715,11 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         languages=("he",),
     ),
     EncodingInfo(
-        name="cp500",
-        aliases=(),
+        name="cp1140",
+        aliases=("cp500",),
         era=EncodingEra.MAINFRAME,
         is_multibyte=False,
-        python_codec="cp500",
+        python_codec="cp1140",
         languages=("en", "fr", "de", "es", "pt", "it", "nl", "da", "sv", "no", "fi", "is", "id", "ms"),
     ),
     EncodingInfo(
