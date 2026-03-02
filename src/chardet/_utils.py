@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import warnings
 
-from chardet.enums import EncodingEra
-
 #: Default maximum number of bytes to examine during detection.
 DEFAULT_MAX_BYTES: int = 200_000
 
@@ -24,15 +22,6 @@ def _warn_deprecated_chunk_size(chunk_size: int, stacklevel: int = 3) -> None:
             DeprecationWarning,
             stacklevel=stacklevel,
         )
-
-
-def _resolve_rename(
-    should_rename_legacy: bool | None, encoding_era: EncodingEra
-) -> bool:
-    """Determine whether to apply legacy encoding name remapping."""
-    if should_rename_legacy is None:
-        return encoding_era == EncodingEra.MODERN_WEB
-    return should_rename_legacy
 
 
 def _validate_max_bytes(max_bytes: int) -> None:

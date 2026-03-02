@@ -7,7 +7,7 @@ from types import MappingProxyType
 from typing import ClassVar
 
 from chardet import _utils
-from chardet._utils import DEFAULT_MAX_BYTES, _resolve_rename, _validate_max_bytes
+from chardet._utils import DEFAULT_MAX_BYTES, _validate_max_bytes
 from chardet.enums import EncodingEra, LanguageFilter
 from chardet.equivalences import PREFERRED_SUPERSET, apply_legacy_rename
 from chardet.pipeline import DetectionDict, DetectionResult
@@ -40,8 +40,8 @@ class UniversalDetector:
     def __init__(
         self,
         lang_filter: LanguageFilter = LanguageFilter.ALL,
-        should_rename_legacy: bool | None = None,
-        encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
+        should_rename_legacy: bool = True,
+        encoding_era: EncodingEra = EncodingEra.ALL,
         max_bytes: int = DEFAULT_MAX_BYTES,
     ) -> None:
         """Initialize the detector.
@@ -49,10 +49,8 @@ class UniversalDetector:
         :param lang_filter: Deprecated -- accepted for backward compatibility
             but has no effect.  A warning is emitted when set to anything
             other than :attr:`LanguageFilter.ALL`.
-        :param should_rename_legacy: If ``True``, remap legacy encoding names
-            to their modern equivalents.  If ``None`` (the default), renaming
-            is applied only when *encoding_era* is
-            :attr:`EncodingEra.MODERN_WEB`.
+        :param should_rename_legacy: If ``True`` (the default), remap legacy
+            encoding names to their modern equivalents.
         :param encoding_era: Restrict candidate encodings to the given era.
         :param max_bytes: Maximum number of bytes to buffer from
             :meth:`feed` calls before stopping accumulation.
@@ -64,7 +62,7 @@ class UniversalDetector:
                 DeprecationWarning,
                 stacklevel=2,
             )
-        self._rename_legacy = _resolve_rename(should_rename_legacy, encoding_era)
+        self._rename_legacy = should_rename_legacy
         _validate_max_bytes(max_bytes)
         self._encoding_era = encoding_era
         self._max_bytes = max_bytes

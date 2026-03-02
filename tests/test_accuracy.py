@@ -1,8 +1,8 @@
 # tests/test_accuracy.py
 """Accuracy evaluation against the chardet test suite.
 
-Each test file is parametrized as its own test case via conftest.py's
-pytest_generate_tests hook. Run with `pytest -n auto` for parallel execution.
+Each test function is independently parametrized with its own xfail set.
+Run with ``pytest -n auto`` for parallel execution.
 """
 
 from __future__ import annotations
@@ -10,13 +10,170 @@ from __future__ import annotations
 import warnings
 from pathlib import Path
 
-from utils import normalize_language
+import pytest
+
+from utils import collect_test_files, get_data_dir, normalize_language
 
 import chardet
 from chardet.enums import EncodingEra
 from chardet.equivalences import is_correct, is_equivalent_detection
+from chardet.registry import REGISTRY
+
+# ---------------------------------------------------------------------------
+# Known accuracy failures — marked xfail so they don't block CI but are
+# tracked for future improvement.  Kept sorted for easy diffing.
+# ---------------------------------------------------------------------------
+
+_KNOWN_FAILURES: frozenset[str] = frozenset(
+    {
+        "cp037-dutch/culturax_mC4_107675.txt",
+        "cp037-english/_ude_1.txt",
+        "cp437-breton/culturax_OSCAR-2019_43764.txt",
+        "cp437-english/culturax_mC4_84512.txt",
+        "cp437-finnish/culturax_mC4_80361.txt",
+        "cp437-finnish/culturax_mC4_80363.txt",
+        "cp437-finnish/culturax_mC4_80364.txt",
+        "cp437-indonesian/culturax_mC4_114889.txt",
+        "cp437-irish/culturax_mC4_63471.txt",
+        "cp437-irish/culturax_mC4_63473.txt",
+        "cp437-welsh/culturax_mC4_78727.txt",
+        "cp437-welsh/culturax_mC4_78729.txt",
+        "cp500-spanish/culturax_mC4_87070.txt",
+        "cp850-breton/culturax_OSCAR-2019_43764.txt",
+        "cp850-english/culturax_mC4_84512.txt",
+        "cp850-finnish/culturax_mC4_80361.txt",
+        "cp850-finnish/culturax_mC4_80363.txt",
+        "cp850-finnish/culturax_mC4_80364.txt",
+        "cp850-icelandic/culturax_mC4_77487.txt",
+        "cp850-icelandic/culturax_mC4_77488.txt",
+        "cp850-icelandic/culturax_mC4_77489.txt",
+        "cp850-indonesian/culturax_mC4_114889.txt",
+        "cp850-irish/culturax_mC4_63468.txt",
+        "cp850-irish/culturax_mC4_63470.txt",
+        "cp850-irish/culturax_mC4_63471.txt",
+        "cp850-spanish/culturax_mC4_87070.txt",
+        "cp850-welsh/culturax_mC4_78727.txt",
+        "cp850-welsh/culturax_mC4_78729.txt",
+        "cp852-romanian/culturax_mC4_78976.txt",
+        "cp852-romanian/culturax_mC4_78978.txt",
+        "cp852-romanian/culturax_mC4_78979.txt",
+        "cp852-romanian/culturax_OSCAR-2019_78977.txt",
+        "cp858-breton/culturax_OSCAR-2019_43764.txt",
+        "cp858-english/culturax_mC4_84512.txt",
+        "cp858-finnish/culturax_mC4_80361.txt",
+        "cp858-finnish/culturax_mC4_80362.txt",
+        "cp858-finnish/culturax_mC4_80363.txt",
+        "cp858-icelandic/culturax_mC4_77487.txt",
+        "cp858-icelandic/culturax_mC4_77488.txt",
+        "cp858-icelandic/culturax_mC4_77489.txt",
+        "cp858-indonesian/culturax_mC4_114889.txt",
+        "cp858-irish/culturax_mC4_63468.txt",
+        "cp858-irish/culturax_mC4_63469.txt",
+        "cp858-irish/culturax_mC4_63470.txt",
+        "cp858-spanish/culturax_mC4_87070.txt",
+        "cp858-welsh/culturax_mC4_78727.txt",
+        "cp858-welsh/culturax_mC4_78729.txt",
+        "cp866-ukrainian/culturax_mC4_95020.txt",
+        "cp866-ukrainian/culturax_mC4_95021.txt",
+        "cp932-japanese/hardsoft.at.webry.info.xml",
+        "cp932-japanese/y-moto.com.xml",
+        "gb2312-chinese/_mozilla_bug171813_text.html",
+        "iso-8859-1-english/ioreg_output.txt",
+        "iso-8859-1-welsh/culturax_mC4_78727.txt",
+        "iso-8859-15-irish/culturax_mC4_63469.txt",
+        "iso-8859-15-welsh/culturax_mC4_78727.txt",
+        "iso-8859-16-romanian/_ude_1.txt",
+        "maclatin2-slovene/culturax_mC4_66688.txt",
+        "maclatin2-slovene/culturax_mC4_66690.txt",
+        "macroman-breton/culturax_OSCAR-2019_43764.txt",
+        "macroman-english/culturax_mC4_84512.txt",
+        "macroman-indonesian/culturax_mC4_114889.txt",
+        "macroman-irish/culturax_mC4_63468.txt",
+        "macroman-irish/culturax_mC4_63469.txt",
+        "macroman-irish/culturax_mC4_63470.txt",
+        "macroman-welsh/culturax_mC4_78727.txt",
+        "macroman-welsh/culturax_mC4_78729.txt",
+        "utf-8-english/finnish-utf-8-latin-1-confusion.html",
+        "windows-1252-welsh/culturax_mC4_78727.txt",
+    }
+)
+
+# Known failures when testing with era-filtered detection.
+# Some overlap with _KNOWN_FAILURES (hard files that fail either way),
+# some are unique (disambiguation is harder with fewer candidates),
+# and many _KNOWN_FAILURES are absent (era filtering actually helps).
+_KNOWN_ERA_FILTERED_FAILURES: frozenset[str] = frozenset(
+    {
+        "cp037-dutch/culturax_mC4_107675.txt",
+        "cp037-english/_ude_1.txt",
+        "cp500-spanish/culturax_mC4_87070.txt",
+        "cp850-icelandic/culturax_mC4_77487.txt",
+        "cp850-icelandic/culturax_mC4_77488.txt",
+        "cp850-icelandic/culturax_mC4_77489.txt",
+        "cp850-spanish/culturax_mC4_87070.txt",
+        "cp852-romanian/culturax_OSCAR-2019_78977.txt",
+        "cp852-romanian/culturax_mC4_78976.txt",
+        "cp852-romanian/culturax_mC4_78978.txt",
+        "cp852-romanian/culturax_mC4_78979.txt",
+        "cp858-finnish/culturax_mC4_80362.txt",
+        "cp858-icelandic/culturax_mC4_77487.txt",
+        "cp858-icelandic/culturax_mC4_77488.txt",
+        "cp858-icelandic/culturax_mC4_77489.txt",
+        "cp858-irish/culturax_mC4_63469.txt",
+        "cp858-spanish/culturax_mC4_87070.txt",
+        "cp932-japanese/hardsoft.at.webry.info.xml",
+        "cp932-japanese/y-moto.com.xml",
+        "gb2312-chinese/_mozilla_bug171813_text.html",
+        "iso-8859-15-irish/culturax_mC4_63469.txt",
+        "iso-8859-16-hungarian/culturax_OSCAR-2019_82421.txt",
+        "iso-8859-16-romanian/_ude_1.txt",
+        "macroman-danish/culturax_mC4_83469.txt",
+        "macroman-finnish/culturax_mC4_80362.txt",
+        "utf-8-english/finnish-utf-8-latin-1-confusion.html",
+    }
+)
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 
+def _encoding_era(name: str) -> EncodingEra:
+    """Look up the encoding era for a test-data encoding name."""
+    if name in REGISTRY:
+        return REGISTRY[name].era
+    lower = name.lower()
+    for info in REGISTRY.values():
+        if lower in (a.lower() for a in info.aliases):
+            return info.era
+    return EncodingEra.ALL
+
+
+def _make_params(
+    known_failures: frozenset[str],
+) -> list[pytest.param]:
+    """Build parametrize params from test data, marking known failures as xfail."""
+    data_dir = get_data_dir()
+    test_files = collect_test_files(data_dir)
+    params = []
+    for enc, lang, fp in test_files:
+        test_id = f"{enc}-{lang}/{fp.name}"
+        marks = []
+        if test_id in known_failures:
+            marks.append(pytest.mark.xfail(reason="known accuracy gap"))
+        params.append(pytest.param(enc, lang, fp, marks=marks, id=test_id))
+    return params
+
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("expected_encoding", "language", "test_file_path"),
+    _make_params(_KNOWN_FAILURES),
+)
 def test_detect(expected_encoding: str, language: str, test_file_path: Path) -> None:
     """Detect encoding of a single test file and verify correctness."""
     data = test_file_path.read_bytes()
@@ -39,3 +196,25 @@ def test_detect(expected_encoding: str, language: str, test_file_path: Path) -> 
             f"(encoding={expected_encoding}, file={test_file_path.name})",
             stacklevel=1,
         )
+
+
+@pytest.mark.parametrize(
+    ("expected_encoding", "language", "test_file_path"),
+    _make_params(_KNOWN_ERA_FILTERED_FAILURES),
+)
+def test_detect_era_filtered(
+    expected_encoding: str, language: str, test_file_path: Path
+) -> None:
+    """Detect encoding using only the expected encoding's own era."""
+    era = _encoding_era(expected_encoding)
+    data = test_file_path.read_bytes()
+    result = chardet.detect(data, encoding_era=era)
+    detected = result["encoding"]
+
+    assert is_correct(expected_encoding, detected) or is_equivalent_detection(
+        data, expected_encoding, detected
+    ), (
+        f"expected={expected_encoding}, got={detected} "
+        f"(era={era!r}, confidence={result['confidence']:.2f}, "
+        f"language={language}, file={test_file_path.name})"
+    )

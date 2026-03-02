@@ -6,7 +6,6 @@ from chardet._utils import (
     _DEFAULT_CHUNK_SIZE,
     DEFAULT_MAX_BYTES,
     MINIMUM_THRESHOLD,
-    _resolve_rename,
     _validate_max_bytes,
     _warn_deprecated_chunk_size,
 )
@@ -33,8 +32,8 @@ __all__ = [
 
 def detect(
     byte_str: bytes | bytearray,
-    should_rename_legacy: bool | None = None,
-    encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
+    should_rename_legacy: bool = True,
+    encoding_era: EncodingEra = EncodingEra.ALL,
     chunk_size: int = _DEFAULT_CHUNK_SIZE,
     max_bytes: int = DEFAULT_MAX_BYTES,
 ) -> DetectionDict:
@@ -44,9 +43,8 @@ def detect(
     *chunk_size* is accepted but has no effect.
 
     :param byte_str: The byte sequence to detect encoding for.
-    :param should_rename_legacy: If ``True``, remap legacy encoding names to
-        their modern equivalents.  If ``None`` (the default), renaming is
-        applied only when *encoding_era* is :attr:`EncodingEra.MODERN_WEB`.
+    :param should_rename_legacy: If ``True`` (the default), remap legacy
+        encoding names to their modern equivalents.
     :param encoding_era: Restrict candidate encodings to the given era.
     :param chunk_size: Deprecated -- accepted for backward compatibility but
         has no effect.
@@ -59,7 +57,7 @@ def detect(
     data = byte_str if isinstance(byte_str, bytes) else bytes(byte_str)
     results = run_pipeline(data, encoding_era, max_bytes=max_bytes)
     result = results[0].to_dict()
-    if _resolve_rename(should_rename_legacy, encoding_era):
+    if should_rename_legacy:
         apply_legacy_rename(result)
     return result
 
@@ -67,8 +65,8 @@ def detect(
 def detect_all(  # noqa: PLR0913
     byte_str: bytes | bytearray,
     ignore_threshold: bool = False,
-    should_rename_legacy: bool | None = None,
-    encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
+    should_rename_legacy: bool = True,
+    encoding_era: EncodingEra = EncodingEra.ALL,
     chunk_size: int = _DEFAULT_CHUNK_SIZE,
     max_bytes: int = DEFAULT_MAX_BYTES,
 ) -> list[DetectionDict]:
@@ -85,9 +83,8 @@ def detect_all(  # noqa: PLR0913
     :param byte_str: The byte sequence to detect encoding for.
     :param ignore_threshold: If ``True``, return all candidate encodings
         regardless of confidence score.
-    :param should_rename_legacy: If ``True``, remap legacy encoding names to
-        their modern equivalents.  If ``None`` (the default), renaming is
-        applied only when *encoding_era* is :attr:`EncodingEra.MODERN_WEB`.
+    :param should_rename_legacy: If ``True`` (the default), remap legacy
+        encoding names to their modern equivalents.
     :param encoding_era: Restrict candidate encodings to the given era.
     :param chunk_size: Deprecated -- accepted for backward compatibility but
         has no effect.
@@ -99,13 +96,12 @@ def detect_all(  # noqa: PLR0913
     _validate_max_bytes(max_bytes)
     data = byte_str if isinstance(byte_str, bytes) else bytes(byte_str)
     results = run_pipeline(data, encoding_era, max_bytes=max_bytes)
-    rename = _resolve_rename(should_rename_legacy, encoding_era)
     dicts = [r.to_dict() for r in results]
     if not ignore_threshold:
         filtered = [d for d in dicts if d["confidence"] > MINIMUM_THRESHOLD]
         if filtered:
             dicts = filtered
-    if rename:
+    if should_rename_legacy:
         for d in dicts:
             apply_legacy_rename(d)
     return sorted(dicts, key=lambda d: d["confidence"], reverse=True)

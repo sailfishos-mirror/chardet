@@ -2,8 +2,72 @@
 
 from __future__ import annotations
 
+import shutil
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
+
+_TEST_DATA_REPO = "https://github.com/chardet/test-data.git"
+_COMMIT_HASH_FILE = ".commit-hash"
+
+
+def _cache_is_stale(local_data: Path) -> bool:
+    """Return True if the cached test data is outdated."""
+    hash_file = local_data / _COMMIT_HASH_FILE
+    if not hash_file.is_file():
+        return False
+    local_hash = hash_file.read_text().strip()
+    try:
+        result = subprocess.run(
+            ["git", "ls-remote", _TEST_DATA_REPO, "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=10,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+        return False
+    remote_hash = result.stdout.split()[0] if result.stdout.strip() else ""
+    return local_hash != remote_hash
+
+
+def _clone_test_data(local_data: Path) -> None:
+    """Shallow-clone the test-data repo into *local_data* and record the commit hash."""
+    with tempfile.TemporaryDirectory() as tmp:
+        subprocess.run(
+            ["git", "clone", "--depth=1", _TEST_DATA_REPO, tmp],
+            check=True,
+            capture_output=True,
+        )
+        head = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=tmp,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        src = Path(tmp)
+        local_data.mkdir(parents=True, exist_ok=True)
+        for item in src.iterdir():
+            if not item.is_dir() or item.name.startswith("."):
+                continue
+            dest = local_data / item.name
+            shutil.copytree(item, dest, dirs_exist_ok=True)
+        (local_data / _COMMIT_HASH_FILE).write_text(head.stdout.strip() + "\n")
+
+
+def get_data_dir() -> Path:
+    """Get the test data directory, cloning from GitHub if needed."""
+    repo_root = Path(__file__).parent.parent
+    local_data = repo_root / "tests" / "data"
+    if local_data.is_dir() and any(local_data.iterdir()):
+        if _cache_is_stale(local_data):
+            shutil.rmtree(local_data)
+            _clone_test_data(local_data)
+        return local_data
+    _clone_test_data(local_data)
+    return local_data
 
 
 def find_chardet_so_files() -> list[Path]:

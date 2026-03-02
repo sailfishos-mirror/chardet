@@ -19,8 +19,8 @@ def test_detect_returns_dict():
 
 def test_detect_ascii():
     result = chardet.detect(b"Hello world")
-    # Default encoding_era=MODERN_WEB resolves should_rename_legacy to True,
-    # so ascii is reported as its superset Windows-1252.
+    # Default should_rename_legacy=True renames, so ascii is reported
+    # as its superset Windows-1252.
     assert result["encoding"] == "Windows-1252"
     assert result["confidence"] == 1.0
 
@@ -46,6 +46,27 @@ def test_detect_with_encoding_era():
     data = b"Hello world"
     result = chardet.detect(data, encoding_era=EncodingEra.MODERN_WEB)
     assert result["encoding"] is not None
+
+
+def test_encoding_era_excludes_legacy():
+    """MODERN_WEB excludes legacy encodings; ALL includes them."""
+    # Greek text that should be detected as iso-8859-7 (Legacy ISO) when
+    # legacy eras are enabled, but not when restricted to MODERN_WEB.
+    data = (
+        "Η Αθήνα είναι η πρωτεύουσα και μεγαλύτερη πόλη της Ελλάδας. "
+        "Η πόλη έχει μακρά ιστορία που εκτείνεται πάνω από τρεις χιλιετίες."
+    ).encode("iso-8859-7")
+    modern = chardet.detect(
+        data, encoding_era=EncodingEra.MODERN_WEB, should_rename_legacy=False
+    )
+    legacy = chardet.detect(
+        data, encoding_era=EncodingEra.ALL, should_rename_legacy=False
+    )
+    # With ALL, iso-8859-7 should be detected
+    assert legacy["encoding"] == "iso-8859-7"
+    # With MODERN_WEB only, iso-8859-7 is not a candidate so the result
+    # must be a different encoding (windows-1253 is the modern Greek encoding)
+    assert modern["encoding"] != "iso-8859-7"
 
 
 def test_detect_with_max_bytes():
@@ -84,8 +105,8 @@ def test_version_exists():
 # --- should_rename_legacy tests ---
 
 
-def test_rename_legacy_default_modern_web():
-    """Default (None) with MODERN_WEB era renames ascii to Windows-1252."""
+def test_rename_legacy_default():
+    """Default (None) always renames ascii to Windows-1252."""
     result = chardet.detect(b"Hello world")
     assert result["encoding"] == "Windows-1252"
 
@@ -106,10 +127,10 @@ def test_rename_legacy_true():
     assert result["encoding"] == "Windows-1252"
 
 
-def test_rename_legacy_none_non_modern_era():
-    """None with non-MODERN_WEB era does not rename."""
+def test_rename_legacy_default_with_all_era():
+    """Default (True) with ALL era renames."""
     result = chardet.detect(b"Hello world", encoding_era=EncodingEra.ALL)
-    assert result["encoding"] == "ascii"
+    assert result["encoding"] == "Windows-1252"
 
 
 def test_rename_legacy_detect_all():
