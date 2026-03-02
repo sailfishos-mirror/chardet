@@ -18,6 +18,7 @@ runtime dependencies, works on PyPy.
 
 - **96.8% accuracy** on 2,179 test files
 - **28x faster** than chardet 6.0.0
+- **5x faster** than charset-normalizer
 - **Language detection** for every result (90.5% accuracy)
 - **99 encodings** across six encoding eras
 - **Thread-safe** ``detect()`` and ``detect_all()``
