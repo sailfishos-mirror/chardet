@@ -54,7 +54,7 @@ SUPERSETS: dict[str, frozenset[str]] = {
     "euc-jp": frozenset({"euc-jis-2004"}),
     "euc-jisx0213": frozenset({"euc-jis-2004"}),
     "euc-kr": frozenset({"cp949"}),
-    "cp500": frozenset({"cp1140"}),
+    "cp037": frozenset({"cp1140"}),
     # ISO-2022-JP subsets: any branch variant is acceptable
     "iso-2022-jp": frozenset({"iso2022-jp-2", "iso2022-jp-2004", "iso2022-jp-ext"}),
     "iso2022-jp-1": frozenset({"iso2022-jp-2", "iso2022-jp-ext"}),

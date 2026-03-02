@@ -33,8 +33,9 @@ def test_registry_iso_8859_1_is_legacy_iso():
 
 
 def test_registry_cp037_is_mainframe():
-    cp037 = next(e for e in REGISTRY if e.name == "cp037")
-    assert EncodingEra.MAINFRAME in cp037.era
+    cp1140 = next(e for e in REGISTRY if e.name == "cp1140")
+    assert EncodingEra.MAINFRAME in cp1140.era
+    assert "cp037" in cp1140.aliases
 
 
 def test_registry_macroman_is_legacy_mac():
@@ -236,17 +237,20 @@ def test_iso2022_jp_split_into_branches():
     assert jpext.languages == ("ja",)
 
 
-# === Task 6a: cp500 -> cp1140 ===
+# === Task 6a: cp037 -> cp1140 ===
 
 
-def test_cp500_flipped_to_cp1140():
-    """cp1140 is the primary name; cp500 is an alias."""
+def test_cp037_flipped_to_cp1140():
+    """cp1140 is the primary name; cp037 is an alias (cp1140 = cp037 + euro sign)."""
     by_name = {e.name: e for e in REGISTRY}
     assert "cp1140" in by_name
     entry = by_name["cp1140"]
-    assert "cp500" in entry.aliases
+    assert "cp037" in entry.aliases
     assert entry.python_codec == "cp1140"
     assert EncodingEra.MAINFRAME in entry.era
+    # cp500 should still be its own entry (different EBCDIC variant)
+    assert "cp500" in by_name
+    assert by_name["cp500"].python_codec == "cp500"
 
 
 # === Task 6b: tis-620 gets iso-8859-11 alias ===

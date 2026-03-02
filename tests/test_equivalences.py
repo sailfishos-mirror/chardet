@@ -118,8 +118,8 @@ def test_superset_equivalences_for_renamed_encodings() -> None:
     assert is_correct("euc-jp", "euc-jis-2004")
     # shift_jis expected, shift_jis_2004 detected -> correct
     assert is_correct("shift_jis", "shift_jis_2004")
-    # cp500 expected, cp1140 detected -> correct
-    assert is_correct("cp500", "cp1140")
+    # cp037 expected, cp1140 detected -> correct (cp1140 = cp037 + euro sign)
+    assert is_correct("cp037", "cp1140")
     # iso-2022-jp expected, any branch -> correct
     assert is_correct("iso-2022-jp", "iso2022-jp-2")
     assert is_correct("iso-2022-jp", "iso2022-jp-2004")
