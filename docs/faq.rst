@@ -11,7 +11,7 @@ of control characters that don't match any known text encoding.
 .. code-block:: python
 
    result = chardet.detect(b"\x00\x01\x02\x03")
-   # {'encoding': None, 'confidence': None, 'language': None}
+   # {'encoding': None, 'confidence': 0.95, 'language': None}
 
 How do I increase accuracy?
 ----------------------------

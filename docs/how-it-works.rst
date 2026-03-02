@@ -68,11 +68,16 @@ The confidence score (0.0 to 1.0) reflects how the result was determined:
 
 - **1.0** — BOM detected (definitive)
 - **0.95** — Deterministic match (escape sequences, markup charset, ASCII,
-  valid UTF-8)
+  BOM-less UTF-16/32, binary detection)
+- **0.80–0.99** — UTF-8 detection. Confidence scales with the proportion of
+  multi-byte sequences in the data.
 - **< 0.95** — Statistical ranking. Higher scores mean the data better
   matches the encoding's expected byte pair frequencies.
 
-A confidence of ``None`` with encoding ``None`` means the data appears to be
+Internal pipeline stages may temporarily boost confidence above 1.0 for
+ranking purposes; ``run_pipeline`` clamps all final results to [0.0, 1.0].
+
+A confidence of ``0.95`` with encoding ``None`` means the data appears to be
 binary (not text).
 
 Language Detection
@@ -90,5 +95,5 @@ detection uses three tiers:
    models and picks the best-matching language.
 
 3. **UTF-8 fallback** — For Unicode encodings (UTF-8, UTF-16, UTF-32),
-   the detected text is scored against byte-level bigram models for 48
-   languages.
+   the detected text is scored against byte-level bigram models for all
+   supported languages.

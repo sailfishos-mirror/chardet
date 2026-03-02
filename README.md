@@ -118,10 +118,10 @@ cat somefile.txt | chardetect
 ## What's New in 7.0
 
 - **MIT license** (previous versions were LGPL)
-- **Ground-up rewrite** — 11-stage detection pipeline using BOM detection, structural probing, byte validity filtering, and bigram statistical models
+- **Ground-up rewrite** — 12-stage detection pipeline using BOM detection, structural probing, byte validity filtering, and bigram statistical models
 - **27x faster** than chardet 6.0.0, **5x faster** than charset-normalizer (pure Python)
 - **96.6% accuracy** — +2.1pp vs chardet 6.0.0, +7.6pp vs charset-normalizer
-- **Language detection** — 90.9% accuracy across 48 languages, returned with every result
+- **Language detection** — 90.9% accuracy across 49 languages, returned with every result
 - **99 encodings** — full coverage including EBCDIC, Mac, DOS, and Baltic/Central European families
 - **`EncodingEra` filtering** — scope detection to modern web encodings, legacy ISO/Mac/DOS, mainframe, or all
 - **Optional mypyc compilation** — 1.45x additional speedup on CPython
