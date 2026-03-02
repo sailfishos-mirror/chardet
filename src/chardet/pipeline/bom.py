@@ -1,4 +1,4 @@
-"""Stage 1: BOM (Byte Order Mark) detection."""
+"""Stage 1a: BOM (Byte Order Mark) detection."""
 
 from __future__ import annotations
 

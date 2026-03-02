@@ -72,7 +72,8 @@ def test_encoding_era_excludes_legacy():
 def test_detect_with_max_bytes():
     data = b"Hello world" * 100_000
     result = chardet.detect(data, max_bytes=100)
-    assert result is not None
+    assert result["encoding"] is not None
+    assert result["confidence"] > 0
 
 
 def test_detect_all_returns_list():
@@ -139,6 +140,12 @@ def test_rename_legacy_detect_all():
     """should_rename_legacy applies to detect_all() results too."""
     results = chardet.detect_all(b"Hello world", should_rename_legacy=True)
     assert results[0]["encoding"] == "Windows-1252"
+
+
+def test_rename_legacy_detect_all_false():
+    """should_rename_legacy=False returns raw encoding names in detect_all."""
+    results = chardet.detect_all(b"Hello world", should_rename_legacy=False)
+    assert results[0]["encoding"] == "ascii"
 
 
 def test_rename_legacy_detector():
@@ -214,6 +221,11 @@ def test_lang_filter_all_no_warning():
 
 
 # --- max_bytes validation tests ---
+
+
+def test_detect_max_bytes_bool_raises():
+    with pytest.raises(ValueError, match="max_bytes"):
+        chardet.detect(b"Hello", max_bytes=True)
 
 
 def test_detect_max_bytes_zero_raises():

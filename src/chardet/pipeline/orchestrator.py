@@ -36,10 +36,16 @@ from chardet.registry import EncodingInfo, get_candidates
 _BINARY_RESULT = DetectionResult(
     encoding=None, confidence=DETERMINISTIC_CONFIDENCE, language=None
 )
+# UTF-8 is the default encoding for empty input, matching web standards
+# (HTML5 default encoding is UTF-8).
 _EMPTY_RESULT = DetectionResult(encoding="utf-8", confidence=0.10, language=None)
+# windows-1252 is the most common single-byte encoding on the web and the
+# HTTP/1.1 default charset — used when no encoding can be determined.
 _FALLBACK_RESULT = DetectionResult(
     encoding="windows-1252", confidence=0.10, language=None
 )
+# Threshold at which a CJK structural score is confident enough to trigger
+# combined structural+statistical ranking rather than purely statistical.
 _STRUCTURAL_CONFIDENCE_THRESHOLD = 0.85
 
 # Common Western Latin encodings that share the iso-8859-1 character
@@ -151,9 +157,11 @@ _ISO_8859_14_DISTINGUISHING: frozenset[int] = frozenset(
 )
 
 # Bytes where windows-1254 has Turkish-specific characters that differ from
-# windows-1252.  The C1 range (0x80-0x9F) is shared between windows-1252
-# and windows-1254 (smart quotes, dashes, etc.), so only the six Turkish
-# letter positions matter: 0xD0, 0xDD, 0xDE, 0xF0, 0xFD, 0xFE.
+# windows-1252.  Windows-1254 differs from windows-1252 at 8 byte positions.
+# Two (0x8E, 0x9E) are undefined in Windows-1254 but defined in Windows-1252;
+# these are excluded here because undefined bytes are not useful for
+# identifying Turkish text.  The remaining six positions map to
+# Turkish-specific letters and are the primary distinguishing signal.
 _WINDOWS_1254_DISTINGUISHING: frozenset[int] = frozenset(
     {0xD0, 0xDD, 0xDE, 0xF0, 0xFD, 0xFE}
 )
@@ -292,6 +300,10 @@ def _score_structural_candidates(
     bytes form valid multi-byte pairs, the structural evidence is strong
     and should increase the candidate's ranking relative to single-byte
     alternatives whose bigram models may score higher on small samples.
+
+    Note: boosted confidence values may exceed 1.0 and are used only for
+    relative ranking among candidates.  ``run_pipeline`` clamps all
+    confidence values to [0.0, 1.0] before returning to callers.
     """
     enc_lookup = {e.name: e for e in valid_candidates if e.is_multibyte}
     valid_mb = tuple(
@@ -378,20 +390,23 @@ def _promote_koi8t(
 
 # Maximum bytes of data used for language scoring in _fill_language.
 # Language bigrams converge quickly — 2 KB is sufficient for discrimination
-# across 48 languages while keeping Tier 3 (48-model scoring) fast.
+# across all language models while keeping Tier 3 (language-model scoring) fast.
 _LANG_SCORE_MAX_BYTES = 2048
 
 
 def _to_utf8(data: bytes, encoding: str) -> bytes | None:
     """Decode data from encoding and re-encode as UTF-8 for language scoring.
 
-    Returns None if decoding fails. For UTF-8, returns data as-is.
+    Returns None if the encoding is unknown. For UTF-8, returns data as-is.
+    Uses ``errors="ignore"`` because the data already passed byte-validity
+    filtering for the detected encoding; any residual invalid bytes are
+    irrelevant for language scoring.
     """
     if encoding == "utf-8":
         return data
     try:
         return data.decode(encoding, errors="ignore").encode("utf-8")
-    except (LookupError, UnicodeDecodeError):
+    except LookupError:
         return None
 
 
@@ -565,5 +580,15 @@ def run_pipeline(
     """
     results = _run_pipeline_core(data, encoding_era, max_bytes)
     # Language scoring uses only the first 2 KB — bigrams converge quickly
-    # and this keeps Tier 3 (48-model scoring) fast even on large inputs.
-    return _fill_language(data[:_LANG_SCORE_MAX_BYTES], results)
+    # and this keeps Tier 3 (language-model scoring) fast even on large inputs.
+    results = _fill_language(data[:_LANG_SCORE_MAX_BYTES], results)
+    assert results, "pipeline must always return at least one result"
+    # Clamp confidence to [0.0, 1.0] at the public API boundary.  Internal
+    # stages may boost confidence above 1.0 for ranking purposes (e.g.
+    # CJK byte-coverage boost), but callers expect a probability-like value.
+    return [
+        DetectionResult(r.encoding, min(r.confidence, 1.0), r.language)
+        if r.confidence > 1.0
+        else r
+        for r in results
+    ]

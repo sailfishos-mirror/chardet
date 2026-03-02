@@ -7,7 +7,8 @@ from dataclasses import field
 from typing import TypedDict
 
 #: Confidence for deterministic (non-BOM) detection stages.
-#: Used by escape, markup, utf1632, and binary stages.
+#: Used by escape, markup, and utf1632 stages (and by the orchestrator for
+#: the binary-detection result).
 DETERMINISTIC_CONFIDENCE: float = 0.95
 
 #: Byte table for fast non-ASCII counting (C-speed via bytes.translate).

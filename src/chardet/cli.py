@@ -54,6 +54,9 @@ def main(argv: list[str] | None = None) -> None:
     elif args.legacy:
         era = EncodingEra.ALL
     else:
+        # CLI defaults to MODERN_WEB (not ALL) for practical use — most CLI
+        # users want modern encoding detection.  The library API defaults to
+        # ALL for maximum coverage and backward compatibility.
         era = EncodingEra.MODERN_WEB
 
     if args.files:
@@ -66,13 +69,22 @@ def main(argv: list[str] | None = None) -> None:
                 print(f"chardetect: {filepath}: {e}", file=sys.stderr)
                 errors += 1
                 continue
-            result = chardet.detect(data, encoding_era=era)
+            try:
+                result = chardet.detect(data, encoding_era=era)
+            except Exception as e:  # noqa: BLE001
+                print(f"chardetect: {filepath}: detection failed: {e}", file=sys.stderr)
+                errors += 1
+                continue
             _print_result(result, filepath, minimal=args.minimal)
         if errors == len(args.files):
             sys.exit(1)
     else:
         data = sys.stdin.buffer.read(DEFAULT_MAX_BYTES)
-        result = chardet.detect(data, encoding_era=era)
+        try:
+            result = chardet.detect(data, encoding_era=era)
+        except Exception as e:  # noqa: BLE001
+            print(f"chardetect: stdin: detection failed: {e}", file=sys.stderr)
+            sys.exit(1)
         _print_result(result, "stdin", minimal=args.minimal)
 
 

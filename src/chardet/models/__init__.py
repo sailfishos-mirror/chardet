@@ -13,7 +13,7 @@ import threading
 from chardet.registry import REGISTRY
 
 #: Weight applied to non-ASCII bigrams during profile construction.
-#: Must be kept in sync with usage in pipeline/confusion.py.
+#: Imported by pipeline/confusion.py for focused bigram re-scoring.
 NON_ASCII_BIGRAM_WEIGHT: int = 8
 
 _MODEL_CACHE: dict[str, bytearray] | None = None
@@ -53,6 +53,14 @@ def load_models() -> dict[str, bytearray]:
         data = ref.read_bytes()
 
         if not data:
+            import warnings
+
+            warnings.warn(
+                "chardet models.bin is empty — statistical detection disabled; "
+                "reinstall chardet to fix",
+                RuntimeWarning,
+                stacklevel=2,
+            )
             _MODEL_CACHE = models
             return models
 
@@ -211,17 +219,19 @@ class BigramProfile:
 
     @classmethod
     def from_weighted_freq(
-        cls, weighted_freq: dict[int, int], weight_sum: int
+        cls, weighted_freq: dict[int, int]
     ) -> "BigramProfile":
         """Create a BigramProfile from pre-computed weighted frequencies.
 
+        Computes ``weight_sum`` and ``input_norm`` from *weighted_freq* to
+        ensure consistency between the three fields.
+
         :param weighted_freq: Mapping of bigram index to weighted count.
-        :param weight_sum: The total sum of all weights.
         :returns: A new :class:`BigramProfile` instance.
         """
         profile = cls(b"")
         profile.weighted_freq = weighted_freq
-        profile.weight_sum = weight_sum
+        profile.weight_sum = sum(weighted_freq.values())
         profile.input_norm = math.sqrt(sum(v * v for v in weighted_freq.values()))
         return profile
 

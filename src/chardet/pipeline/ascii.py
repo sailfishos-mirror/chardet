@@ -1,4 +1,4 @@
-"""Stage 1: Pure ASCII detection."""
+"""Stage 1c: Pure ASCII detection."""
 
 from __future__ import annotations
 

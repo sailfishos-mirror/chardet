@@ -29,8 +29,9 @@ _UTF16_MIN_NULL_FRACTION = 0.03
 
 # Minimum text-quality score to accept a UTF-16 candidate when both
 # endiannesses show null-byte patterns.  A score of 0.5 corresponds to
-# roughly 33% letters with no ASCII bonus — sufficient to distinguish
-# real text from coincidental byte patterns.
+# roughly 50% letters with no ASCII bonus (or ~40% with whitespace
+# present) — sufficient to distinguish real text from coincidental byte
+# patterns.
 _MIN_TEXT_QUALITY = 0.5
 
 # Minimum fraction of printable characters for a decoded sample to be
@@ -93,7 +94,7 @@ def _check_utf32(data: bytes) -> DetectionResult | None:
                     confidence=DETERMINISTIC_CONFIDENCE,
                     language=None,
                 )
-        except (UnicodeDecodeError, ValueError):
+        except UnicodeDecodeError:
             pass
 
     # UTF-32-LE: last byte of each 4-byte unit must be 0x00
@@ -110,7 +111,7 @@ def _check_utf32(data: bytes) -> DetectionResult | None:
                     confidence=DETERMINISTIC_CONFIDENCE,
                     language=None,
                 )
-        except (UnicodeDecodeError, ValueError):
+        except UnicodeDecodeError:
             pass
 
     return None
@@ -167,7 +168,7 @@ def _check_utf16(data: bytes) -> DetectionResult | None:
                     confidence=DETERMINISTIC_CONFIDENCE,
                     language=None,
                 )
-        except (UnicodeDecodeError, ValueError):
+        except UnicodeDecodeError:
             pass
         return None
 
@@ -179,7 +180,7 @@ def _check_utf16(data: bytes) -> DetectionResult | None:
     for encoding, _ in candidates:
         try:
             text = data[:sample_len].decode(encoding)
-        except (UnicodeDecodeError, ValueError):
+        except UnicodeDecodeError:
             continue
         quality = _text_quality(text)
         if quality > best_quality:
@@ -208,9 +209,11 @@ def _looks_like_text(text: str) -> bool:
 def _text_quality(text: str, limit: int = 500) -> float:
     """Score how much *text* looks like real human-readable content.
 
-    Returns a score in the range [-1.0, 1.6].  Higher values indicate
-    more natural text.  A score of -1.0 means the content is almost certainly
-    not valid text (too many control characters or combining marks).
+    Returns a score in the range [-1.0, ~1.6).  Higher values indicate
+    more natural text.  The practical maximum is 1.5 for all-ASCII-letter
+    input (1.6 approaches as sample size grows with all ASCII letters plus
+    whitespace).  A score of -1.0 means the content is almost certainly not
+    valid text (too many control characters or combining marks).
 
     Scoring factors:
 

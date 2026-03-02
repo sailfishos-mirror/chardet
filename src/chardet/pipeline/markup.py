@@ -1,4 +1,4 @@
-"""Stage 1d: HTML/XML charset declaration extraction."""
+"""Stage 1b: HTML/XML charset declaration extraction."""
 
 from __future__ import annotations
 
@@ -72,7 +72,7 @@ def _validate_bytes(data: bytes, encoding: str) -> bool:
     """Check that *data* can be decoded under *encoding* without errors.
 
     Only validates the first ``_SCAN_LIMIT`` bytes to avoid decoding a
-    full 200KB input just to verify a charset declaration found in the
+    full 200 kB input just to verify a charset declaration found in the
     header.
     """
     try:

@@ -109,3 +109,14 @@ def test_cli_encoding_era_flag(tmp_path: Path, capsys: pytest.CaptureFixture[str
     main(["-e", "modern_web", str(f)])
     captured = capsys.readouterr()
     assert "with confidence" in captured.out
+
+
+def test_cli_partial_failure(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
+    """When some files succeed and some fail, exit code should be 0."""
+    good = tmp_path / "good.txt"
+    good.write_bytes(b"Hello world")
+    # Mix of valid and invalid files — should NOT exit with code 1
+    main([str(good), "nonexistent_file_xyz.txt"])
+    captured = capsys.readouterr()
+    assert "nonexistent_file_xyz.txt" in captured.err
+    assert "with confidence" in captured.out

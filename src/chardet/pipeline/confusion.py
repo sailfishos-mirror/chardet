@@ -121,9 +121,21 @@ def load_confusion_data() -> DistinguishingMaps:
         ref = importlib.resources.files("chardet.models").joinpath("confusion.bin")
         raw = ref.read_bytes()
         if not raw:
+            import warnings
+
+            warnings.warn(
+                "chardet confusion.bin is empty — confusion resolution disabled; "
+                "reinstall chardet to fix",
+                RuntimeWarning,
+                stacklevel=2,
+            )
             _CONFUSION_CACHE = {}
             return _CONFUSION_CACHE
-        _CONFUSION_CACHE = deserialize_confusion_data_from_bytes(raw)
+        try:
+            _CONFUSION_CACHE = deserialize_confusion_data_from_bytes(raw)
+        except (struct.error, UnicodeDecodeError) as e:
+            msg = f"corrupt confusion.bin: {e}"
+            raise ValueError(msg) from e
         return _CONFUSION_CACHE
 
 
@@ -227,7 +239,6 @@ def resolve_by_bigram_rescore(
         return None
 
     freq: dict[int, int] = {}
-    w_sum = 0
     for i in range(len(data) - 1):
         b1 = data[i]
         b2 = data[i + 1]
@@ -236,12 +247,11 @@ def resolve_by_bigram_rescore(
         idx = (b1 << 8) | b2
         weight = NON_ASCII_BIGRAM_WEIGHT if (b1 > 0x7F or b2 > 0x7F) else 1
         freq[idx] = freq.get(idx, 0) + weight
-        w_sum += weight
 
     if not freq:
         return None
 
-    profile = BigramProfile.from_weighted_freq(freq, w_sum)
+    profile = BigramProfile.from_weighted_freq(freq)
 
     index = get_enc_index()
 

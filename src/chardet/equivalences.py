@@ -6,9 +6,11 @@ This module defines:
    encoding when the expected encoding is a subset is correct (e.g., detecting
    utf-8 when expected is ascii), but not the reverse.
 
-2. **Bidirectional equivalents**: encodings that are byte-for-byte identical
-   for all alphanumeric/punctuation/currency characters (currently only
-   UTF-16/UTF-32 endian variants).
+2. **Bidirectional equivalents**: groups of encodings where detecting any
+   member when another member was expected is considered correct.  This
+   includes UTF-16/UTF-32 endian variants (which encode the same text with
+   different byte order) and ISO-2022-JP branch variants (which are
+   compatible extensions of the same base encoding).
 
 3. **Preferred superset mapping** for the ``should_rename_legacy`` API option:
    replaces detected ISO/subset encoding names with their Windows/CP superset
@@ -110,7 +112,7 @@ def apply_legacy_rename(
     return result
 
 
-# Bidirectional equivalents -- byte-order variants only.
+# Bidirectional equivalents -- groups where any member is acceptable for any other.
 BIDIRECTIONAL_GROUPS: tuple[tuple[str, ...], ...] = (
     ("utf-16", "utf-16-le", "utf-16-be"),
     ("utf-32", "utf-32-le", "utf-32-be"),
