@@ -4,9 +4,9 @@ Supported Encodings
 chardet recognises **99 Python text encodings** via
 86 detection targets and their aliases, across six
 encoding eras.
-The default :attr:`~chardet.EncodingEra.MODERN_WEB` era covers the
-encodings most commonly found on the web today. Use
-:attr:`~chardet.EncodingEra.ALL` to enable detection of all encodings.
+The default :attr:`~chardet.EncodingEra.ALL` era enables detection of all
+encodings. Use :attr:`~chardet.EncodingEra.MODERN_WEB` to restrict
+candidates to the encodings most commonly found on the web today.
 
 Modern Web
 ----------

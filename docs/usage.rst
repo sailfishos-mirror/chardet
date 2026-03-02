@@ -67,33 +67,40 @@ another file.
 Encoding Eras
 -------------
 
-By default, chardet only considers modern web encodings. Use the
-``encoding_era`` parameter to broaden the search:
+By default, chardet considers all supported encodings for maximum
+accuracy. Use the ``encoding_era`` parameter to restrict the search to a
+specific subset:
 
 .. code-block:: python
 
    from chardet import detect, EncodingEra
 
-   # Default: only modern web encodings
+   # Default: all encodings considered
    result = detect(data)
 
-   # Include legacy ISO, Mac, DOS, and mainframe encodings
-   result = detect(data, encoding_era=EncodingEra.ALL)
+   # Restrict to modern web encodings only
+   result = detect(data, encoding_era=EncodingEra.MODERN_WEB)
 
    # Only legacy ISO encodings
    result = detect(data, encoding_era=EncodingEra.LEGACY_ISO)
 
 Available eras (can be combined with ``|``):
 
+- :attr:`~chardet.EncodingEra.ALL` — All supported encodings (default)
 - :attr:`~chardet.EncodingEra.MODERN_WEB` — UTF-8, Windows codepages,
-  CJK encodings (default)
+  CJK encodings
 - :attr:`~chardet.EncodingEra.LEGACY_ISO` — ISO-8859 family
 - :attr:`~chardet.EncodingEra.LEGACY_MAC` — Mac encodings
 - :attr:`~chardet.EncodingEra.LEGACY_REGIONAL` — Regional codepages
   (KOI8-T, KZ-1048, etc.)
 - :attr:`~chardet.EncodingEra.DOS` — DOS codepages (CP437, CP850, etc.)
 - :attr:`~chardet.EncodingEra.MAINFRAME` — EBCDIC encodings
-- :attr:`~chardet.EncodingEra.ALL` — All of the above
+
+.. note::
+
+   The ``chardetect`` command-line tool defaults to
+   :attr:`~chardet.EncodingEra.MODERN_WEB`. Pass ``--legacy`` to use
+   :attr:`~chardet.EncodingEra.ALL`.
 
 Limiting Bytes
 --------------

@@ -42,14 +42,24 @@ order:
    candidate encoding's Python codec. Any encoding that raises a decode
    error is eliminated.
 
-9. **Structural Probing** — For multi-byte encodings (CJK), analyzes
-   byte sequences to verify they follow the encoding's structural rules
-   (lead byte / trail byte patterns, valid ranges).
+9. **CJK Gating** — Eliminates CJK candidates that lack genuine
+   multi-byte structure. Checks pair ratio, high-byte count, byte
+   coverage, and lead byte diversity to prevent false CJK matches on
+   single-byte data.
 
-10. **Statistical Scoring** — Scores remaining candidates using pre-trained
+10. **Structural Probing** — For multi-byte encodings (CJK), analyzes
+    byte sequences to verify they follow the encoding's structural rules
+    (lead byte / trail byte patterns, valid ranges).
+
+11. **Statistical Scoring** — Scores remaining candidates using pre-trained
     bigram frequency models. Each model captures the characteristic byte
     pair frequencies of a language written in a specific encoding. The
     candidate with the highest score wins.
+
+12. **Post-processing** — Resolves confusion groups (encodings that are
+    statistically hard to distinguish), demotes niche Latin encodings
+    when a more common alternative scores similarly, and promotes KOI8-T
+    when appropriate.
 
 Confidence Scores
 -----------------
