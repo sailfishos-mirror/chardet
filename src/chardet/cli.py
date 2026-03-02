@@ -33,9 +33,6 @@ def main(argv: list[str] | None = None) -> None:
         "--minimal", action="store_true", help="Output only the encoding name"
     )
     parser.add_argument(
-        "--legacy", action="store_true", help="Include legacy encodings"
-    )
-    parser.add_argument(
         "-e",
         "--encoding-era",
         default=None,
@@ -48,15 +45,9 @@ def main(argv: list[str] | None = None) -> None:
 
     args = parser.parse_args(argv)
 
-    if args.encoding_era:
-        era = EncodingEra[args.encoding_era.upper()]
-    elif args.legacy:
-        era = EncodingEra.ALL
-    else:
-        # CLI defaults to MODERN_WEB (not ALL) for practical use — most CLI
-        # users want modern encoding detection.  The library API defaults to
-        # ALL for maximum coverage and backward compatibility.
-        era = EncodingEra.MODERN_WEB
+    era = (
+        EncodingEra[args.encoding_era.upper()] if args.encoding_era else EncodingEra.ALL
+    )
 
     if args.files:
         errors = 0

@@ -108,9 +108,6 @@ chardetect somefile.txt
 chardetect --minimal somefile.txt
 # utf-8
 
-# Include legacy encodings
-chardetect --legacy somefile.txt
-
 # Pipe from stdin
 cat somefile.txt | chardetect
 ```

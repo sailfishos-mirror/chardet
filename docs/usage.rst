@@ -96,12 +96,6 @@ Available eras (can be combined with ``|``):
 - :attr:`~chardet.EncodingEra.DOS` — DOS codepages (CP437, CP850, etc.)
 - :attr:`~chardet.EncodingEra.MAINFRAME` — EBCDIC encodings
 
-.. note::
-
-   The ``chardetect`` command-line tool defaults to
-   :attr:`~chardet.EncodingEra.MODERN_WEB`. Pass ``--legacy`` to use
-   :attr:`~chardet.EncodingEra.ALL`.
-
 Limiting Bytes
 --------------
 
@@ -128,9 +122,6 @@ chardet includes a ``chardetect`` command:
 
    # Output only the encoding name
    chardetect --minimal somefile.txt
-
-   # Include all encoding eras
-   chardetect --legacy somefile.txt
 
    # Specific encoding era
    chardetect -e dos somefile.txt

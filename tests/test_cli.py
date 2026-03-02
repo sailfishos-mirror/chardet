@@ -19,7 +19,6 @@ def test_cli_detects_file(tmp_path: Path):
         text=True,
     )
     assert result.returncode == 0
-    # Default era is MODERN_WEB, which renames ascii to Windows-1252
     assert "windows-1252" in result.stdout.lower()
 
 
@@ -42,7 +41,6 @@ def test_cli_stdin():
         capture_output=True,
     )
     assert result.returncode == 0
-    # Default era is MODERN_WEB, which renames ascii to Windows-1252
     assert "windows-1252" in result.stdout.decode().lower()
 
 
@@ -69,7 +67,6 @@ def test_cli_minimal_flag(tmp_path: Path):
         text=True,
     )
     assert result.returncode == 0
-    # Default era is MODERN_WEB, which renames ascii to Windows-1252
     assert result.stdout.strip() == "Windows-1252"
 
 
@@ -93,14 +90,6 @@ def test_cli_nonexistent_file(capsys: pytest.CaptureFixture[str]) -> None:
         main(["nonexistent_file_xyz.txt"])
     captured = capsys.readouterr()
     assert "nonexistent_file_xyz.txt" in captured.err
-
-
-def test_cli_legacy_flag(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
-    f = tmp_path / "test.txt"
-    f.write_bytes(b"Hello world, enough text for detection. " * 3)
-    main(["--legacy", str(f)])
-    captured = capsys.readouterr()
-    assert "with confidence" in captured.out
 
 
 def test_cli_encoding_era_flag(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
