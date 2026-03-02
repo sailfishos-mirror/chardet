@@ -11,16 +11,21 @@ Python 3.10+, zero runtime dependencies, works on PyPy.
 
 ## Why chardet 7.0?
 
-| Feature | chardet 7.0 | [charset-normalizer] |
-|---|:---:|:---:|
-| License | MIT | MIT |
-| Streaming detection | **yes** | no |
-| Encoding era filtering | **yes** | no |
-| Detect spoken language | **yes** | yes |
-| Byte-validity filtering | **yes** | yes |
-| Native Python | **yes** | yes |
-| Optional mypyc compilation | **yes** | yes |
-| Supported encodings | 84 | 99 |
+**96.6% accuracy** on 2,161 test files. **27x faster** than chardet 6.0.0.
+**5x faster** than charset-normalizer. **Language detection** for every
+result. **MIT licensed.**
+
+| | chardet 7.0 | chardet 6.0.0 | [charset-normalizer] |
+|---|:---:|:---:|:---:|
+| Accuracy (2,161 files) | **96.6%** | 94.5% | 89.0% |
+| Speed (pure Python) | **6.5s** | 175.6s | 32.9s |
+| Language detection | **90.9%** | 47.0% | -- |
+| Peak memory | **22.5 MiB** | 16.4 MiB | 102.2 MiB |
+| Streaming detection | **yes** | yes | no |
+| Encoding era filtering | **yes** | no | no |
+| Supported encodings | 84 | 84 | 99 |
+| Optional mypyc compilation | **yes** | no | yes |
+| License | MIT | LGPL | MIT |
 
 [charset-normalizer]: https://github.com/jawah/charset_normalizer
 
@@ -113,8 +118,13 @@ cat somefile.txt | chardetect
 
 - **MIT license** (previous versions were LGPL)
 - **Ground-up rewrite** — 11-stage detection pipeline using BOM detection, structural probing, byte validity filtering, and bigram statistical models
+- **27x faster** than chardet 6.0.0, **5x faster** than charset-normalizer (pure Python)
+- **96.6% accuracy** — +2.1pp vs chardet 6.0.0, +7.6pp vs charset-normalizer
+- **Language detection** — 90.9% accuracy across 48 languages, returned with every result
+- **84 encodings** — full coverage including EBCDIC, Mac, DOS, and Baltic/Central European families
 - **`EncodingEra` filtering** — scope detection to modern web encodings, legacy ISO/Mac/DOS, mainframe, or all
-- **Optional mypyc compilation** for C-level performance on hot paths
+- **Optional mypyc compilation** — 1.45x additional speedup on CPython
+- **Thread-safe** — `detect()` and `detect_all()` are safe to call concurrently; scales on free-threaded Python
 - **Same API** — `detect()`, `detect_all()`, `UniversalDetector`, and the `chardetect` CLI all work as before
 
 ## Documentation

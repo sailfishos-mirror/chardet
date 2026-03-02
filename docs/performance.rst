@@ -18,24 +18,24 @@ Accuracy
      - Accuracy
      - Time
    * - **chardet** (this version)
-     - **2083/2161**
-     - **96.4%**
-     - **6.07s**
+     - **2088/2161**
+     - **96.6%**
+     - **6.47s**
    * - chardet 6.0.0
      - 2042/2161
      - 94.5%
-     - 175.79s
+     - 175.56s
    * - charset-normalizer
      - 1924/2161
      - 89.0%
-     - 33.81s
+     - 32.89s
    * - cchardet
      - 1228/2161
      - 56.8%
-     - 0.73s
+     - 0.71s
 
-chardet leads all detectors on accuracy: **+1.9pp** vs chardet 6.0.0,
-**+7.4pp** vs charset-normalizer, and **+39.6pp** vs cchardet.
+chardet leads all detectors on accuracy: **+2.1pp** vs chardet 6.0.0,
+**+7.6pp** vs charset-normalizer, and **+39.8pp** vs cchardet.
 
 Speed
 -----
@@ -51,32 +51,32 @@ Speed
      - p90
      - p95
    * - cchardet
-     - 723ms
+     - 713ms
      - 0.33ms
      - 0.07ms
      - 0.68ms
      - 0.92ms
    * - **chardet** (this version)
-     - **6,049ms**
-     - **2.80ms**
-     - **1.08ms**
-     - **5.07ms**
-     - **5.89ms**
+     - **6,469ms**
+     - **2.99ms**
+     - **1.12ms**
+     - **5.42ms**
+     - **6.17ms**
    * - charset-normalizer
-     - 33,783ms
+     - 32,889ms
      - 15.63ms
      - 4.74ms
      - 50.66ms
      - 72.64ms
    * - chardet 6.0.0
-     - 175,757ms
+     - 175,558ms
      - 81.33ms
      - 16.10ms
      - 121.99ms
      - 307.29ms
 
-chardet is **29x faster** than chardet 6.0.0 and **5.6x faster** than
-charset-normalizer. Its median latency (1.08ms) is the lowest among all
+chardet is **27x faster** than chardet 6.0.0 and **5.1x faster** than
+charset-normalizer. Its median latency (1.12ms) is the lowest among all
 pure-Python detectors.
 
 Memory
@@ -91,9 +91,9 @@ Memory
      - Peak Memory
      - RSS
    * - **chardet** (this version)
-     - **96 B**
-     - **20.4 MiB**
-     - **91.9 MiB**
+     - **51 B**
+     - **22.5 MiB**
+     - **94.8 MiB**
    * - chardet 6.0.0
      - 96 B
      - 16.4 MiB
@@ -101,14 +101,14 @@ Memory
    * - charset-normalizer
      - 1.7 MiB
      - 102.2 MiB
-     - 264.9 MiB
+     - 263.2 MiB
    * - cchardet
      - 23.6 KiB
      - 27.2 KiB
      - 59.8 MiB
 
-chardet uses negligible import memory (96 B), **5x less peak memory** than
-charset-normalizer, and **2.9x less RSS**.
+chardet uses negligible import memory (51 B), **4.5x less peak memory** than
+charset-normalizer, and **2.8x less RSS**.
 
 Language Detection
 ------------------
@@ -121,7 +121,7 @@ Language Detection
      - Correct
      - Accuracy
    * - **chardet** (this version)
-     - **1965/2161**
+     - **1964/2161**
      - **90.9%**
    * - chardet 6.0.0
      - 1016/2161
@@ -184,11 +184,11 @@ compilation on CPython:
      - Total Time
      - Speedup
    * - Pure Python
-     - 6,030ms
+     - 6,469ms
      - baseline
    * - mypyc compiled
-     - 4,015ms
-     - **1.50x**
+     - 4,471ms
+     - **1.45x**
 
 Pure-Python wheels are always available for PyPy and platforms without
 prebuilt binaries.

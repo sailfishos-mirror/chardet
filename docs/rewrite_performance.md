@@ -16,26 +16,26 @@ The chardet-rewrite numbers below are pure Python (CPython 3.12). See
 
 | Detector | Correct | Accuracy | Detection Time |
 |---|---|---|---|
-| **chardet-rewrite** | **2083/2161** | **96.4%** | 6.07s |
-| chardet 6.0.0 | 2042/2161 | 94.5% | 175.79s |
-| charset-normalizer | 1924/2161 | 89.0% | 33.81s |
-| charset-normalizer (pure) | 1924/2161 | 89.0% | 50.50s |
+| **chardet-rewrite** | **2088/2161** | **96.6%** | 6.47s |
+| chardet 6.0.0 | 2042/2161 | 94.5% | 175.56s |
+| charset-normalizer | 1924/2161 | 89.0% | 32.89s |
+| charset-normalizer (pure) | 1924/2161 | 89.0% | 50.39s |
 | chardet 5.2.0 | 1469/2161 | 68.0% | 33.42s |
-| cchardet | 1228/2161 | 56.8% | 0.73s |
+| cchardet | 1228/2161 | 56.8% | 0.71s |
 
-The rewrite leads all detectors on accuracy: **+1.9pp** vs chardet 6.0.0,
-**+7.4pp** vs charset-normalizer, **+28.4pp** vs chardet 5.2.0, and
-**+39.6pp** vs cchardet. Speed-wise, the rewrite is **29.0x faster** than
-chardet 6.0.0, **5.6x faster** than charset-normalizer, and **5.5x faster**
+The rewrite leads all detectors on accuracy: **+2.1pp** vs chardet 6.0.0,
+**+7.6pp** vs charset-normalizer, **+28.6pp** vs chardet 5.2.0, and
+**+39.8pp** vs cchardet. Speed-wise, the rewrite is **27x faster** than
+chardet 6.0.0, **5.1x faster** than charset-normalizer, and **5.2x faster**
 than chardet 5.2.0.
 
-cchardet (C/C++ uchardet engine via faust-cchardet) is the fastest at 0.73s
+cchardet (C/C++ uchardet engine via faust-cchardet) is the fastest at 0.71s
 but has the lowest accuracy at 56.8% -- over 39pp behind the rewrite. It
 lacks support for many encodings the rewrite handles (EBCDIC, Mac encodings,
 Baltic, etc.).
 
 The two charset-normalizer variants produce identical accuracy (1924/2161).
-The pure-Python build is 1.5x slower (50.50s vs 33.81s).
+The pure-Python build is 1.5x slower (50.39s vs 32.89s).
 
 ## Language Detection Accuracy
 
@@ -53,7 +53,7 @@ Language detection uses a three-tier approach:
 
 | Detector | Correct | Accuracy |
 |---|---|---|
-| **chardet-rewrite** | **1965/2161** | **90.9%** |
+| **chardet-rewrite** | **1964/2161** | **90.9%** |
 | chardet 6.0.0 | 1016/2161 | 47.0% |
 | chardet 5.2.0 | 411/2161 | 19.0% |
 | charset-normalizer | 0/2161 | 0.0% |
@@ -74,16 +74,16 @@ across all 48 languages.
 
 | Detector | Total | Mean | Median | p90 | p95 |
 |---|---|---|---|---|---|
-| cchardet | 723ms | 0.33ms | 0.07ms | 0.68ms | 0.92ms |
-| chardet-rewrite | 6,049ms | 2.80ms | 1.08ms | 5.07ms | 5.89ms |
+| cchardet | 713ms | 0.33ms | 0.07ms | 0.68ms | 0.92ms |
+| chardet-rewrite | 6,469ms | 2.99ms | 1.12ms | 5.42ms | 6.17ms |
 | chardet 5.2.0 | 33,398ms | 15.45ms | 2.85ms | 12.00ms | 22.76ms |
-| charset-normalizer | 33,783ms | 15.63ms | 4.74ms | 50.66ms | 72.64ms |
-| charset-normalizer (pure) | 50,477ms | 23.36ms | 7.35ms | 77.53ms | 108.54ms |
-| chardet 6.0.0 | 175,757ms | 81.33ms | 16.10ms | 121.99ms | 307.29ms |
+| charset-normalizer | 32,889ms | 15.63ms | 4.74ms | 50.66ms | 72.64ms |
+| charset-normalizer (pure) | 50,386ms | 23.36ms | 7.35ms | 77.53ms | 108.54ms |
+| chardet 6.0.0 | 175,558ms | 81.33ms | 16.10ms | 121.99ms | 307.29ms |
 
-The rewrite has the lowest median latency (1.08ms) among all pure-Python
+The rewrite has the lowest median latency (1.12ms) among all pure-Python
 detectors, matching cchardet's order of magnitude despite being pure Python.
-Its p95 (5.89ms) is well below charset-normalizer's (73ms) and chardet
+Its p95 (6.17ms) is well below charset-normalizer's (73ms) and chardet
 6.0.0's (307ms).
 
 ## Startup & Memory
@@ -91,18 +91,18 @@ Its p95 (5.89ms) is well below charset-normalizer's (73ms) and chardet
 | Detector | Import Time | Traced Import | Traced Peak | RSS After |
 |---|---|---|---|---|
 | cchardet | 0.289s | 23.6 KiB | 27.2 KiB | 59.8 MiB |
-| chardet-rewrite | 0.000s | 96 B | 20.4 MiB | 91.9 MiB |
+| chardet-rewrite | 0.000s | 51 B | 22.5 MiB | 94.8 MiB |
 | chardet 6.0.0 | 0.000s | 96 B | 16.4 MiB | 100.2 MiB |
 | chardet 5.2.0 | 0.000s | 51 B | 60.9 MiB | 127.8 MiB |
-| charset-normalizer | 0.469s | 1.7 MiB | 102.2 MiB | 264.9 MiB |
-| charset-normalizer (pure) | 0.025s | 1.7 MiB | 102.2 MiB | 263.7 MiB |
+| charset-normalizer | 0.469s | 1.7 MiB | 102.2 MiB | 263.2 MiB |
+| charset-normalizer (pure) | 0.025s | 1.7 MiB | 102.2 MiB | 263.2 MiB |
 
 Among pure-Python detectors, the rewrite has the best memory profile:
 
-- **negligible import memory** (96 B traced import)
-- **5.0x less peak memory** than charset-normalizer (20.4 MiB vs 102.2 MiB)
-- **3.0x less peak memory** than chardet 5.2.0 (20.4 MiB vs 60.9 MiB)
-- **2.9x less RSS** than charset-normalizer (91.9 MiB vs 264.9 MiB)
+- **negligible import memory** (51 B traced import)
+- **4.5x less peak memory** than charset-normalizer (22.5 MiB vs 102.2 MiB)
+- **2.7x less peak memory** than chardet 5.2.0 (22.5 MiB vs 60.9 MiB)
+- **2.8x less RSS** than charset-normalizer (94.8 MiB vs 263.2 MiB)
 
 cchardet has near-zero Python-level memory (C extension) but these numbers
 reflect only tracemalloc-visible allocations. Its RSS advantage (59.8 MiB)
@@ -185,8 +185,8 @@ models had a small edge.
 
 The two charset-normalizer variants (mypyc default, pure-Python venv) produce
 **identical accuracy** (1924/2161 = 89.0%). The mypyc build is 1.5x faster
-(33.81s vs 50.50s). Both have identical peak memory (~102.2 MiB traced,
-~264 MiB RSS).
+(32.89s vs 50.39s). Both have identical peak memory (~102.2 MiB traced,
+~263 MiB RSS).
 
 ## mypyc Compilation
 
@@ -200,14 +200,14 @@ In-process timing (2161 files, `encoding_era=ALL`, pre-loaded into memory):
 
 | Build | Total | Per-file mean | Speedup |
 |---|---|---|---|
-| Pure Python | 6,030ms | 2.79ms | baseline |
-| mypyc compiled | 4,015ms | 1.86ms | **1.50x** |
+| Pure Python | 6,469ms | 2.99ms | baseline |
+| mypyc compiled | 4,471ms | 2.07ms | **1.45x** |
 
-The mypyc speedup is 1.50x. The three-tier `_fill_language`
+The mypyc speedup is 1.45x. The three-tier `_fill_language`
 post-processing adds ~800ms of BigramProfile construction and cosine
 scoring in pure Python -- exactly the kind of tight-loop integer
 arithmetic that mypyc compiles to fast C code. The compiled build
-(4,015ms) is faster than the pure Python baseline *before*
+(4,471ms) is faster than the pure Python baseline *before*
 language detection was added (~5,015ms).
 
 Pure Python wheels are published alongside mypyc wheels for PyPy and
@@ -271,9 +271,9 @@ compensates: 4-thread 3.13t (1,930ms) beats single-threaded CPython 3.12
 
 ## Key Takeaways
 
-1. **The rewrite achieves 96.4% accuracy with dramatic speed/memory gains**
-   vs chardet 6.0.0. It detects in ~6.1s what 6.0.0 takes 176s for, imports
-   instantly, and uses negligible import memory (96 B) -- while being +1.9pp
+1. **The rewrite achieves 96.6% accuracy with dramatic speed/memory gains**
+   vs chardet 6.0.0. It detects in ~6.5s what 6.0.0 takes 176s for, imports
+   instantly, and uses negligible import memory (51 B) -- while being +2.1pp
    more accurate.
 
 2. **Remaining accuracy gaps vs chardet 6.0.0**: cp874, DOS codepages where
@@ -282,20 +282,20 @@ compensates: 4-thread 3.13t (1,930ms) beats single-threaded CPython 3.12
    retraining with more data or encoding-specific structural probes.
 
 3. **The rewrite beats all competitors** on accuracy among pure-Python
-   detectors. It leads chardet 6.0.0 by +1.9pp, charset-normalizer by
-   +7.4pp, and chardet 5.2.0 by +28.4pp.
+   detectors. It leads chardet 6.0.0 by +2.1pp, charset-normalizer by
+   +7.6pp, and chardet 5.2.0 by +28.6pp.
 
 4. **charset-normalizer is worst on peak memory** (102.2 MiB traced peak,
-   265 MiB RSS) despite moderate accuracy. The rewrite beats it on both
+   263 MiB RSS) despite moderate accuracy. The rewrite beats it on both
    fronts.
 
-5. **cchardet is unbeatable on raw speed** (0.73s) but pays for it with the
+5. **cchardet is unbeatable on raw speed** (0.71s) but pays for it with the
    lowest accuracy (56.8%) and zero support for many encoding families. It's
    a poor choice when encoding breadth matters.
 
-6. **mypyc compilation provides 1.50x speedup**. The BigramProfile
+6. **mypyc compilation provides 1.45x speedup**. The BigramProfile
    construction and scoring in `_fill_language` is the kind of tight-loop
-   work that mypyc optimizes well, bringing the compiled total (4,015ms)
+   work that mypyc optimizes well, bringing the compiled total (4,471ms)
    below the pre-language pure Python baseline (~5,015ms).
 
 7. **Thread-safe and free-threading ready** -- `detect()` and
