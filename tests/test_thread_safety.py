@@ -22,7 +22,7 @@ _JAPANESE = "これはテストです。日本語のテキスト。".encode("shi
 _GERMAN = (
     "Die Größe des Gebäudes überraschte die Besucher. Natürlich können wir das ändern."
 ).encode("windows-1252")
-_CHINESE = "这是中文测试文本，用于并发检测。".encode("gb18030")  # noqa: RUF001
+_CHINESE = "这是中文测试文本，用于并发检测。".encode("gb18030")
 
 _SAMPLES: list[tuple[bytes, frozenset[str]]] = [
     (_JAPANESE, _JAPANESE_ENCODINGS),

@@ -9,13 +9,12 @@ from pathlib import Path
 import chardet
 from chardet._utils import DEFAULT_MAX_BYTES
 from chardet.enums import EncodingEra
+from chardet.pipeline import DetectionDict
 
 _ERA_NAMES = [e.name.lower() for e in EncodingEra if e.bit_count() == 1] + ["all"]
 
 
-def _print_result(
-    result: dict[str, str | float | None], label: str, *, minimal: bool
-) -> None:
+def _print_result(result: DetectionDict, label: str, *, minimal: bool) -> None:
     """Print a detection result to stdout."""
     if minimal:
         print(result["encoding"])

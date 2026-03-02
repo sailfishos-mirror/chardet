@@ -9,6 +9,7 @@ import importlib.resources
 import math
 import struct
 import threading
+import warnings
 
 from chardet.registry import REGISTRY
 
@@ -26,9 +27,7 @@ _MODEL_NORMS: dict[str, float] | None = None
 _MODEL_NORMS_LOCK = threading.Lock()
 # Encodings that map to exactly one language, derived from the registry.
 _SINGLE_LANG_MAP: dict[str, str] = {
-    enc.name: enc.languages[0]
-    for enc in REGISTRY.values()
-    if len(enc.languages) == 1
+    enc.name: enc.languages[0] for enc in REGISTRY.values() if len(enc.languages) == 1
 }
 
 
@@ -53,8 +52,6 @@ def load_models() -> dict[str, bytearray]:
         data = ref.read_bytes()
 
         if not data:
-            import warnings
-
             warnings.warn(
                 "chardet models.bin is empty — statistical detection disabled; "
                 "reinstall chardet to fix",
@@ -218,9 +215,7 @@ class BigramProfile:
         self.input_norm = math.sqrt(sum(v * v for v in freq.values()))
 
     @classmethod
-    def from_weighted_freq(
-        cls, weighted_freq: dict[int, int]
-    ) -> "BigramProfile":
+    def from_weighted_freq(cls, weighted_freq: dict[int, int]) -> "BigramProfile":
         """Create a BigramProfile from pre-computed weighted frequencies.
 
         Computes ``weight_sum`` and ``input_norm`` from *weighted_freq* to

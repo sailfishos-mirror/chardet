@@ -118,6 +118,7 @@ ignore = [
     "PERF401", # manual list comprehension (readability)
     "SLF001",  # private member access (whitebox testing of internals)
     "ARG001",  # unused function arguments (pytest fixtures)
+    "RUF001",  # ambiguous unicode (intentional in encoding detection tests)
     # Docstrings and return types not required in tests
     "D100", "D101", "D102", "D103", "D104", "D107",
     "ANN201", "ANN202",

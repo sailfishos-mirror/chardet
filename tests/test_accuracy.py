@@ -11,7 +11,6 @@ import warnings
 from pathlib import Path
 
 import pytest
-
 from utils import collect_test_files, get_data_dir, normalize_language
 
 import chardet

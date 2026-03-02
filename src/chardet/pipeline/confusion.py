@@ -12,6 +12,7 @@ from __future__ import annotations
 import importlib.resources
 import struct
 import threading
+import warnings
 
 from chardet.models import (
     NON_ASCII_BIGRAM_WEIGHT,
@@ -121,8 +122,6 @@ def load_confusion_data() -> DistinguishingMaps:
         ref = importlib.resources.files("chardet.models").joinpath("confusion.bin")
         raw = ref.read_bytes()
         if not raw:
-            import warnings
-
             warnings.warn(
                 "chardet confusion.bin is empty — confusion resolution disabled; "
                 "reinstall chardet to fix",

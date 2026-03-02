@@ -12,6 +12,7 @@ import unicodedata
 from pathlib import Path
 
 from chardet.pipeline.confusion import DistinguishingMaps
+from chardet.registry import REGISTRY
 
 # Unicode general category -> uint8 encoding for struct serialization.
 # Must stay in sync with _INT_TO_CATEGORY in chardet.pipeline.confusion.
@@ -47,7 +48,6 @@ _CATEGORY_TO_INT: dict[str, int] = {
     "Co": 28,
     "Cn": 29,  # Other
 }
-from chardet.registry import REGISTRY
 
 
 def _decode_byte_table(codec_name: str) -> list[str | None]:

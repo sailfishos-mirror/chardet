@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import codecs
+import contextlib
 
 from chardet.enums import EncodingEra
 from chardet.registry import REGISTRY
@@ -25,15 +26,11 @@ def main() -> None:
     # Count unique Python codec names reachable via registry names + aliases
     codec_names: set[str] = set()
     for info in REGISTRY.values():
-        try:
+        with contextlib.suppress(LookupError):
             codec_names.add(codecs.lookup(info.python_codec).name)
-        except LookupError:
-            pass
         for alias in info.aliases:
-            try:
+            with contextlib.suppress(LookupError):
                 codec_names.add(codecs.lookup(alias).name)
-            except LookupError:
-                pass
     total_codecs = len(codec_names)
 
     print("Supported Encodings")
