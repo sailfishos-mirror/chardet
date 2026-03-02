@@ -5,6 +5,11 @@ description = "Universal character encoding detector"
 license = "MIT"
 readme = "README.md"
 requires-python = ">=3.10"
+authors = [{ name = "Dan Blanchard", email = "dan.blanchard@gmail.com" }]
+maintainers = [
+  { name = "Dan Blanchard", email = "dan.blanchard@gmail.com" },
+  { name = "Ian Cordasco" },
+]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
