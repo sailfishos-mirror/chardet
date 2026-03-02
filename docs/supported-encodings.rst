@@ -1,7 +1,9 @@
 Supported Encodings
 ===================
 
-chardet supports **81 encodings** across six encoding eras.
+chardet recognises **99 Python text encodings** via
+86 detection targets and their aliases, across six
+encoding eras.
 The default :attr:`~chardet.EncodingEra.MODERN_WEB` era covers the
 encodings most commonly found on the web today. Use
 :attr:`~chardet.EncodingEra.ALL` to enable detection of all encodings.
@@ -19,8 +21,8 @@ Modern Web
    * - ascii
      - us-ascii
      - No
-   * - big5
-     - big5-tw, csbig5
+   * - big5hkscs
+     - big5, big5-tw, csbig5, cp950
      - Yes
    * - cp874
      - windows-874
@@ -31,23 +33,29 @@ Modern Web
    * - cp949
      - ms949, uhc
      - Yes
-   * - euc-jp
-     - eucjp, ujis, u-jis
+   * - euc-jis-2004
+     - euc-jp, eucjp, ujis, u-jis, euc-jisx0213
      - Yes
    * - euc-kr
      - euckr
      - Yes
    * - gb18030
-     - gb-18030
+     - gb-18030, gb2312, gbk
      - Yes
    * - hz-gb-2312
      - hz
      - Yes
-   * - iso-2022-jp
-     - csiso2022jp
-     - Yes
    * - iso-2022-kr
      - csiso2022kr
+     - Yes
+   * - iso2022-jp-2
+     - iso-2022-jp, csiso2022jp, iso2022-jp-1
+     - Yes
+   * - iso2022-jp-2004
+     - iso2022-jp-3
+     - Yes
+   * - iso2022-jp-ext
+     - —
      - Yes
    * - koi8-r
      - koi8r
@@ -55,11 +63,11 @@ Modern Web
    * - koi8-u
      - koi8u
      - No
-   * - shift_jis
-     - sjis, shiftjis, s_jis
+   * - shift_jis_2004
+     - shift_jis, sjis, shiftjis, s_jis, shift-jisx0213
      - Yes
    * - tis-620
-     - tis620
+     - tis620, iso-8859-11
      - No
    * - utf-16
      - utf16
@@ -78,6 +86,9 @@ Modern Web
      - No
    * - utf-32-le
      - utf-32le
+     - No
+   * - utf-7
+     - utf7
      - No
    * - utf-8
      - utf8
@@ -217,6 +228,9 @@ Legacy Regional
    * - cp720
      - —
      - No
+   * - hp-roman8
+     - roman8, r8, csHPRoman8
+     - No
    * - koi8-t
      - —
      - No
@@ -299,10 +313,13 @@ Mainframe (EBCDIC)
    * - Encoding
      - Aliases
      - Multi-byte
-   * - cp037
+   * - cp1026
      - —
      - No
-   * - cp1026
+   * - cp1140
+     - cp037
+     - No
+   * - cp273
      - —
      - No
    * - cp424
@@ -314,3 +331,4 @@ Mainframe (EBCDIC)
    * - cp875
      - —
      - No
+

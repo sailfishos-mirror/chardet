@@ -23,7 +23,7 @@ result. **MIT licensed.**
 | Peak memory | **22.5 MiB** | 16.4 MiB | 102.2 MiB |
 | Streaming detection | **yes** | yes | no |
 | Encoding era filtering | **yes** | no | no |
-| Supported encodings | 84 | 84 | 99 |
+| Supported encodings | 99 | 84 | 99 |
 | Optional mypyc compilation | **yes** | no | yes |
 | License | MIT | LGPL | MIT |
 
@@ -121,7 +121,7 @@ cat somefile.txt | chardetect
 - **27x faster** than chardet 6.0.0, **5x faster** than charset-normalizer (pure Python)
 - **96.6% accuracy** — +2.1pp vs chardet 6.0.0, +7.6pp vs charset-normalizer
 - **Language detection** — 90.9% accuracy across 48 languages, returned with every result
-- **84 encodings** — full coverage including EBCDIC, Mac, DOS, and Baltic/Central European families
+- **99 encodings** — full coverage including EBCDIC, Mac, DOS, and Baltic/Central European families
 - **`EncodingEra` filtering** — scope detection to modern web encodings, legacy ISO/Mac/DOS, mainframe, or all
 - **Optional mypyc compilation** — 1.45x additional speedup on CPython
 - **Thread-safe** — `detect()` and `detect_all()` are safe to call concurrently; scales on free-threaded Python

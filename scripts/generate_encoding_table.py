@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import codecs
+
 from chardet.enums import EncodingEra
 from chardet.registry import REGISTRY
 
@@ -20,11 +22,26 @@ ERA_ORDER = list(ERA_DISPLAY)
 
 def main() -> None:
     """Print the supported encodings RST table to stdout."""
-    total = len(REGISTRY)
+    # Count unique Python codec names reachable via registry names + aliases
+    codec_names: set[str] = set()
+    for info in REGISTRY.values():
+        try:
+            codec_names.add(codecs.lookup(info.python_codec).name)
+        except LookupError:
+            pass
+        for alias in info.aliases:
+            try:
+                codec_names.add(codecs.lookup(alias).name)
+            except LookupError:
+                pass
+    total_codecs = len(codec_names)
+
     print("Supported Encodings")
     print("===================")
     print()
-    print(f"chardet supports **{total} encodings** across six encoding eras.")
+    print(f"chardet recognises **{total_codecs} Python text encodings** via")
+    print(f"{len(REGISTRY)} detection targets and their aliases, across six")
+    print("encoding eras.")
     print("The default :attr:`~chardet.EncodingEra.MODERN_WEB` era covers the")
     print("encodings most commonly found on the web today. Use")
     print(":attr:`~chardet.EncodingEra.ALL` to enable detection of all encodings.")
