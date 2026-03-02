@@ -9,13 +9,13 @@ from chardet._utils import (
     _validate_max_bytes,
     _warn_deprecated_chunk_size,
 )
+from chardet._version import __version__
 from chardet.detector import UniversalDetector
 from chardet.enums import EncodingEra, LanguageFilter
 from chardet.equivalences import apply_legacy_rename
 from chardet.pipeline import DetectionDict, DetectionResult
 from chardet.pipeline.orchestrator import run_pipeline
 
-__version__ = "6.1.0"
 __all__ = [
     "DEFAULT_MAX_BYTES",
     "MINIMUM_THRESHOLD",

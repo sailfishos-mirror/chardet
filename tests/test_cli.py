@@ -53,7 +53,11 @@ def test_cli_version():
         text=True,
     )
     assert result.returncode == 0
-    assert "6.1.0" in result.stdout
+    # Output is "chardet <version>"; version should start with a digit
+    output = result.stdout.strip()
+    assert output.startswith("chardet "), output
+    version = output.split()[-1]
+    assert version[0].isdigit(), version
 
 
 def test_cli_minimal_flag(tmp_path: Path):

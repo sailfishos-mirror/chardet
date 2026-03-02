@@ -1,6 +1,6 @@
 [project]
 name = "chardet"
-version = "6.1.0"
+dynamic = ["version"]
 description = "Universal character encoding detector"
 license = "MIT"
 readme = "README.md"
@@ -33,8 +33,14 @@ Documentation = "https://chardet.readthedocs.io"
 chardetect = "chardet.cli:main"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/chardet/_version.py"
 
 [tool.hatch.build.targets.sdist]
 exclude = ["tests/data/", "data/"]

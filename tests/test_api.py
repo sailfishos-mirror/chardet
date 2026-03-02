@@ -99,7 +99,9 @@ def test_detect_all_each_is_dict():
 def test_version_exists():
     assert hasattr(chardet, "__version__")
     assert isinstance(chardet.__version__, str)
-    assert chardet.__version__ == "6.1.0"
+    assert len(chardet.__version__) > 0
+    # Version should start with a digit (e.g., "7.0.0" or "7.0.1.dev3+g...")
+    assert chardet.__version__[0].isdigit(), chardet.__version__
 
 
 # --- should_rename_legacy tests ---
