@@ -27,25 +27,6 @@ How do I increase accuracy?
   may be the second candidate. :func:`chardet.detect_all` returns all
   candidates ranked by confidence.
 
-What changed from older chardet versions?
-------------------------------------------
-
-This version is a ground-up rewrite of chardet:
-
-- Dramatically improved accuracy (96.6% vs 94.5% in chardet 6.0.0, 68.2%
-  in chardet 5.2.0)
-- 27x faster than chardet 6.0.0
-- Encoding era system (:class:`~chardet.EncodingEra`) for filtering
-  candidates
-- Language detection for every file (90.9% accuracy)
-- Thread-safe :func:`~chardet.detect` and :func:`~chardet.detect_all`
-- Free-threaded Python support (3.13t+)
-- Negligible import memory (51 B)
-- Zero runtime dependencies
-
-The public API is backward-compatible. ``detect()``, ``detect_all()``,
-and ``UniversalDetector`` work the same way.
-
 How is chardet different from charset-normalizer?
 --------------------------------------------------
 
@@ -58,8 +39,6 @@ an alternative encoding detector. Key differences:
 - **Memory:** chardet uses 4.5x less peak memory (22.5 vs 102.2 MiB).
 - **Language detection:** chardet reports the detected language;
   charset-normalizer does not.
-- **Encoding breadth:** chardet supports EBCDIC, Mac, and DOS encodings
-  that charset-normalizer does not.
 
 How is chardet different from cchardet?
 ----------------------------------------
