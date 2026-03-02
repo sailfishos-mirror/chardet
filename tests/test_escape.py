@@ -10,7 +10,7 @@ def test_iso_2022_jp_esc_dollar_b() -> None:
     data = b"Hello \x1b$B$3$s$K$A$O\x1b(B World"
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "iso-2022-jp"
+    assert result.encoding == "iso2022-jp-2"
     assert result.confidence == 0.95
 
 
@@ -18,7 +18,7 @@ def test_iso_2022_jp_esc_dollar_at() -> None:
     data = b"Hello \x1b$@$3$s$K$A$O\x1b(B World"
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "iso-2022-jp"
+    assert result.encoding == "iso2022-jp-2"
 
 
 def test_iso_2022_kr() -> None:
@@ -137,3 +137,29 @@ def test_utf7_rejects_mime_boundary() -> None:
     data = b"--boundary+ABCdef123-end"
     result = detect_escape_encoding(data)
     assert result is None
+
+
+def test_iso2022_jp_base_returns_jp2() -> None:
+    """Base ISO-2022-JP escape codes should default to iso2022-jp-2 (broadest)."""
+    data = b"Hello \x1b$B$3$s$K$A$O\x1b(B World"
+    result = detect_escape_encoding(data)
+    assert result is not None
+    assert result.encoding == "iso2022-jp-2"
+
+
+def test_iso2022_jp_2004_codes() -> None:
+    """JIS X 0213 escape codes should return iso2022-jp-2004."""
+    # ESC $ ( O designates JIS X 0213 plane 1
+    data = b"\x1b$B$3$s\x1b(B\x1b$(O\x21\x21\x1b(B"
+    result = detect_escape_encoding(data)
+    assert result is not None
+    assert result.encoding == "iso2022-jp-2004"
+
+
+def test_iso2022_jp_ext_codes() -> None:
+    """Half-width katakana SI/SO should return iso2022-jp-ext."""
+    # ESC $ B for JIS X 0208, then SI (0x0E) / SO (0x0F) for half-width katakana
+    data = b"\x1b$B$3$s\x1b(B\x0e\xb1\xb2\x0f"
+    result = detect_escape_encoding(data)
+    assert result is not None
+    assert result.encoding == "iso2022-jp-ext"

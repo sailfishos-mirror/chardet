@@ -121,10 +121,25 @@ def detect_escape_encoding(data: bytes) -> DetectionResult | None:
     if not has_esc and not has_tilde and not has_plus:
         return None
 
-    # ISO-2022-JP: ESC sequences for JIS X 0208 / JIS X 0201
+    # ISO-2022-JP family: check for base ESC sequences, then classify variant.
     if has_esc and (b"\x1b$B" in data or b"\x1b$@" in data or b"\x1b(J" in data):
+        # JIS X 0213 designation -> modern Japanese branch
+        if b"\x1b$(O" in data or b"\x1b$(P" in data:
+            return DetectionResult(
+                encoding="iso2022-jp-2004",
+                confidence=DETERMINISTIC_CONFIDENCE,
+                language="ja",
+            )
+        # Half-width katakana SI/SO markers (0x0E / 0x0F)
+        if b"\x0e" in data and b"\x0f" in data:
+            return DetectionResult(
+                encoding="iso2022-jp-ext",
+                confidence=DETERMINISTIC_CONFIDENCE,
+                language="ja",
+            )
+        # Multinational designations or base codes -> broadest multinational
         return DetectionResult(
-            encoding="iso-2022-jp",
+            encoding="iso2022-jp-2",
             confidence=DETERMINISTIC_CONFIDENCE,
             language="ja",
         )
