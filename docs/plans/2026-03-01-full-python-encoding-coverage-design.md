@@ -61,9 +61,9 @@ Currently one entry (`iso-2022-jp`). Split into three entries, one per branch:
 ### EBCDIC (flip)
 
 - **New primary:** `cp1140` (`python_codec="cp1140"`)
-- **Aliases:** `cp500`
-- **Replaces:** current `cp500` entry
-- cp1140 is the superset (adds euro sign)
+- **Aliases:** `cp037`
+- **Replaces:** current `cp037` entry (cp1140 = cp037 + euro sign at byte 0x9F)
+- `cp500` remains its own entry (International Latin-1 EBCDIC, differs from cp037 at 7 positions)
 
 ### Thai (alias only)
 
@@ -105,7 +105,7 @@ variants are acceptable detections of narrower subsets:
 - `big5` expected -> `big5hkscs` correct
 - `euc-jp` expected -> `euc-jis-2004` correct
 - `shift_jis` expected -> `shift_jis_2004` correct
-- `cp500` expected -> `cp1140` correct
+- `cp037` expected -> `cp1140` correct
 
 The three ISO-2022-JP branch variants should be bidirectionally equivalent
 (detecting any branch when another was expected is acceptable, since they all
