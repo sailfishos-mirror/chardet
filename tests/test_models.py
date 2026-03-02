@@ -5,7 +5,12 @@ from pathlib import Path
 import pytest
 from train import deserialize_models, serialize_models
 
-from chardet.models import BigramProfile, get_enc_index, load_models, score_best_language
+from chardet.models import (
+    BigramProfile,
+    get_enc_index,
+    load_models,
+    score_best_language,
+)
 
 
 def test_enc_index_resolves_aliases() -> None:

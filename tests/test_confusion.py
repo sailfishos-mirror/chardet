@@ -16,8 +16,8 @@ def test_load_confusion_data():
     maps = load_confusion_data()
     assert len(maps) > 0
     found_ebcdic = any(
-        ("cp037" in key[0] and "cp500" in key[1])
-        or ("cp500" in key[0] and "cp037" in key[1])
+        ("cp037" in key[0] and "cp1140" in key[1])
+        or ("cp1140" in key[0] and "cp037" in key[1])
         for key in maps
     )
     assert found_ebcdic
@@ -68,10 +68,10 @@ def test_resolve_confusion_groups_preserves_all_results():
     """Confusion resolution should preserve all results, only reorder."""
     results = [
         DetectionResult(encoding="cp037", confidence=0.95, language="English"),
-        DetectionResult(encoding="cp500", confidence=0.94, language="English"),
+        DetectionResult(encoding="cp1140", confidence=0.94, language="English"),
         DetectionResult(encoding="windows-1252", confidence=0.50, language="English"),
     ]
     resolved = resolve_confusion_groups(bytes(range(256)), results)
     assert len(resolved) == len(results)
     resolved_encs = {r.encoding for r in resolved}
-    assert resolved_encs == {"cp037", "cp500", "windows-1252"}
+    assert resolved_encs == {"cp037", "cp1140", "windows-1252"}

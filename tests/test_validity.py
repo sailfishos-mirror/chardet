@@ -27,7 +27,7 @@ def test_shift_jis_text_valid_under_shift_jis():
     candidates = get_candidates(EncodingEra.ALL)
     valid = filter_by_validity(data, candidates)
     valid_names = {e.name for e in valid}
-    assert "shift_jis" in valid_names
+    assert "shift_jis_2004" in valid_names
 
 
 def test_eliminates_impossible_encodings():
