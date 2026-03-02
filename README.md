@@ -89,14 +89,14 @@ Restrict detection to specific encoding eras to reduce false positives:
 from chardet import detect
 from chardet.enums import EncodingEra
 
-# Only consider modern web encodings (the default)
-detect("Cześć, jak się masz? Dziękuję bardzo za pomoc.".encode("utf-8"))
-# {'encoding': 'utf-8', 'confidence': 0.99, 'language': 'pl'}
-
-# Include legacy encodings too
-detect("Η Αθήνα είναι η πρωτεύουσα και μεγαλύτερη πόλη της Ελλάδας.".encode("iso-8859-7"),
-       encoding_era=EncodingEra.ALL)
+# All encoding eras are considered by default
+detect("Η Αθήνα είναι η πρωτεύουσα και μεγαλύτερη πόλη της Ελλάδας.".encode("iso-8859-7"))
 # {'encoding': 'iso-8859-7', 'confidence': 0.52, 'language': 'el'}
+
+# Restrict to modern web encodings only
+detect("Cześć, jak się masz? Dziękuję bardzo za pomoc.".encode("utf-8"),
+       encoding_era=EncodingEra.MODERN_WEB)
+# {'encoding': 'utf-8', 'confidence': 0.99, 'language': 'pl'}
 ```
 
 ## CLI
