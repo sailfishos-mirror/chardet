@@ -41,7 +41,8 @@ pip install chardet
 ```python
 import chardet
 
-# Plain ASCII is reported as its superset Windows-1252 by default
+# Plain ASCII is reported as its superset Windows-1252 by default,
+# keeping with WHATWG guidelines for encoding detection.
 chardet.detect(b"Hello, world!")
 # {'encoding': 'Windows-1252', 'confidence': 1.0, 'language': 'en'}
 
