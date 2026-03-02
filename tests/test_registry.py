@@ -130,9 +130,10 @@ def test_language_agnostic_encodings():
 
 
 def test_utf7_in_registry():
-    """utf-7 is in the registry as MODERN_WEB."""
+    """utf-7 is in the registry as LEGACY_REGIONAL (disabled by browsers since ~2020)."""
     assert "utf-7" in REGISTRY
-    assert EncodingEra.MODERN_WEB in REGISTRY["utf-7"].era
+    assert EncodingEra.LEGACY_REGIONAL in REGISTRY["utf-7"].era
+    assert EncodingEra.MODERN_WEB not in REGISTRY["utf-7"].era
 
 
 # === Task 1: big5 -> big5hkscs ===

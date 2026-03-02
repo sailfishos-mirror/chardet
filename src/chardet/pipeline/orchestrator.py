@@ -31,7 +31,7 @@ from chardet.pipeline.structural import (
 from chardet.pipeline.utf8 import detect_utf8
 from chardet.pipeline.utf1632 import detect_utf1632_patterns
 from chardet.pipeline.validity import filter_by_validity
-from chardet.registry import EncodingInfo, get_candidates
+from chardet.registry import REGISTRY, EncodingInfo, get_candidates
 
 _BINARY_RESULT = DetectionResult(
     encoding=None, confidence=DETERMINISTIC_CONFIDENCE, language=None
@@ -405,7 +405,9 @@ def _to_utf8(data: bytes, encoding: str) -> bytes | None:
     if encoding == "utf-8":
         return data
     try:
-        return data.decode(encoding, errors="ignore").encode("utf-8")
+        return data.decode(encoding, errors="ignore").encode(
+            "utf-8", errors="surrogatepass"
+        )
     except LookupError:
         return None
 
@@ -488,12 +490,17 @@ def _run_pipeline_core(
     if utf1632_result is not None:
         return [utf1632_result]
 
-    # Escape-sequence encodings (ISO-2022, HZ-GB-2312): must run before
-    # binary detection (ESC is a control byte) and before ASCII detection
-    # (HZ-GB-2312 uses only printable ASCII plus tildes).
+    # Escape-sequence encodings (ISO-2022, HZ-GB-2312, UTF-7): must run
+    # before binary detection (ESC is a control byte) and before ASCII
+    # detection (HZ-GB-2312 uses only printable ASCII plus tildes).
+    # Gate the result on encoding_era so that deprecated encodings like
+    # UTF-7 (disabled by browsers since ~2020 as an XSS vector) are only
+    # returned when the caller's era filter includes them.
     escape_result = detect_escape_encoding(data)
-    if escape_result is not None:
-        return [escape_result]
+    if escape_result is not None and escape_result.encoding is not None:
+        enc_info = REGISTRY.get(escape_result.encoding)
+        if enc_info is None or encoding_era & enc_info.era:
+            return [escape_result]
 
     # Pre-check UTF-8 to prevent false binary classification.  Valid UTF-8
     # with multi-byte sequences can contain control bytes (e.g. ESC for ANSI

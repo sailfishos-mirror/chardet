@@ -290,6 +290,74 @@ def test_detect_utf7():
     assert result["encoding"] == "utf-7"
 
 
+def test_detect_utf7_era_all():
+    """UTF-7 should be detected with EncodingEra.ALL (includes LEGACY_REGIONAL)."""
+    data = "Meeting notes: 日本語テスト and Ñoño.".encode("utf-7")
+    result = chardet.detect(data, encoding_era=EncodingEra.ALL)
+    assert result["encoding"] == "utf-7"
+
+
+def test_detect_utf7_era_modern_web_skipped():
+    """UTF-7 should NOT be detected with MODERN_WEB (disabled by browsers since ~2020)."""
+    data = "Hello, 世界!".encode("utf-7")
+    result = chardet.detect(data, encoding_era=EncodingEra.MODERN_WEB)
+    assert result["encoding"] != "utf-7"
+
+
+def test_detect_utf7_multi_paragraph():
+    """Longer UTF-7 documents with multiple shifted sequences must still be detected."""
+    text = (
+        "From: user@example.com\r\n"
+        "Subject: Réunion\r\n"
+        "\r\n"
+        "Bonjour à tous,\r\n"
+        "La réunion aura lieu à 14h dans la salle côté jardin.\r\n"
+        "Merci de préparer les données sur les résultats financiers.\r\n"
+        "Cordialement,\r\n"
+        "François\r\n"
+    )
+    data = text.encode("utf-7")
+    result = chardet.detect(data)
+    assert result["encoding"] == "utf-7"
+
+
+def test_detect_hz_gb_2312_era_all():
+    """hz-gb-2312 should be detected with EncodingEra.ALL."""
+    data = b"Hello ~{CEDE~} World"
+    result = chardet.detect(data, encoding_era=EncodingEra.ALL)
+    assert result["encoding"] == "hz-gb-2312"
+
+
+def test_detect_hz_gb_2312_era_modern_web_skipped():
+    """hz-gb-2312 is WHATWG 'replacement' - should NOT be detected with MODERN_WEB."""
+    data = b"Hello ~{CEDE~} World"
+    result = chardet.detect(data, encoding_era=EncodingEra.MODERN_WEB)
+    assert result["encoding"] != "hz-gb-2312"
+
+
+def test_detect_iso_2022_kr_era_all():
+    """iso-2022-kr should be detected with EncodingEra.ALL."""
+    data = b"\x1b$)C\x0e\x21\x21\x0f"
+    result = chardet.detect(data, encoding_era=EncodingEra.ALL)
+    assert result["encoding"] == "iso-2022-kr"
+
+
+def test_detect_iso_2022_kr_era_modern_web_skipped():
+    """iso-2022-kr is WHATWG 'replacement' - should NOT be detected with MODERN_WEB."""
+    data = b"\x1b$)C\x0e\x21\x21\x0f"
+    result = chardet.detect(data, encoding_era=EncodingEra.MODERN_WEB)
+    assert result["encoding"] != "iso-2022-kr"
+
+
+def test_detect_iso_2022_jp_era_modern_web_still_works():
+    """ISO-2022-JP is NOT in WHATWG 'replacement' - should still be detected with MODERN_WEB."""
+    data = b"Hello \x1b$B$3$s$K$A$O\x1b(B World"
+    result = chardet.detect(data, encoding_era=EncodingEra.MODERN_WEB)
+    assert result["encoding"] is not None
+    assert "2022" in result["encoding"]
+    assert "jp" in result["encoding"]
+
+
 def test_detect_cp273():
     data = "Grüße aus Deutschland".encode("cp273")
     result = chardet.detect(data, encoding_era=EncodingEra.ALL)

@@ -139,6 +139,66 @@ def test_utf7_rejects_mime_boundary() -> None:
     assert result is None
 
 
+def test_utf7_rejects_cpp_version() -> None:
+    """C++20, C++11, etc. should not trigger UTF-7 (Guard A)."""
+    data = b"#include <ranges>  // C++20 feature\nint main() { return 0; }\n"
+    result = detect_escape_encoding(data)
+    assert result is None
+
+
+def test_utf7_rejects_pem_base64() -> None:
+    """PEM certificate base64 blobs should not trigger UTF-7 (Guard B)."""
+    data = (
+        b"-----BEGIN CERTIFICATE-----\n"
+        b"MIICpDCCAYwCCQDU+pQ4pHgSpDANBgkqhkiG9w0BAQsFADAUMRIwEAYDVQQDDAls\n"
+        b"b2NhbGhvc3QwHhcNMjMwNTI5MTI0ODQ3WhcNMjQwNTI4MTI0ODQ3WjAUMRIwEAYD\n"
+        b"VQQDDAlsb2NhbGhvc3QwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC+\n"
+        b"7e1RRz+BI/kHMBbOz+FN5bEwMmJ2KKQGXN+yTDaj8bKRMqgJ7MJifi3eFmFnqYg\n"
+        b"-----END CERTIFICATE-----\n"
+    )
+    result = detect_escape_encoding(data)
+    assert result is None
+
+
+def test_utf7_multi_paragraph_document() -> None:
+    """A longer UTF-7 document with multiple shifted sequences must still be detected."""
+    parts = [
+        "From: sender@example.com\r\n",
+        "Subject: Meeting notes\r\n",
+        "\r\n",
+        "Meeting at 3pm.\r\n",
+        "Topic: 日本語テスト.\r\n",
+        "Attendees: Müller, René, 田中.\r\n",
+        "\r\n",
+        "Please review the 資料 before Thursday.\r\n",
+        "Best regards,\r\n",
+        "André\r\n",
+    ]
+    data = "".join(parts).encode("utf-7")
+    result = detect_escape_encoding(data)
+    assert result is not None
+    assert result.encoding == "utf-7"
+
+
+def test_utf7_mixed_ascii_and_shifted() -> None:
+    """UTF-7 with interspersed ASCII and shifted blocks must be detected."""
+    # Multiple short non-ASCII words spread across ASCII text
+    text = "Price: 100€, shipping to München, estimated 3-5 days. Sincerely, José."
+    data = text.encode("utf-7")
+    result = detect_escape_encoding(data)
+    assert result is not None
+    assert result.encoding == "utf-7"
+
+
+def test_utf7_consecutive_shifted_sequences() -> None:
+    """Back-to-back shifted sequences (common in CJK text) must be detected."""
+    text = "これはテストです"  # All non-ASCII
+    data = text.encode("utf-7")
+    result = detect_escape_encoding(data)
+    assert result is not None
+    assert result.encoding == "utf-7"
+
+
 def test_iso2022_jp_base_returns_jp2() -> None:
     """Base ISO-2022-JP escape codes should default to iso2022-jp-2 (broadest)."""
     data = b"Hello \x1b$B$3$s$K$A$O\x1b(B World"

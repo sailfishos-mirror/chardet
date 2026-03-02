@@ -77,6 +77,30 @@ def _is_valid_utf7_b64(b64_bytes: bytes) -> bool:
     return True
 
 
+def _is_embedded_in_base64(data: bytes, pos: int) -> bool:
+    """Return True if the ``+`` at *pos* is embedded in a base64 stream.
+
+    Walks backward from *pos*, skipping CR/LF, and counts consecutive base64
+    characters (including ``=`` for padding).  If 4 or more are found, the
+    ``+`` is likely part of a PEM certificate, email attachment, or similar
+    base64 blob rather than a real UTF-7 shift character.
+    """
+    b64_with_pad: frozenset[int] = _UTF7_BASE64 | frozenset(b"=")
+    count = 0
+    i = pos - 1
+    while i >= 0:
+        b = data[i]
+        if b in {0x0A, 0x0D}:  # skip newlines
+            i -= 1
+            continue
+        if b in b64_with_pad:
+            count += 1
+            i -= 1
+        else:
+            break
+    return count >= 4
+
+
 def _has_valid_utf7_sequences(data: bytes) -> bool:
     """Check that *data* contains at least one valid UTF-7 shifted sequence.
 
@@ -87,13 +111,24 @@ def _has_valid_utf7_sequences(data: bytes) -> bool:
     """
     start = 0
     while True:
-        pos = data.find(ord("+"), start)
-        if pos == -1:
+        shift_pos = data.find(ord("+"), start)
+        if shift_pos == -1:
             return False
-        pos += 1  # skip the '+'
+        pos = shift_pos + 1  # skip the '+'
         # +- is a literal plus, not a shifted sequence
         if pos < len(data) and data[pos] == ord("-"):
             start = pos + 1
+            continue
+        # Guard A: '+' as the first base64 character encodes PUA code points
+        # (U+F800-U+FBFC) which never appear in real text.  This catches
+        # patterns like "C++20".
+        if pos < len(data) and data[pos] == ord("+"):
+            start = pos
+            continue
+        # Guard B: if the '+' is embedded in a base64 stream (PEM, email
+        # attachment, etc.), it's not a real UTF-7 shift character.
+        if _is_embedded_in_base64(data, shift_pos):
+            start = pos
             continue
         # Collect consecutive Base64 characters
         i = pos

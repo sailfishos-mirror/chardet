@@ -9,7 +9,22 @@ from types import MappingProxyType
 from chardet.enums import EncodingEra
 
 # Shared language tuples — used by multiple EncodingInfo entries below.
-_WESTERN = ("en", "fr", "de", "es", "pt", "it", "nl", "da", "sv", "no", "fi", "is", "id", "ms")
+_WESTERN = (
+    "en",
+    "fr",
+    "de",
+    "es",
+    "pt",
+    "it",
+    "nl",
+    "da",
+    "sv",
+    "no",
+    "fi",
+    "is",
+    "id",
+    "ms",
+)
 _WESTERN_TR = (*_WESTERN, "tr")
 _CYRILLIC = ("ru", "bg", "uk", "sr", "mk", "be")
 _CENTRAL_EU = ("pl", "cs", "hu", "hr", "ro", "sk", "sl")
@@ -133,7 +148,7 @@ _REGISTRY_ENTRIES = (
     EncodingInfo(
         name="utf-7",
         aliases=("utf7",),
-        era=EncodingEra.MODERN_WEB,
+        era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=False,
         python_codec="utf-7",
         languages=(),
@@ -190,7 +205,7 @@ _REGISTRY_ENTRIES = (
     EncodingInfo(
         name="hz-gb-2312",
         aliases=("hz",),
-        era=EncodingEra.MODERN_WEB,
+        era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=True,
         python_codec="hz",
         languages=("zh",),
@@ -222,7 +237,7 @@ _REGISTRY_ENTRIES = (
     EncodingInfo(
         name="iso-2022-kr",
         aliases=("csiso2022kr",),
-        era=EncodingEra.MODERN_WEB,
+        era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=True,
         python_codec="iso2022-kr",
         languages=("ko",),
