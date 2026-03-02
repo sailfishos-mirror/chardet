@@ -28,9 +28,6 @@ _MODEL_NORMS_LOCK = threading.Lock()
 _SINGLE_LANG_MAP: dict[str, str] = {
     enc.name: enc.languages[0] for enc in REGISTRY if len(enc.languages) == 1
 }
-# gb2312 is not in the registry (detector returns gb18030 instead) but
-# needs a language mapping for accuracy test evaluation.
-_SINGLE_LANG_MAP["gb2312"] = "zh"
 
 
 def load_models() -> dict[str, bytearray]:
@@ -111,6 +108,17 @@ def get_enc_index() -> dict[str, list[tuple[str | None, bytearray]]]:
             else:
                 # Plain encoding key (backward compat / fallback)
                 index.setdefault(key, []).append((None, model))
+
+        # Resolve aliases: if a model key matches a registry alias but not
+        # the primary name, copy the entry under the primary name.
+        alias_to_primary: dict[str, str] = {}
+        for entry in REGISTRY:
+            for alias in entry.aliases:
+                alias_to_primary[alias] = entry.name
+        for alias, primary in alias_to_primary.items():
+            if alias in index and primary not in index:
+                index[primary] = index[alias]
+
         _ENC_INDEX = index
         return index
 

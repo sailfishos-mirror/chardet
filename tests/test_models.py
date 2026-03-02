@@ -5,7 +5,16 @@ from pathlib import Path
 import pytest
 from train import deserialize_models, serialize_models
 
-from chardet.models import BigramProfile, load_models, score_best_language
+from chardet.models import BigramProfile, get_enc_index, load_models, score_best_language
+
+
+def test_enc_index_resolves_aliases() -> None:
+    index = get_enc_index()
+    # Models keyed by old names should be accessible under new primary names
+    assert "big5hkscs" in index
+    assert "euc-jis-2004" in index
+    assert "shift_jis_2004" in index
+    assert "cp1140" in index
 
 
 def test_load_models_returns_dict() -> None:
