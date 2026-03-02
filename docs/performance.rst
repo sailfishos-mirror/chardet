@@ -16,23 +16,23 @@ Accuracy
    * - Detector
      - Correct
      - Accuracy
-     - Time
+     - Speed
    * - **chardet** (this version)
      - **2088/2161**
      - **96.6%**
-     - **6.47s**
+     - **334 files/s**
    * - chardet 6.0.0
      - 2042/2161
      - 94.5%
-     - 175.56s
+     - 12 files/s
    * - charset-normalizer
      - 1924/2161
      - 89.0%
-     - 32.89s
+     - 66 files/s
    * - cchardet
      - 1228/2161
      - 56.8%
-     - 0.71s
+     - 3,032 files/s
 
 chardet leads all detectors on accuracy: **+2.1pp** vs chardet 6.0.0,
 **+7.6pp** vs charset-normalizer, and **+39.8pp** vs cchardet.
@@ -45,31 +45,31 @@ Speed
    :widths: 30 12 12 12 12 12
 
    * - Detector
-     - Total
+     - Files/s
      - Mean
      - Median
      - p90
      - p95
    * - cchardet
-     - 713ms
+     - 3,032
      - 0.33ms
      - 0.07ms
      - 0.68ms
      - 0.92ms
    * - **chardet** (this version)
-     - **6,469ms**
+     - **334**
      - **2.99ms**
      - **1.12ms**
      - **5.42ms**
      - **6.17ms**
    * - charset-normalizer
-     - 32,889ms
+     - 66
      - 15.63ms
      - 4.74ms
      - 50.66ms
      - 72.64ms
    * - chardet 6.0.0
-     - 175,558ms
+     - 12
      - 81.33ms
      - 16.10ms
      - 121.99ms
@@ -181,13 +181,13 @@ compilation on CPython:
    :widths: 30 20 20
 
    * - Build
-     - Total Time
+     - Files/s
      - Speedup
    * - Pure Python
-     - 6,469ms
+     - 334
      - baseline
    * - mypyc compiled
-     - 4,471ms
+     - 484
      - **1.45x**
 
 Pure-Python wheels are always available for PyPy and platforms without

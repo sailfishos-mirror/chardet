@@ -18,7 +18,7 @@ result. **MIT licensed.**
 | | chardet 7.0 | chardet 6.0.0 | [charset-normalizer] |
 |---|:---:|:---:|:---:|
 | Accuracy (2,161 files) | **96.6%** | 94.5% | 89.0% |
-| Speed (pure Python) | **6.5s** | 175.6s | 32.9s |
+| Speed (pure Python) | **334 files/s** | 12 files/s | 66 files/s |
 | Language detection | **90.9%** | 47.0% | -- |
 | Peak memory | **22.5 MiB** | 16.4 MiB | 102.2 MiB |
 | Streaming detection | **yes** | yes | no |
