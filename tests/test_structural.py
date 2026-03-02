@@ -8,7 +8,7 @@ from chardet.registry import REGISTRY
 
 
 def _get_encoding(name: str):
-    return next(e for e in REGISTRY if e.name == name)
+    return REGISTRY[name]
 
 
 def test_shift_jis_scores_high_on_shift_jis_data():

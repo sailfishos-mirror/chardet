@@ -26,7 +26,9 @@ _MODEL_NORMS: dict[int, float] | None = None
 _MODEL_NORMS_LOCK = threading.Lock()
 # Encodings that map to exactly one language, derived from the registry.
 _SINGLE_LANG_MAP: dict[str, str] = {
-    enc.name: enc.languages[0] for enc in REGISTRY if len(enc.languages) == 1
+    enc.name: enc.languages[0]
+    for enc in REGISTRY.values()
+    if len(enc.languages) == 1
 }
 
 
@@ -112,7 +114,7 @@ def get_enc_index() -> dict[str, list[tuple[str | None, bytearray]]]:
         # Resolve aliases: if a model key matches a registry alias but not
         # the primary name, copy the entry under the primary name.
         alias_to_primary: dict[str, str] = {}
-        for entry in REGISTRY:
+        for entry in REGISTRY.values():
             for alias in entry.aliases:
                 alias_to_primary[alias] = entry.name
         for alias, primary in alias_to_primary.items():

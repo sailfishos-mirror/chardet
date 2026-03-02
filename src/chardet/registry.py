@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import threading
+from types import MappingProxyType
 
 from chardet.enums import EncodingEra
 
@@ -38,7 +39,7 @@ def get_candidates(era: EncodingEra) -> tuple[EncodingInfo, ...]:
         result = _CANDIDATES_CACHE.get(key)
         if result is not None:
             return result
-        result = tuple(enc for enc in REGISTRY if enc.era & era)
+        result = tuple(enc for enc in REGISTRY.values() if enc.era & era)
         _CANDIDATES_CACHE[key] = result
         return result
 
@@ -46,7 +47,7 @@ def get_candidates(era: EncodingEra) -> tuple[EncodingInfo, ...]:
 # Era assignments match chardet 6.0.0's chardet/metadata/charsets.py
 # python_codec values verified via codecs.lookup()
 
-REGISTRY: tuple[EncodingInfo, ...] = (
+_REGISTRY_ENTRIES = (
     # === MODERN_WEB ===
     EncodingInfo(
         name="ascii",
@@ -882,4 +883,8 @@ REGISTRY: tuple[EncodingInfo, ...] = (
         python_codec="cp273",
         languages=("de",),
     ),
+)
+
+REGISTRY: MappingProxyType[str, EncodingInfo] = MappingProxyType(
+    {e.name: e for e in _REGISTRY_ENTRIES}
 )

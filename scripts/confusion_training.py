@@ -60,7 +60,7 @@ def compute_confusion_groups(
     """
     # Collect single-byte encodings with valid codecs
     single_byte = []
-    for enc in REGISTRY:
+    for enc in REGISTRY.values():
         if enc.is_multibyte:
             continue
         try:
@@ -120,7 +120,7 @@ def compute_distinguishing_maps(
     """
     # Collect single-byte encodings with valid codecs
     single_byte = []
-    for enc in REGISTRY:
+    for enc in REGISTRY.values():
         if enc.is_multibyte:
             continue
         try:

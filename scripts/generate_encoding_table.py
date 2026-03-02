@@ -32,7 +32,7 @@ def main() -> None:
 
     for era in ERA_ORDER:
         entries = sorted(
-            [e for e in REGISTRY if e.era == era],
+            [e for e in REGISTRY.values() if e.era == era],
             key=lambda e: e.name,
         )
         title = ERA_DISPLAY[era]

@@ -34,23 +34,23 @@ from confusion_training import (
     serialize_confusion_data,
 )
 
+from chardet.registry import REGISTRY
+
 print = functools.partial(print, flush=True)  # noqa: A001
 
 # ---------------------------------------------------------------------------
 # Encoding -> language mapping (derived from registry)
 # ---------------------------------------------------------------------------
 
-from chardet.registry import REGISTRY
-
 # Build encoding → language map from the registry.  Language associations are
 # based on the historical usage of each encoding and stored in
 # ``EncodingInfo.languages``.
 ENCODING_LANG_MAP: dict[str, list[str]] = {
-    enc.name: list(enc.languages) for enc in REGISTRY if enc.languages
+    enc.name: list(enc.languages) for enc in REGISTRY.values() if enc.languages
 }
 # utf-8 is language-agnostic but we train it on ALL languages for
 # language detection (Tier 3 fallback in the pipeline).
-_ALL_LANGS = sorted({lang for enc in REGISTRY for lang in enc.languages})
+_ALL_LANGS = sorted({lang for enc in REGISTRY.values() for lang in enc.languages})
 ENCODING_LANG_MAP["utf-8"] = _ALL_LANGS
 
 # CulturaX dataset on Hugging Face
