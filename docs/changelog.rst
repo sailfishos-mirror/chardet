@@ -1,7 +1,7 @@
 Changelog
 =========
 
-7.0.0 (unreleased)
+7.0.0 (2026-03-02)
 -------------------
 
 Ground-up, MIT-licensed rewrite of chardet. Same package name, same
