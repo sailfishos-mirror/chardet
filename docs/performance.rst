@@ -1,7 +1,7 @@
 Performance
 ===========
 
-Benchmarked against 2,161 test files from the
+Benchmarked against 2,179 test files from the
 `chardet test suite <https://github.com/chardet/test-data>`_. All
 detectors evaluated with the same equivalence rules. Numbers below are
 pure Python (CPython 3.12) unless noted.
@@ -18,24 +18,24 @@ Accuracy
      - Accuracy
      - Speed
    * - **chardet** (this version)
-     - **2088/2161**
-     - **96.6%**
-     - **334 files/s**
+     - **2110/2179**
+     - **96.8%**
+     - **342 files/s**
    * - chardet 6.0.0
-     - 2042/2161
+     - 2060/2179
      - 94.5%
      - 12 files/s
    * - charset-normalizer
-     - 1924/2161
-     - 89.0%
-     - 66 files/s
+     - 1942/2179
+     - 89.1%
+     - 65 files/s
    * - cchardet
-     - 1228/2161
-     - 56.8%
-     - 3,032 files/s
+     - 1245/2179
+     - 57.1%
+     - 1,801 files/s
 
-chardet leads all detectors on accuracy: **+2.1pp** vs chardet 6.0.0,
-**+7.6pp** vs charset-normalizer, and **+39.8pp** vs cchardet.
+chardet leads all detectors on accuracy: **+2.3pp** vs chardet 6.0.0,
+**+7.7pp** vs charset-normalizer, and **+39.7pp** vs cchardet.
 
 Speed
 -----
@@ -51,32 +51,32 @@ Speed
      - p90
      - p95
    * - cchardet
-     - 3,032
-     - 0.33ms
+     - 1,801
+     - 0.55ms
      - 0.07ms
-     - 0.68ms
-     - 0.92ms
+     - 0.64ms
+     - 0.93ms
    * - **chardet** (this version)
-     - **334**
-     - **2.99ms**
-     - **1.12ms**
-     - **5.42ms**
-     - **6.17ms**
+     - **342**
+     - **2.92ms**
+     - **1.08ms**
+     - **5.16ms**
+     - **5.97ms**
    * - charset-normalizer
-     - 66
-     - 15.63ms
-     - 4.74ms
-     - 50.66ms
-     - 72.64ms
+     - 65
+     - 15.30ms
+     - 4.71ms
+     - 50.19ms
+     - 70.88ms
    * - chardet 6.0.0
      - 12
-     - 81.33ms
-     - 16.10ms
-     - 121.99ms
-     - 307.29ms
+     - 82.74ms
+     - 16.23ms
+     - 122.57ms
+     - 323.31ms
 
-chardet is **27x faster** than chardet 6.0.0 and **5.1x faster** than
-charset-normalizer. Its median latency (1.12ms) is the lowest among all
+chardet is **28x faster** than chardet 6.0.0 and **5.2x faster** than
+charset-normalizer. Its median latency (1.08ms) is the lowest among all
 pure-Python detectors.
 
 Memory
@@ -91,23 +91,23 @@ Memory
      - Peak Memory
      - RSS
    * - **chardet** (this version)
-     - **51 B**
+     - **96 B**
      - **22.5 MiB**
-     - **94.8 MiB**
+     - **96.0 MiB**
    * - chardet 6.0.0
      - 96 B
      - 16.4 MiB
-     - 100.2 MiB
+     - 101.9 MiB
    * - charset-normalizer
-     - 1.7 MiB
-     - 102.2 MiB
-     - 263.2 MiB
+     - 1.3 MiB
+     - 101.8 MiB
+     - 266.8 MiB
    * - cchardet
-     - 23.6 KiB
-     - 27.2 KiB
-     - 59.8 MiB
+     - 23.7 KiB
+     - 27.3 KiB
+     - 63.0 MiB
 
-chardet uses negligible import memory (51 B), **4.5x less peak memory** than
+chardet uses negligible import memory (96 B), **4.5x less peak memory** than
 charset-normalizer, and **2.8x less RSS**.
 
 Language Detection
@@ -121,16 +121,16 @@ Language Detection
      - Correct
      - Accuracy
    * - **chardet** (this version)
-     - **1964/2161**
-     - **90.9%**
+     - **1964/2171**
+     - **90.5%**
    * - chardet 6.0.0
-     - 1016/2161
-     - 47.0%
+     - 1016/2171
+     - 46.8%
    * - charset-normalizer
-     - 0/2161
+     - 0/2171
      - 0.0%
    * - cchardet
-     - 0/2161
+     - 0/2171
      - 0.0%
 
 chardet detects the language for every file. charset-normalizer and cchardet
@@ -184,11 +184,11 @@ compilation on CPython:
      - Files/s
      - Speedup
    * - Pure Python
-     - 334
+     - 332
      - baseline
    * - mypyc compiled
-     - 484
-     - **1.45x**
+     - 494
+     - **1.49x**
 
 Pure-Python wheels are always available for PyPy and platforms without
 prebuilt binaries.

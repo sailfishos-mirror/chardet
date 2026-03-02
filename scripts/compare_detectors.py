@@ -454,7 +454,8 @@ def run_comparison(
 
     # -- Per-encoding table --
     all_encodings = sorted(
-        {enc for label in detector_labels for enc in stats[label]["per_enc"]}
+        {enc for label in detector_labels for enc in stats[label]["per_enc"]},
+        key=lambda x: x or "",
     )
     col_w = max(18, *(len(label) + 2 for label in detector_labels))
 
@@ -484,7 +485,8 @@ def run_comparison(
         if t_enc == 0:
             continue
 
-        row = f"  {enc:<25} {t_enc:>5}"
+        enc_display = "None" if enc is None else enc
+        row = f"  {enc_display:<25} {t_enc:>5}"
         best_acc = -1.0
         best_label = ""
         tied = False
@@ -535,7 +537,8 @@ def run_comparison(
         if t_enc == 0:
             continue
 
-        row = f"  {enc:<25} {t_enc:>5}"
+        enc_display = "None" if enc is None else enc
+        row = f"  {enc_display:<25} {t_enc:>5}"
         for label in detector_labels:
             s = stats[label]["per_enc"][enc]
             lang_c = s["lang_correct"]
@@ -555,25 +558,28 @@ def run_comparison(
         rw = sorted(pw["ref_wins"], key=lambda x: x[1] - x[2], reverse=True)
         print(f"\n  {ref_label} wins ({len(rw)} encodings):")
         for enc, r_acc, o_acc, t_enc in rw:
+            enc_display = "None" if enc is None else enc
             diff = r_acc - o_acc
             print(
-                f"    {enc:<25} {ref_label}={r_acc:>6.1%}  "
+                f"    {enc_display:<25} {ref_label}={r_acc:>6.1%}  "
                 f"{label}={o_acc:>6.1%}  delta={diff:>+6.1%}  ({t_enc} files)"
             )
 
         ow = sorted(pw["other_wins"], key=lambda x: x[1] - x[2], reverse=True)
         print(f"\n  {label} wins ({len(ow)} encodings):")
         for enc, o_acc, r_acc, t_enc in ow:
+            enc_display = "None" if enc is None else enc
             diff = o_acc - r_acc
             print(
-                f"    {enc:<25} {label}={o_acc:>6.1%}  "
+                f"    {enc_display:<25} {label}={o_acc:>6.1%}  "
                 f"{ref_label}={r_acc:>6.1%}  delta={diff:>+6.1%}  ({t_enc} files)"
             )
 
         ti = pw["ties"]
         print(f"\n  Tied ({len(ti)} encodings):")
         for enc, acc, t_enc in ti:
-            print(f"    {enc:<25} both={acc:>6.1%}  ({t_enc} files)")
+            enc_display = "None" if enc is None else enc
+            print(f"    {enc_display:<25} both={acc:>6.1%}  ({t_enc} files)")
 
     # -- Failure details --
     for label in detector_labels:
