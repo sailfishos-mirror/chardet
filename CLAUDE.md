@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MIT-licensed, ground-up rewrite of chardet (the Python character encoding detector). Drop-in replacement for chardet 6.x — same package name, same public API. Version 6.1.0+. Zero runtime dependencies, Python 3.10+, must work on PyPy.
+MIT-licensed, ground-up rewrite of chardet (the Python character encoding detector). Drop-in replacement for chardet 6.x — same package name, same public API. Zero runtime dependencies, Python 3.10+, must work on PyPy.
+
+### Versioning
+
+Version is derived from git tags via `hatch-vcs`. The tag is the single source of truth — no hardcoded version strings. At tag `v7.0.0` the version is `7.0.0`; between tags it's auto-incremented (e.g., `7.0.1.dev3+g...`). The generated `src/chardet/_version.py` is gitignored and should never be committed.
 
 ## Commands
 
@@ -62,7 +66,7 @@ Docs use Sphinx with Furo theme. API reference is auto-generated from source doc
 HATCH_BUILD_HOOK_ENABLE_MYPYC=true uv build  # compile hot-path modules
 ```
 
-Only three modules are compiled: `models/__init__.py`, `pipeline/structural.py`, `pipeline/validity.py`, `pipeline/statistical.py`.
+Compiled modules: `models/__init__.py`, `pipeline/structural.py`, `pipeline/validity.py`, `pipeline/statistical.py`, `pipeline/utf1632.py`, `pipeline/utf8.py`, `pipeline/escape.py`. These modules cannot use `from __future__ import annotations` (FA100 is ignored for them in ruff config).
 
 ## Architecture
 
@@ -81,6 +85,7 @@ All detection flows through `run_pipeline()`, which runs stages in order — eac
 9. **CJK gating** (in orchestrator) — eliminate CJK candidates lacking multi-byte structure
 10. **Structural probing** (`structural.py`) — score multi-byte encoding fit
 11. **Statistical scoring** (`statistical.py`) — bigram frequency models for final ranking
+12. **Post-processing** (`_postprocess_results()` in orchestrator) — confusion group resolution (`confusion.py`), niche Latin demotion, KOI8-T promotion
 
 ### Key Types
 
@@ -110,7 +115,7 @@ Defines acceptable detection mismatches for accuracy testing: directional supers
 ## Conventions
 
 - Ruff with `select = ["ALL"]` and targeted ignores — check `pyproject.toml` for the full ignore list
-- `from __future__ import annotations` in all source files
+- `from __future__ import annotations` in all source files (except mypyc-compiled modules)
 - Frozen dataclasses with `slots=True` for data types
 - Era assignments in `registry.py` match chardet 6.0.0
 - Training data (Wikipedia/HTML) is never the same as evaluation data (chardet test suite)
