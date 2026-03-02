@@ -169,12 +169,10 @@ Create one instance per thread when using the streaming API.
 Optional mypyc Compilation
 --------------------------
 
-chardet supports optional `mypyc <https://mypyc.readthedocs.io>`_
-compilation on CPython:
-
-.. code-block:: bash
-
-   HATCH_BUILD_HOOK_ENABLE_MYPYC=true pip install chardet
+Prebuilt `mypyc <https://mypyc.readthedocs.io>`_-compiled wheels are
+published to PyPI for CPython on Linux, macOS, and Windows. A regular
+``pip install chardet`` will pick them up automatically — no extra flags
+needed.
 
 .. list-table::
    :header-rows: 1
