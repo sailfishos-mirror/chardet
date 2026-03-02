@@ -8,9 +8,9 @@ byte strings and returns the detected encoding, confidence score, and language.
 
    import chardet
 
-   result = chardet.detect(b"\xc3\xa9\xc3\xa0\xc3\xbc")
+   result = chardet.detect("It\u2019s a lovely day \u2014 let\u2019s grab coffee.".encode("utf-8"))
    print(result)
-   # {'encoding': 'utf-8', 'confidence': 0.99, 'language': 'French'}
+   # {'encoding': 'utf-8', 'confidence': 0.99, 'language': 'es'}
 
 chardet 7.0 is a ground-up, MIT-licensed rewrite — same package name, same
 public API, drop-in replacement for chardet 5.x/6.x. Python 3.10+, zero
