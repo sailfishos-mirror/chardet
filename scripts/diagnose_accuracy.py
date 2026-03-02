@@ -77,7 +77,11 @@ def main() -> None:
         size = len(data)
         short_path = f"{filepath.parent.name}/{filepath.name}"
 
-        norm_expected = normalize_encoding_name(expected_encoding)
+        norm_expected = (
+            "None"
+            if expected_encoding is None
+            else normalize_encoding_name(expected_encoding)
+        )
 
         total += 1
         enc_total[norm_expected] += 1
@@ -89,7 +93,7 @@ def main() -> None:
             enc_correct[norm_expected] += 1
         else:
             failures[norm_expected].append((detected, confidence, size, short_path))
-            if detected is None:
+            if detected is None and expected_encoding is not None:
                 none_results.append((expected_encoding, language, size, short_path))
 
     # ---- Overall summary ----

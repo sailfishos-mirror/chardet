@@ -225,8 +225,8 @@ def _measure_memory_subprocess(
 
 def _record_result(  # noqa: PLR0913
     detector_stats: dict,
-    expected_encoding: str,
-    expected_language: str,
+    expected_encoding: str | None,
+    expected_language: str | None,
     filepath: Path,
     detected: str | None,
     detected_language: str | None,
@@ -247,6 +247,9 @@ def _record_result(  # noqa: PLR0913
         )
 
     # Language tracking (independent of encoding accuracy)
+    # Skip for binary files (expected_language is None).
+    if expected_language is None:
+        return
     detector_stats["lang_total"] += 1
     detector_stats["per_enc"][expected_encoding]["lang_total"] += 1
     normalized = normalize_language(detected_language)

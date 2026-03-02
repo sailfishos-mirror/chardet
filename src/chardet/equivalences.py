@@ -141,7 +141,7 @@ def _build_bidir_index() -> dict[str, frozenset[str]]:
 _NORMALIZED_BIDIR: dict[str, frozenset[str]] = _build_bidir_index()
 
 
-def is_correct(expected: str, detected: str | None) -> bool:
+def is_correct(expected: str | None, detected: str | None) -> bool:
     """Check whether *detected* is an acceptable answer for *expected*.
 
     Acceptable means:
@@ -150,10 +150,12 @@ def is_correct(expected: str, detected: str | None) -> bool:
     2. Both belong to the same bidirectional byte-order group, OR
     3. *detected* is a known superset of *expected*.
 
-    :param expected: The expected encoding name.
+    :param expected: The expected encoding name, or ``None`` for binary files.
     :param detected: The detected encoding name, or ``None``.
     :returns: ``True`` if the detection is acceptable.
     """
+    if expected is None:
+        return detected is None
     if detected is None:
         return False
     norm_exp = normalize_encoding_name(expected)
@@ -206,7 +208,9 @@ def _chars_equivalent(a: str, b: str) -> bool:
     return _strip_combining(a) == _strip_combining(b)
 
 
-def is_equivalent_detection(data: bytes, expected: str, detected: str | None) -> bool:
+def is_equivalent_detection(
+    data: bytes, expected: str | None, detected: str | None
+) -> bool:
     """Check whether *detected* produces functionally identical text to *expected*.
 
     Returns ``True`` when:
@@ -222,11 +226,13 @@ def is_equivalent_detection(data: bytes, expected: str, detected: str | None) ->
     or either encoding cannot decode *data*.
 
     :param data: The raw byte data that was detected.
-    :param expected: The expected encoding name.
+    :param expected: The expected encoding name, or ``None`` for binary files.
     :param detected: The detected encoding name, or ``None``.
     :returns: ``True`` if decoding with *detected* yields functionally identical
         text to decoding with *expected*.
     """
+    if expected is None:
+        return detected is None
     if detected is None:
         return False
 

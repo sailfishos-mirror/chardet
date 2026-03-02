@@ -137,8 +137,10 @@ _KNOWN_ERA_FILTERED_FAILURES: frozenset[str] = frozenset(
 # ---------------------------------------------------------------------------
 
 
-def _encoding_era(name: str) -> EncodingEra:
+def _encoding_era(name: str | None) -> EncodingEra:
     """Look up the encoding era for a test-data encoding name."""
+    if name is None:
+        return EncodingEra.ALL
     if name in REGISTRY:
         return REGISTRY[name].era
     lower = name.lower()
@@ -173,14 +175,16 @@ def _make_params(
     ("expected_encoding", "language", "test_file_path"),
     _make_params(_KNOWN_FAILURES),
 )
-def test_detect(expected_encoding: str, language: str, test_file_path: Path) -> None:
+def test_detect(
+    expected_encoding: str | None, language: str | None, test_file_path: Path
+) -> None:
     """Detect encoding of a single test file and verify correctness."""
     data = test_file_path.read_bytes()
     result = chardet.detect(data, encoding_era=EncodingEra.ALL)
     detected = result["encoding"]
 
-    # Binary files: directory name is "None-None", expect encoding=None
-    if expected_encoding == "None":
+    # Binary files: expect encoding=None
+    if expected_encoding is None:
         assert detected is None, (
             f"expected binary (None), got={detected} "
             f"(confidence={result['confidence']:.2f}, file={test_file_path.name})"
@@ -210,7 +214,7 @@ def test_detect(expected_encoding: str, language: str, test_file_path: Path) -> 
     _make_params(_KNOWN_ERA_FILTERED_FAILURES),
 )
 def test_detect_era_filtered(
-    expected_encoding: str, language: str, test_file_path: Path
+    expected_encoding: str | None, language: str | None, test_file_path: Path
 ) -> None:
     """Detect encoding using only the expected encoding's own era."""
     era = _encoding_era(expected_encoding)
@@ -218,8 +222,8 @@ def test_detect_era_filtered(
     result = chardet.detect(data, encoding_era=era)
     detected = result["encoding"]
 
-    # Binary files: directory name is "None-None", expect encoding=None
-    if expected_encoding == "None":
+    # Binary files: expect encoding=None
+    if expected_encoding is None:
         assert detected is None, (
             f"expected binary (None), got={detected} "
             f"(era={era!r}, confidence={result['confidence']:.2f}, "

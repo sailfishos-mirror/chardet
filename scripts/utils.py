@@ -169,7 +169,9 @@ def normalize_language(detected_language: str | None) -> str | None:
     return ISO_TO_LANGUAGE.get(detected_language.lower(), detected_language.lower())
 
 
-def collect_test_files(data_dir: Path) -> list[tuple[str, str, Path]]:
+def collect_test_files(
+    data_dir: Path,
+) -> list[tuple[str | None, str | None, Path]]:
     """Collect (encoding, language, filepath) tuples from test data.
 
     Directory name format: "{encoding}-{language}" e.g. "utf-8-english",
@@ -177,15 +179,23 @@ def collect_test_files(data_dir: Path) -> list[tuple[str, str, Path]]:
 
     Since all language names are single words (no hyphens), we can reliably
     split on the last hyphen to separate encoding from language.
+
+    The binary test directory is named "None-None"; its encoding and language
+    are returned as Python ``None`` rather than the string ``"None"``.
     """
-    test_files: list[tuple[str, str, Path]] = []
+    test_files: list[tuple[str | None, str | None, Path]] = []
     for encoding_dir in sorted(data_dir.iterdir()):
         if not encoding_dir.is_dir():
             continue
         parts = encoding_dir.name.rsplit("-", 1)
         if len(parts) != 2:
             continue
-        encoding_name, language = parts
+        encoding_name: str | None = parts[0]
+        language: str | None = parts[1]
+        if encoding_name == "None":
+            encoding_name = None
+        if language == "None":
+            language = None
         test_files.extend(
             (encoding_name, language, filepath)
             for filepath in sorted(encoding_dir.iterdir())
