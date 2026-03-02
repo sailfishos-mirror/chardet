@@ -11,7 +11,42 @@ import struct
 import unicodedata
 from pathlib import Path
 
-from chardet.pipeline.confusion import _CATEGORY_TO_INT, DistinguishingMaps
+from chardet.pipeline.confusion import DistinguishingMaps
+
+# Unicode general category -> uint8 encoding for struct serialization.
+# Must stay in sync with _INT_TO_CATEGORY in chardet.pipeline.confusion.
+_CATEGORY_TO_INT: dict[str, int] = {
+    "Lu": 0,
+    "Ll": 1,
+    "Lt": 2,
+    "Lm": 3,
+    "Lo": 4,  # Letters
+    "Mn": 5,
+    "Mc": 6,
+    "Me": 7,  # Marks
+    "Nd": 8,
+    "Nl": 9,
+    "No": 10,  # Numbers
+    "Pc": 11,
+    "Pd": 12,
+    "Ps": 13,
+    "Pe": 14,  # Punctuation
+    "Pi": 15,
+    "Pf": 16,
+    "Po": 17,
+    "Sm": 18,
+    "Sc": 19,
+    "Sk": 20,
+    "So": 21,  # Symbols
+    "Zs": 22,
+    "Zl": 23,
+    "Zp": 24,  # Separators
+    "Cc": 25,
+    "Cf": 26,
+    "Cs": 27,
+    "Co": 28,
+    "Cn": 29,  # Other
+}
 from chardet.registry import REGISTRY
 
 

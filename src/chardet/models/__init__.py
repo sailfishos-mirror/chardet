@@ -268,7 +268,7 @@ def score_best_language(
     :returns: A ``(score, language)`` tuple with the best cosine-similarity
         score and the corresponding language code (or ``None``).
     """
-    if not data:
+    if not data and profile is None:
         return 0.0, None
 
     index = get_enc_index()

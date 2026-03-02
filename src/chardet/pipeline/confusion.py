@@ -28,40 +28,40 @@ DistinguishingMaps = dict[
     tuple[frozenset[int], dict[int, tuple[str, str]]],
 ]
 
-# Unicode general category -> uint8 encoding for struct serialization
-_CATEGORY_TO_INT: dict[str, int] = {
-    "Lu": 0,
-    "Ll": 1,
-    "Lt": 2,
-    "Lm": 3,
-    "Lo": 4,  # Letters
-    "Mn": 5,
-    "Mc": 6,
-    "Me": 7,  # Marks
-    "Nd": 8,
-    "Nl": 9,
-    "No": 10,  # Numbers
-    "Pc": 11,
-    "Pd": 12,
-    "Ps": 13,
-    "Pe": 14,  # Punctuation
-    "Pi": 15,
-    "Pf": 16,
-    "Po": 17,
-    "Sm": 18,
-    "Sc": 19,
-    "Sk": 20,
-    "So": 21,  # Symbols
-    "Zs": 22,
-    "Zl": 23,
-    "Zp": 24,  # Separators
-    "Cc": 25,
-    "Cf": 26,
-    "Cs": 27,
-    "Co": 28,
-    "Cn": 29,  # Other
+# uint8 -> Unicode general category, inverse of the mapping in
+# scripts/confusion_training.py used at serialization time.
+_INT_TO_CATEGORY: dict[int, str] = {
+    0: "Lu",
+    1: "Ll",
+    2: "Lt",
+    3: "Lm",
+    4: "Lo",
+    5: "Mn",
+    6: "Mc",
+    7: "Me",
+    8: "Nd",
+    9: "Nl",
+    10: "No",
+    11: "Pc",
+    12: "Pd",
+    13: "Ps",
+    14: "Pe",
+    15: "Pi",
+    16: "Pf",
+    17: "Po",
+    18: "Sm",
+    19: "Sc",
+    20: "Sk",
+    21: "So",
+    22: "Zs",
+    23: "Zl",
+    24: "Zp",
+    25: "Cc",
+    26: "Cf",
+    27: "Cs",
+    28: "Co",
+    29: "Cn",
 }
-_INT_TO_CATEGORY: dict[int, str] = {v: k for k, v in _CATEGORY_TO_INT.items()}
 
 _CONFUSION_CACHE: DistinguishingMaps | None = None
 _CONFUSION_CACHE_LOCK = threading.Lock()
