@@ -26,6 +26,7 @@ runtime dependencies, works on PyPy.
 .. toctree::
    :maxdepth: 2
    :caption: Contents
+   :hidden:
 
    usage
    supported-encodings
