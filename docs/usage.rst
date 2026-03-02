@@ -17,9 +17,12 @@ Use :func:`chardet.detect` to detect the encoding of a byte string:
 
    import chardet
 
-   result = chardet.detect(b"\xc3\xa9\xc3\xa0\xc3\xbc")
+   result = chardet.detect(
+       "München ist die Hauptstadt Bayerns und eine der"
+       " schönsten Städte Deutschlands.".encode("windows-1252")
+   )
    print(result)
-   # {'encoding': 'utf-8', 'confidence': 0.99, 'language': 'French'}
+   # {'encoding': 'windows-1252', 'confidence': 0.34, 'language': 'de'}
 
 The result is a dictionary with three keys:
 
