@@ -11,7 +11,7 @@ annotations.
 
 from collections.abc import Callable
 
-from chardet.pipeline import PipelineContext
+from chardet.pipeline import HIGH_BYTES, PipelineContext
 from chardet.registry import EncodingInfo
 
 # ---------------------------------------------------------------------------
@@ -26,10 +26,6 @@ from chardet.registry import EncodingInfo
 # analyzer) so that mypyc can inline the byte-range constants into each
 # function's tight loop.
 # ---------------------------------------------------------------------------
-
-# Byte table for fast non-ASCII counting (C-speed via bytes.translate).
-# Deleting all bytes >= 0x80 and comparing lengths gives the non-ASCII count.
-_HIGH_BYTES: bytes = bytes(range(0x80, 0x100))
 
 
 def _analyze_shift_jis(
@@ -304,15 +300,14 @@ def _get_analysis(
     data: bytes, name: str, ctx: PipelineContext
 ) -> tuple[float, int, int] | None:
     """Return cached analysis or compute and cache it."""
-    key = (id(data), len(data), name)
-    cached = ctx.analysis_cache.get(key)
+    cached = ctx.analysis_cache.get(name)
     if cached is not None:
         return cached
     analyzer = _ANALYZERS.get(name)
     if analyzer is None:
         return None
     result = analyzer(data)
-    ctx.analysis_cache[key] = result
+    ctx.analysis_cache[name] = result
     return result
 
 
@@ -348,7 +343,7 @@ def compute_multibyte_byte_coverage(
     data: bytes,
     encoding_info: EncodingInfo,
     ctx: PipelineContext,
-    non_ascii_count: int = -1,
+    non_ascii_count: int | None = None,
 ) -> float:
     """Ratio of non-ASCII bytes that participate in valid multi-byte sequences.
 
@@ -359,7 +354,7 @@ def compute_multibyte_byte_coverage(
     :param data: The raw byte data to analyze.
     :param encoding_info: Metadata for the encoding to probe.
     :param ctx: Pipeline context for caching analysis results.
-    :param non_ascii_count: Pre-computed count of non-ASCII bytes, or ``-1``
+    :param non_ascii_count: Pre-computed count of non-ASCII bytes, or ``None``
         to compute from *data*.
     :returns: A coverage ratio between 0.0 and 1.0.
     """
@@ -374,8 +369,8 @@ def compute_multibyte_byte_coverage(
 
     non_ascii = (
         non_ascii_count
-        if non_ascii_count >= 0
-        else len(data) - len(data.translate(None, _HIGH_BYTES))
+        if non_ascii_count is not None
+        else len(data) - len(data.translate(None, HIGH_BYTES))
     )
     if non_ascii == 0:
         return 0.0

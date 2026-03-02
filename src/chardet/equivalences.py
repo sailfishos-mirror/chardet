@@ -20,6 +20,8 @@ from __future__ import annotations
 import codecs
 import unicodedata
 
+from chardet.pipeline import DetectionDict
+
 
 def normalize_encoding_name(name: str) -> str:
     """Normalize encoding name for comparison.
@@ -92,17 +94,20 @@ PREFERRED_SUPERSET: dict[str, str] = {
 
 
 def apply_legacy_rename(
-    result: dict[str, str | float | None],
-) -> None:
+    result: DetectionDict,
+) -> DetectionDict:
     """Replace the encoding name with its preferred Windows/CP superset.
 
-    Modifies the ``"encoding"`` value in *result* in-place.
+    Modifies the ``"encoding"`` value in *result* in-place and returns *result*
+    for fluent chaining.
 
     :param result: A detection result dict containing an ``"encoding"`` key.
+    :returns: The same *result* dict, modified in-place.
     """
     enc = result.get("encoding")
     if isinstance(enc, str):
         result["encoding"] = PREFERRED_SUPERSET.get(enc.lower(), enc)
+    return result
 
 
 # Bidirectional equivalents -- byte-order variants only.

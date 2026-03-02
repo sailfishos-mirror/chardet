@@ -27,6 +27,16 @@ _MIN_BYTES_UTF16 = 10  # 5 full code units
 # prevents false positives from binary files at this lower threshold.
 _UTF16_MIN_NULL_FRACTION = 0.03
 
+# Minimum text-quality score to accept a UTF-16 candidate when both
+# endiannesses show null-byte patterns.  A score of 0.5 corresponds to
+# roughly 33% letters with no ASCII bonus — sufficient to distinguish
+# real text from coincidental byte patterns.
+_MIN_TEXT_QUALITY = 0.5
+
+# Minimum fraction of printable characters for a decoded sample to be
+# considered text rather than binary data.
+_MIN_PRINTABLE_FRACTION = 0.7
+
 
 def detect_utf1632_patterns(data: bytes) -> DetectionResult | None:
     """Detect UTF-32 or UTF-16 encoding from null-byte patterns.
@@ -176,7 +186,7 @@ def _check_utf16(data: bytes) -> DetectionResult | None:
             best_quality = quality
             best_encoding = encoding
 
-    if best_encoding is not None and best_quality >= 0.5:
+    if best_encoding is not None and best_quality >= _MIN_TEXT_QUALITY:
         return DetectionResult(
             encoding=best_encoding,
             confidence=DETERMINISTIC_CONFIDENCE,
@@ -192,7 +202,7 @@ def _looks_like_text(text: str) -> bool:
         return False
     sample = text[:500]
     printable = sum(1 for c in sample if c.isprintable() or c in "\n\r\t")
-    return printable / len(sample) > 0.7
+    return printable / len(sample) > _MIN_PRINTABLE_FRACTION
 
 
 def _text_quality(text: str, limit: int = 500) -> float:

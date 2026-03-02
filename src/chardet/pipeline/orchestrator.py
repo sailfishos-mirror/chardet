@@ -10,7 +10,12 @@ from chardet.models import (
     infer_language,
     score_best_language,
 )
-from chardet.pipeline import DETERMINISTIC_CONFIDENCE, DetectionResult, PipelineContext
+from chardet.pipeline import (
+    DETERMINISTIC_CONFIDENCE,
+    HIGH_BYTES,
+    DetectionResult,
+    PipelineContext,
+)
 from chardet.pipeline.ascii import detect_ascii
 from chardet.pipeline.binary import is_binary
 from chardet.pipeline.bom import detect_bom
@@ -19,7 +24,6 @@ from chardet.pipeline.escape import detect_escape_encoding
 from chardet.pipeline.markup import detect_markup_charset
 from chardet.pipeline.statistical import score_candidates
 from chardet.pipeline.structural import (
-    _HIGH_BYTES,
     compute_lead_byte_diversity,
     compute_multibyte_byte_coverage,
     compute_structural_score,
@@ -252,8 +256,8 @@ def _gate_cjk_candidates(
             ctx.mb_scores[enc.name] = mb_score
             if mb_score < _CJK_MIN_MB_RATIO:
                 continue  # No multi-byte structure -> eliminate
-            if ctx.non_ascii_count < 0:
-                ctx.non_ascii_count = len(data) - len(data.translate(None, _HIGH_BYTES))
+            if ctx.non_ascii_count is None:
+                ctx.non_ascii_count = len(data) - len(data.translate(None, HIGH_BYTES))
             if ctx.non_ascii_count < _CJK_MIN_NON_ASCII:
                 continue  # Too few high bytes to trust the score
             byte_coverage = compute_multibyte_byte_coverage(
@@ -434,6 +438,16 @@ def _fill_language(
     return filled
 
 
+def _postprocess_results(
+    data: bytes,
+    results: list[DetectionResult],
+) -> list[DetectionResult]:
+    """Apply confusion resolution, niche Latin demotion, and KOI8-T promotion."""
+    results = resolve_confusion_groups(data, results)
+    results = _demote_niche_latin(data, results)
+    return _promote_koi8t(data, results)
+
+
 def _run_pipeline_core(
     data: bytes,
     encoding_era: EncodingEra,
@@ -527,18 +541,14 @@ def _run_pipeline_core(
             results = _score_structural_candidates(
                 data, structural_scores, valid_candidates, ctx
             )
-            results = resolve_confusion_groups(data, results)
-            results = _demote_niche_latin(data, results)
-            return _promote_koi8t(data, results)
+            return _postprocess_results(data, results)
 
     # Stage 3: Statistical scoring for all remaining candidates
     results = list(score_candidates(data, tuple(valid_candidates)))
     if not results:
         return [_FALLBACK_RESULT]
 
-    results = resolve_confusion_groups(data, results)
-    results = _demote_niche_latin(data, results)
-    return _promote_koi8t(data, results)
+    return _postprocess_results(data, results)
 
 
 def run_pipeline(

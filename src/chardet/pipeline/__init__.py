@@ -4,10 +4,27 @@ from __future__ import annotations
 
 import dataclasses
 from dataclasses import field
+from typing import TypedDict
 
 #: Confidence for deterministic (non-BOM) detection stages.
 #: Used by escape, markup, utf1632, and binary stages.
 DETERMINISTIC_CONFIDENCE: float = 0.95
+
+#: Byte table for fast non-ASCII counting (C-speed via bytes.translate).
+#: Deleting all bytes >= 0x80 and comparing lengths gives the non-ASCII count.
+HIGH_BYTES: bytes = bytes(range(0x80, 0x100))
+
+
+class DetectionDict(TypedDict):
+    """Dictionary representation of a detection result.
+
+    Returned by :func:`chardet.detect`, :func:`chardet.detect_all`,
+    and :attr:`chardet.UniversalDetector.result`.
+    """
+
+    encoding: str | None
+    confidence: float
+    language: str | None
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -22,7 +39,7 @@ class DetectionResult:
     confidence: float
     language: str | None
 
-    def to_dict(self) -> dict[str, str | float | None]:
+    def to_dict(self) -> DetectionDict:
         """Convert this result to a plain dict.
 
         :returns: A dict with ``'encoding'``, ``'confidence'``, and ``'language'`` keys.
@@ -44,9 +61,7 @@ class PipelineContext:
     mutable caches.
     """
 
-    analysis_cache: dict[tuple[int, int, str], tuple[float, int, int]] = field(
-        default_factory=dict
-    )
-    non_ascii_count: int = -1
+    analysis_cache: dict[str, tuple[float, int, int]] = field(default_factory=dict)
+    non_ascii_count: int | None = None
     mb_scores: dict[str, float] = field(default_factory=dict)
     mb_coverage: dict[str, float] = field(default_factory=dict)

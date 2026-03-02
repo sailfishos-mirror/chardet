@@ -18,11 +18,11 @@ NON_ASCII_BIGRAM_WEIGHT: int = 8
 
 _MODEL_CACHE: dict[str, bytearray] | None = None
 _MODEL_CACHE_LOCK = threading.Lock()
-# Pre-grouped index: encoding name -> [(lang, model), ...]
-_ENC_INDEX: dict[str, list[tuple[str | None, bytearray]]] | None = None
+# Pre-grouped index: encoding name -> [(lang, model, model_key), ...]
+_ENC_INDEX: dict[str, list[tuple[str | None, bytearray, str]]] | None = None
 _ENC_INDEX_LOCK = threading.Lock()
-# Cached L2 norms for all models, keyed by id(model)
-_MODEL_NORMS: dict[int, float] | None = None
+# Cached L2 norms for all models, keyed by model key string (e.g. "French/windows-1252")
+_MODEL_NORMS: dict[str, float] | None = None
 _MODEL_NORMS_LOCK = threading.Lock()
 # Encodings that map to exactly one language, derived from the registry.
 _SINGLE_LANG_MAP: dict[str, str] = {
@@ -93,8 +93,8 @@ def load_models() -> dict[str, bytearray]:
         return models
 
 
-def get_enc_index() -> dict[str, list[tuple[str | None, bytearray]]]:
-    """Return a pre-grouped index mapping encoding name -> [(lang, model), ...]."""
+def get_enc_index() -> dict[str, list[tuple[str | None, bytearray, str]]]:
+    """Return a pre-grouped index mapping encoding name -> [(lang, model, model_key), ...]."""
     global _ENC_INDEX  # noqa: PLW0603
     if _ENC_INDEX is not None:
         return _ENC_INDEX
@@ -102,14 +102,14 @@ def get_enc_index() -> dict[str, list[tuple[str | None, bytearray]]]:
         # No re-check: mypyc type-narrows _ENC_INDEX to None after the
         # outer check, so a re-read here would hit a TypeError under mypyc.
         models = load_models()
-        index: dict[str, list[tuple[str | None, bytearray]]] = {}
+        index: dict[str, list[tuple[str | None, bytearray, str]]] = {}
         for key, model in models.items():
             if "/" in key:
                 lang, enc = key.split("/", 1)
-                index.setdefault(enc, []).append((lang, model))
+                index.setdefault(enc, []).append((lang, model, key))
             else:
                 # Plain encoding key (backward compat / fallback)
-                index.setdefault(key, []).append((None, model))
+                index.setdefault(key, []).append((None, model, key))
 
         # Resolve aliases: if a model key matches a registry alias but not
         # the primary name, copy the entry under the primary name.
@@ -144,8 +144,8 @@ def has_model_variants(encoding: str) -> bool:
     return encoding in get_enc_index()
 
 
-def _get_model_norms() -> dict[int, float]:
-    """Return cached L2 norms for all models, keyed by id(model)."""
+def _get_model_norms() -> dict[str, float]:
+    """Return cached L2 norms for all models, keyed by model key string."""
     global _MODEL_NORMS  # noqa: PLW0603
     if _MODEL_NORMS is not None:
         return _MODEL_NORMS
@@ -153,16 +153,14 @@ def _get_model_norms() -> dict[int, float]:
         # No re-check: mypyc type-narrows _MODEL_NORMS to None after the
         # outer check, so a re-read here would hit a TypeError under mypyc.
         models = load_models()
-        norms: dict[int, float] = {}
-        for model in models.values():
-            mid = id(model)
-            if mid not in norms:
-                sq_sum = 0
-                for i in range(65536):
-                    v = model[i]
-                    if v:
-                        sq_sum += v * v
-                norms[mid] = math.sqrt(sq_sum)
+        norms: dict[str, float] = {}
+        for key, model in models.items():
+            sq_sum = 0
+            for i in range(65536):
+                v = model[i]
+                if v:
+                    sq_sum += v * v
+            norms[key] = math.sqrt(sq_sum)
         _MODEL_NORMS = norms
         return norms
 
@@ -228,14 +226,15 @@ class BigramProfile:
         return profile
 
 
-def score_with_profile(profile: BigramProfile, model: bytearray) -> float:
+def score_with_profile(
+    profile: BigramProfile, model: bytearray, model_key: str = ""
+) -> float:
     """Score a pre-computed bigram profile against a single model using cosine similarity."""
     if profile.input_norm == 0.0:
         return 0.0
     norms = _get_model_norms()
-    model_norm = norms.get(id(model))
+    model_norm = norms.get(model_key) if model_key else None
     if model_norm is None:
-        # Fallback: compute on the fly if id() miss (e.g. rare startup race).
         sq_sum = 0
         for i in range(65536):
             v = model[i]
@@ -282,8 +281,8 @@ def score_best_language(
 
     best_score = 0.0
     best_lang: str | None = None
-    for lang, model in variants:
-        s = score_with_profile(profile, model)
+    for lang, model, model_key in variants:
+        s = score_with_profile(profile, model, model_key)
         if s > best_score:
             best_score = s
             best_lang = lang

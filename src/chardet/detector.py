@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 import warnings
+from types import MappingProxyType
 from typing import ClassVar
 
 from chardet import _utils
 from chardet._utils import DEFAULT_MAX_BYTES, _resolve_rename, _validate_max_bytes
 from chardet.enums import EncodingEra, LanguageFilter
 from chardet.equivalences import PREFERRED_SUPERSET, apply_legacy_rename
-from chardet.pipeline import DetectionResult
+from chardet.pipeline import DetectionDict, DetectionResult
 from chardet.pipeline.orchestrator import run_pipeline
 
 _NONE_RESULT = DetectionResult(encoding=None, confidence=0.0, language=None)
-_NONE_DICT: dict[str, str | float | None] = _NONE_RESULT.to_dict()
 
 
 class UniversalDetector:
@@ -25,12 +25,17 @@ class UniversalDetector:
     All detection is performed by the same pipeline used by
     :func:`chardet.detect` and :func:`chardet.detect_all`, ensuring
     consistent results regardless of which API is used.
+
+    .. note::
+
+        This class is **not** thread-safe.  Each thread should create its own
+        :class:`UniversalDetector` instance.
     """
 
     MINIMUM_THRESHOLD = _utils.MINIMUM_THRESHOLD
     # Exposed for backward compatibility with chardet 6.x callers that
     # reference UniversalDetector.LEGACY_MAP directly.
-    LEGACY_MAP: ClassVar[dict[str, str]] = dict(PREFERRED_SUPERSET)
+    LEGACY_MAP: ClassVar[MappingProxyType[str, str]] = MappingProxyType(PREFERRED_SUPERSET)
 
     def __init__(
         self,
@@ -90,7 +95,7 @@ class UniversalDetector:
         if len(self._buffer) >= self._max_bytes:
             self._done = True
 
-    def close(self) -> dict[str, str | float | None]:
+    def close(self) -> DetectionDict:
         """Finalize detection and return the best result.
 
         Runs the full detection pipeline on the buffered data.
@@ -119,11 +124,11 @@ class UniversalDetector:
         return self._done
 
     @property
-    def result(self) -> dict[str, str | float | None]:
+    def result(self) -> DetectionDict:
         """The current best detection result."""
         if self._result is not None:
             d = self._result.to_dict()
             if self._rename_legacy:
                 apply_legacy_rename(d)
             return d
-        return dict(_NONE_DICT)
+        return _NONE_RESULT.to_dict()

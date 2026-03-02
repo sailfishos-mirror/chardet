@@ -13,10 +13,15 @@ from chardet._utils import (
 from chardet.detector import UniversalDetector
 from chardet.enums import EncodingEra, LanguageFilter
 from chardet.equivalences import apply_legacy_rename
+from chardet.pipeline import DetectionDict, DetectionResult
 from chardet.pipeline.orchestrator import run_pipeline
 
 __version__ = "6.1.0"
 __all__ = [
+    "DEFAULT_MAX_BYTES",
+    "MINIMUM_THRESHOLD",
+    "DetectionDict",
+    "DetectionResult",
     "EncodingEra",
     "LanguageFilter",
     "UniversalDetector",
@@ -32,7 +37,7 @@ def detect(
     encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
     chunk_size: int = _DEFAULT_CHUNK_SIZE,
     max_bytes: int = DEFAULT_MAX_BYTES,
-) -> dict[str, str | float | None]:
+) -> DetectionDict:
     """Detect the encoding of the given byte string.
 
     Parameters match chardet 6.x for backward compatibility.
@@ -66,7 +71,7 @@ def detect_all(  # noqa: PLR0913
     encoding_era: EncodingEra = EncodingEra.MODERN_WEB,
     chunk_size: int = _DEFAULT_CHUNK_SIZE,
     max_bytes: int = DEFAULT_MAX_BYTES,
-) -> list[dict[str, str | float | None]]:
+) -> list[DetectionDict]:
     """Detect all possible encodings of the given byte string.
 
     Parameters match chardet 6.x for backward compatibility.
@@ -97,10 +102,10 @@ def detect_all(  # noqa: PLR0913
     rename = _resolve_rename(should_rename_legacy, encoding_era)
     dicts = [r.to_dict() for r in results]
     if not ignore_threshold:
-        filtered = [d for d in dicts if float(d["confidence"] or 0) > MINIMUM_THRESHOLD]
+        filtered = [d for d in dicts if d["confidence"] > MINIMUM_THRESHOLD]
         if filtered:
             dicts = filtered
     if rename:
         for d in dicts:
             apply_legacy_rename(d)
-    return sorted(dicts, key=lambda d: float(d["confidence"] or 0), reverse=True)
+    return sorted(dicts, key=lambda d: d["confidence"], reverse=True)

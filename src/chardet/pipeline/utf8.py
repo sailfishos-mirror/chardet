@@ -7,6 +7,14 @@ annotations.
 
 from chardet.pipeline import DetectionResult
 
+# Confidence curve parameters for UTF-8 detection.
+# Even a small fraction of valid multi-byte sequences is strong evidence.
+_BASE_CONFIDENCE = 0.80
+_MAX_CONFIDENCE = 0.99
+# Scale factor for the multi-byte byte ratio: mb_ratio * 6 saturates the
+# confidence ramp at ~17% multi-byte content.
+_MB_RATIO_SCALE = 6
+
 
 def detect_utf8(data: bytes) -> DetectionResult | None:
     """Validate UTF-8 byte structure.
@@ -81,5 +89,9 @@ def detect_utf8(data: bytes) -> DetectionResult | None:
     # Confidence scales with the proportion of multi-byte bytes in the data.
     # Even a small amount of valid multi-byte UTF-8 is strong evidence.
     mb_ratio = multibyte_bytes / length
-    confidence = min(0.99, 0.80 + 0.19 * min(mb_ratio * 6, 1.0))
+    confidence_range = _MAX_CONFIDENCE - _BASE_CONFIDENCE
+    confidence = min(
+        _MAX_CONFIDENCE,
+        _BASE_CONFIDENCE + confidence_range * min(mb_ratio * _MB_RATIO_SCALE, 1.0),
+    )
     return DetectionResult(encoding="utf-8", confidence=confidence, language=None)

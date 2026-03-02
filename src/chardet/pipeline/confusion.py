@@ -248,15 +248,15 @@ def resolve_by_bigram_rescore(
     best_a = 0.0
     variants_a = index.get(enc_a)
     if variants_a:
-        for _, model in variants_a:
-            s = score_with_profile(profile, model)
+        for _, model, model_key in variants_a:
+            s = score_with_profile(profile, model, model_key)
             best_a = max(best_a, s)
 
     best_b = 0.0
     variants_b = index.get(enc_b)
     if variants_b:
-        for _, model in variants_b:
-            s = score_with_profile(profile, model)
+        for _, model, model_key in variants_b:
+            s = score_with_profile(profile, model, model_key)
             best_b = max(best_b, s)
 
     if best_a > best_b:
