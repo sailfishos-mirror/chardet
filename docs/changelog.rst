@@ -165,3 +165,31 @@ public API — drop-in replacement for chardet 5.x/6.x.
 -------------------
 
 - First release after merger with charade (Python 3 support)
+
+2.1.1 (2012-10-01)
+-------------------
+
+- Bumped version past Mark Pilgrim's last release
+- ``chardetect`` can now read from stdin (Erik Rose)
+- Fixed BOM byte strings for UCS-4-2143 and UCS-4-3412 (Toshio Kuratomi)
+- Restored Mark Pilgrim's original docs and COPYING file (Toshio Kuratomi)
+
+1.1 (2012-07-27)
+-----------------
+
+- Added ``chardetect`` CLI tool (Erik Rose)
+- Fixed ``utf8prober`` crash when character is out of range (David Cramer)
+- Cleaned up detection logic to fail gracefully (David Cramer)
+- Fixed feed encoding errors (David Cramer)
+
+1.0.1 (2008-04-19)
+-------------------
+
+- Packaging fix, added egg distributions for Python 2.4 and 2.5
+  (Mark Pilgrim)
+
+1.0 (2006-12-23)
+-----------------
+
+- Initial release: Python 2 port of Mozilla's universal charset detector
+  (Mark Pilgrim)
