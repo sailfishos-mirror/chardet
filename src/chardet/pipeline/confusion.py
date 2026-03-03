@@ -326,7 +326,4 @@ def resolve_confusion_groups(
     if winner is None or winner == top.encoding:
         return results
 
-    if winner == second.encoding:
-        return [second, top, *results[2:]]
-
-    return results
+    return [second, top, *results[2:]]

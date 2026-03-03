@@ -109,12 +109,8 @@ def get_enc_index() -> dict[str, list[tuple[str | None, bytearray, str]]]:
         models = load_models()
         index: dict[str, list[tuple[str | None, bytearray, str]]] = {}
         for key, model in models.items():
-            if "/" in key:
-                lang, enc = key.split("/", 1)
-                index.setdefault(enc, []).append((lang, model, key))
-            else:
-                # Plain encoding key (backward compat / fallback)
-                index.setdefault(key, []).append((None, model, key))
+            lang, enc = key.split("/", 1)
+            index.setdefault(enc, []).append((lang, model, key))
 
         # Resolve aliases: if a model key matches a registry alias but not
         # the primary name, copy the entry under the primary name.

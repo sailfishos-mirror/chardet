@@ -67,9 +67,7 @@ def _is_valid_utf7_b64(b64_bytes: bytes) -> bool:
     # are zero.
     padding_bits = total_bits % 16
     if padding_bits > 0:
-        last_val = _B64_DECODE.get(b64_bytes[-1], -1)
-        if last_val < 0:
-            return False
+        last_val = _B64_DECODE[b64_bytes[-1]]
         # The low `padding_bits` of the last sextet must be zero
         mask = (1 << padding_bits) - 1
         if last_val & mask:

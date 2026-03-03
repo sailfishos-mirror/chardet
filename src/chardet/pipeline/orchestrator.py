@@ -589,7 +589,7 @@ def run_pipeline(
     # Language scoring uses only the first 2 KB — bigrams converge quickly
     # and this keeps Tier 3 (language-model scoring) fast even on large inputs.
     results = _fill_language(data[:_LANG_SCORE_MAX_BYTES], results)
-    if not results:
+    if not results:  # pragma: no cover
         msg = "pipeline must always return at least one result"
         raise RuntimeError(msg)
     # Clamp confidence to [0.0, 1.0] at the public API boundary.  Internal
