@@ -58,9 +58,15 @@ def _clone_test_data(local_data: Path) -> None:
 
 
 def get_data_dir() -> Path:
-    """Get the test data directory, cloning from GitHub if needed."""
+    """Get the test data directory, cloning from GitHub if needed.
+
+    If ``tests/data`` is a symlink (e.g. to a local ``chardet/test-data``
+    checkout), it is used as-is — no staleness check or clone is performed.
+    """
     repo_root = Path(__file__).parent.parent
     local_data = repo_root / "tests" / "data"
+    if local_data.is_symlink():
+        return local_data.resolve()
     if local_data.is_dir() and any(local_data.iterdir()):
         if _cache_is_stale(local_data):
             shutil.rmtree(local_data)
