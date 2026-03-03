@@ -212,10 +212,11 @@ the pure-Python wheel.
 
 .. list-table::
    :header-rows: 1
-   :widths: 18 10 12 10 10 10 10 10
+   :widths: 16 8 10 10 10 10 10 10 10
 
    * - Python
      - Wheel
+     - Import
      - Total
      - Files/s
      - Mean
@@ -224,6 +225,7 @@ the pure-Python wheel.
      - p95
    * - CPython 3.10
      - mypyc
+     - 2.509s
      - 4,257ms
      - 512
      - 1.95ms
@@ -232,6 +234,7 @@ the pure-Python wheel.
      - 4.28ms
    * - CPython 3.10
      - pure
+     - 0.038s
      - 8,172ms
      - 267
      - 3.75ms
@@ -240,6 +243,7 @@ the pure-Python wheel.
      - 7.79ms
    * - **CPython 3.11**
      - **mypyc**
+     - **2.736s**
      - **3,815ms**
      - **571**
      - **1.75ms**
@@ -248,6 +252,7 @@ the pure-Python wheel.
      - **3.89ms**
    * - CPython 3.11
      - pure
+     - 0.040s
      - 6,345ms
      - 343
      - 2.91ms
@@ -256,6 +261,7 @@ the pure-Python wheel.
      - 6.20ms
    * - CPython 3.12
      - mypyc
+     - 2.930s
      - 4,455ms
      - 489
      - 2.04ms
@@ -264,6 +270,7 @@ the pure-Python wheel.
      - 4.44ms
    * - CPython 3.12
      - pure
+     - 0.018s
      - 6,567ms
      - 332
      - 3.01ms
@@ -272,6 +279,7 @@ the pure-Python wheel.
      - 6.18ms
    * - CPython 3.13
      - mypyc
+     - 2.755s
      - 4,678ms
      - 466
      - 2.15ms
@@ -280,6 +288,7 @@ the pure-Python wheel.
      - 4.71ms
    * - CPython 3.13
      - pure
+     - 0.054s
      - 8,666ms
      - 251
      - 3.98ms
@@ -288,6 +297,7 @@ the pure-Python wheel.
      - 7.91ms
    * - CPython 3.14
      - mypyc
+     - 2.666s
      - 4,656ms
      - 468
      - 2.14ms
@@ -296,6 +306,7 @@ the pure-Python wheel.
      - 4.75ms
    * - CPython 3.14
      - pure
+     - 0.013s
      - 6,525ms
      - 334
      - 2.99ms
@@ -304,6 +315,7 @@ the pure-Python wheel.
      - 6.24ms
    * - PyPy 3.10
      - pure
+     - 0.031s
      - 5,392ms
      - 404
      - 2.47ms
@@ -312,6 +324,7 @@ the pure-Python wheel.
      - 5.52ms
    * - PyPy 3.11
      - pure
+     - 0.138s
      - 5,409ms
      - 403
      - 2.48ms
@@ -324,3 +337,8 @@ mypyc provides a 1.4--1.9x speedup across CPython versions. PyPy's JIT
 is competitive with mypyc: pure Python on PyPy (404 files/s) beats every
 pure CPython version and reaches 70--85% of mypyc-compiled CPython
 throughput.
+
+mypyc builds pay ~2.5--2.9s upfront for import (loading compiled ``.so``
+extensions and lazy model initialization) vs 13--54ms for pure-Python
+builds. This is a one-time cost amortized over all subsequent
+``detect()`` calls.
