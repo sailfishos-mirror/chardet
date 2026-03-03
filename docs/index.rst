@@ -17,8 +17,8 @@ public API, drop-in replacement for chardet 5.x/6.x. Python 3.10+, zero
 runtime dependencies, works on PyPy.
 
 - **96.8% accuracy** on 2,179 test files
-- **28x faster** than chardet 6.0.0
-- **5x faster** than charset-normalizer
+- **41x faster** than chardet 6.0.0 with mypyc, **28x faster** pure Python
+- **7.5x faster** than charset-normalizer with mypyc, **5.1x faster** pure Python
 - **Language detection** for every result (90.5% accuracy)
 - **99 encodings** across six encoding eras
 - **Thread-safe** ``detect()`` and ``detect_all()``

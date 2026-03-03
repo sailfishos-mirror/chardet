@@ -12,7 +12,8 @@ public API — drop-in replacement for chardet 5.x/6.x.
 - **MIT license** (previous versions were LGPL)
 - **96.8% accuracy** on 2,179 test files (+2.3pp vs chardet 6.0.0,
   +7.7pp vs charset-normalizer)
-- **28x faster** than chardet 6.0.0, 5x faster than charset-normalizer
+- **41x faster** than chardet 6.0.0 with mypyc (**28x** pure Python),
+  **7.5x faster** than charset-normalizer
 - **Language detection** for every result (90.5% accuracy across 49
   languages)
 - **99 encodings** across six eras (MODERN_WEB, LEGACY_ISO, LEGACY_MAC,

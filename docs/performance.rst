@@ -17,10 +17,14 @@ Accuracy
      - Correct
      - Accuracy
      - Speed
-   * - **chardet** (this version)
+   * - **chardet 7.0 (mypyc)**
      - **2110/2179**
      - **96.8%**
-     - **335 files/s**
+     - **494 files/s**
+   * - chardet 7.0 (pure)
+     - 2110/2179
+     - 96.8%
+     - 336 files/s
    * - chardet 6.0.0
      - 2060/2179
      - 94.5%
@@ -56,12 +60,18 @@ Speed
      - 0.07ms
      - 0.65ms
      - 0.92ms
-   * - **chardet** (this version)
-     - **336**
-     - **2.98ms**
-     - **1.13ms**
-     - **5.32ms**
-     - **6.15ms**
+   * - **chardet 7.0 (mypyc)**
+     - **494**
+     - **2.02ms**
+     - **0.61ms**
+     - **3.86ms**
+     - **4.49ms**
+   * - chardet 7.0 (pure)
+     - 336
+     - 2.98ms
+     - 1.11ms
+     - 5.37ms
+     - 6.21ms
    * - charset-normalizer
      - 66
      - 15.17ms
@@ -75,9 +85,10 @@ Speed
      - 122.32ms
      - 319.77ms
 
-chardet is **28x faster** than chardet 6.0.0 and **5.1x faster** than
-charset-normalizer. Its median latency (1.13ms) is the lowest among all
-pure-Python detectors.
+With mypyc compilation, chardet 7.0 is **41x faster** than chardet 6.0.0 and
+**7.5x faster** than charset-normalizer. Even the pure-Python build is **28x
+faster** than chardet 6.0.0 and **5.1x faster** than charset-normalizer.
+Median time per file is 0.61ms (mypyc) / 1.11ms (pure).
 
 Memory
 ------
@@ -90,7 +101,7 @@ Memory
      - Import Memory
      - Peak Memory
      - RSS
-   * - **chardet** (this version)
+   * - **chardet 7.0**
      - **96 B**
      - **22.5 MiB**
      - **96.1 MiB**
@@ -120,7 +131,7 @@ Language Detection
    * - Detector
      - Correct
      - Accuracy
-   * - **chardet** (this version)
+   * - **chardet 7.0**
      - **1964/2171**
      - **90.5%**
    * - chardet 6.0.0

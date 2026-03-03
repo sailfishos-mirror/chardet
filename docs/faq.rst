@@ -35,7 +35,8 @@ an alternative encoding detector. Key differences:
 
 - **Accuracy:** chardet achieves 96.8% vs charset-normalizer's 89.1% on
   the same test suite.
-- **Speed:** chardet is 5.1x faster (335 vs 66 files/s).
+- **Speed:** chardet is 7.5x faster with mypyc (494 vs 66 files/s),
+  5.1x faster pure Python (336 vs 66 files/s).
 - **Memory:** chardet uses 4.5x less peak memory (22.5 vs 102.2 MiB).
 - **Language detection:** chardet reports the detected language;
   charset-normalizer does not.
