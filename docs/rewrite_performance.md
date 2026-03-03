@@ -209,6 +209,45 @@ arithmetic that mypyc compiles to fast C code. The compiled build
 Pure Python wheels are published alongside mypyc wheels for PyPy and
 platforms without prebuilt binaries. No runtime dependencies are added.
 
+## Performance Across Python Versions
+
+Benchmarked chardet 7.0.0rc4 from PyPI across all supported Python
+versions (macOS aarch64, 2179 files, `encoding_era=ALL`). CPython
+versions install mypyc-compiled wheels automatically; PyPy receives
+the pure-Python wheel.
+
+| Python | Wheel | Total | Files/s | Mean | Median | p90 | p95 |
+|---|---|---|---|---|---|---|---|
+| CPython 3.10 | mypyc | 4,257ms | 512 | 1.95ms | 0.60ms | 3.72ms | 4.28ms |
+| CPython 3.10 | pure | 8,172ms | 267 | 3.75ms | 1.41ms | 6.89ms | 7.79ms |
+| CPython 3.11 | mypyc | 3,815ms | **571** | **1.75ms** | 0.52ms | **3.41ms** | **3.89ms** |
+| CPython 3.11 | pure | 6,345ms | 343 | 2.91ms | 1.09ms | 5.34ms | 6.20ms |
+| CPython 3.12 | mypyc | 4,455ms | 489 | 2.04ms | 0.62ms | 3.87ms | 4.44ms |
+| CPython 3.12 | pure | 6,567ms | 332 | 3.01ms | 1.13ms | 5.35ms | 6.18ms |
+| CPython 3.13 | mypyc | 4,678ms | 466 | 2.15ms | 0.63ms | 4.07ms | 4.71ms |
+| CPython 3.13 | pure | 8,666ms | 251 | 3.98ms | 1.46ms | 7.01ms | 7.91ms |
+| CPython 3.14 | mypyc | 4,656ms | 468 | 2.14ms | 0.64ms | 4.07ms | 4.75ms |
+| CPython 3.14 | pure | 6,525ms | 334 | 2.99ms | 1.12ms | 5.43ms | 6.24ms |
+| PyPy 3.10 | pure | 5,392ms | 404 | 2.47ms | **0.31ms** | 4.97ms | 5.52ms |
+| PyPy 3.11 | pure | 5,409ms | 403 | 2.48ms | 0.30ms | 4.98ms | 5.52ms |
+
+**mypyc speedup by version:** 1.92x (3.10), 1.66x (3.11), 1.47x (3.12),
+1.85x (3.13), 1.40x (3.14). The speedup varies because pure-Python
+performance differs across CPython versions -- 3.11 and 3.12 have the
+fastest pure-Python interpreters, leaving less room for mypyc to improve.
+
+**CPython 3.11 + mypyc is the fastest combination** at 571 files/s,
+~10% ahead of other mypyc builds.
+
+**PyPy's JIT is competitive with mypyc**: pure Python on PyPy
+(404 files/s) beats every pure CPython version and reaches 70--85% of
+mypyc-compiled CPython throughput. PyPy also has the lowest median
+latency (0.30--0.31ms), indicating the JIT optimizes the fast-path
+pipeline stages (BOM, ASCII, UTF-8) extremely well.
+
+**Best pure CPython versions:** 3.11, 3.12, and 3.14 cluster at
+332--343 files/s; 3.10 and 3.13 are ~20% slower in pure mode.
+
 ## Thread Safety
 
 The rewrite is fully thread-safe for concurrent `detect()` and
