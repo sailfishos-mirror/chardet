@@ -215,3 +215,46 @@ def test_confidence_clamped_to_one():
     result = run_pipeline(data, EncodingEra.ALL)
     for r in result:
         assert r.confidence <= 1.0
+
+
+def test_to_utf8_unknown_encoding():
+    """_to_utf8 with an unknown encoding should return None."""
+    from chardet.pipeline.orchestrator import _to_utf8
+
+    result = _to_utf8(b"Hello world", "not-a-real-encoding")
+    assert result is None
+
+
+def test_to_utf8_passthrough():
+    """_to_utf8 with utf-8 encoding should return data unchanged."""
+    from chardet.pipeline.orchestrator import _to_utf8
+
+    data = b"Hello \xc3\xa9"
+    result = _to_utf8(data, "utf-8")
+    assert result is data
+
+
+def test_demote_niche_latin_iso_8859_14():
+    """iso-8859-14 at top should be demoted when no distinguishing bytes."""
+    from chardet.pipeline.orchestrator import _demote_niche_latin
+
+    results = [
+        DetectionResult("iso-8859-14", 0.90, None),
+        DetectionResult("windows-1252", 0.85, None),
+    ]
+    data = bytes([0xC0, 0xC1, 0xC2])
+    demoted = _demote_niche_latin(data, results)
+    assert demoted[0].encoding == "windows-1252"
+
+
+def test_demote_niche_latin_windows_1254():
+    """windows-1254 at top should be demoted when no distinguishing bytes."""
+    from chardet.pipeline.orchestrator import _demote_niche_latin
+
+    results = [
+        DetectionResult("windows-1254", 0.90, None),
+        DetectionResult("windows-1252", 0.85, None),
+    ]
+    data = bytes([0xC0, 0xC1, 0xE9])
+    demoted = _demote_niche_latin(data, results)
+    assert demoted[0].encoding == "windows-1252"

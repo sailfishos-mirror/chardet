@@ -47,3 +47,10 @@ def test_pipeline_context_is_mutable():
     assert ctx.analysis_cache["utf-8"] == (0.9, 10, 5)
     assert ctx.non_ascii_count == 42
     assert ctx.mb_scores["shift_jis"] == 0.85
+
+
+def test_pipeline_context_mb_coverage():
+    ctx = PipelineContext()
+    assert ctx.mb_coverage == {}
+    ctx.mb_coverage["shift_jis"] = 0.95
+    assert ctx.mb_coverage["shift_jis"] == 0.95

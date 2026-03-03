@@ -422,3 +422,49 @@ def test_all_null_bytes_returns_none() -> None:
     data = b"\x00" * 64
     result = detect_utf1632_patterns(data)
     assert result is None
+
+
+def test_utf32_be_decode_error() -> None:
+    """UTF-32-BE pattern check passes but decode fails on invalid code point."""
+    # Mix valid BMP (U+0041='A') with invalid U+110000 so pattern check passes
+    # but utf-32-be decode raises UnicodeDecodeError.
+    valid = b"\x00\x00\x00\x41"  # U+0041 BE
+    invalid = b"\x00\x11\x00\x00"  # U+110000 BE (above max)
+    data = valid * 6 + invalid * 2
+    result = detect_utf1632_patterns(data)
+    # BE decode fails, LE pattern doesn't match → None
+    assert result is None
+
+
+def test_utf32_le_decode_error() -> None:
+    """UTF-32-LE pattern check passes but decode fails on invalid code point."""
+    valid = b"\x41\x00\x00\x00"  # U+0041 LE
+    invalid = b"\x00\x00\x11\x00"  # U+110000 LE (above max)
+    data = valid * 6 + invalid * 2
+    result = detect_utf1632_patterns(data)
+    # LE decode fails, BE pattern doesn't match → None
+    assert result is None
+
+
+def test_utf16_single_candidate_decode_error() -> None:
+    """UTF-16 with only one endianness matching but decode fails."""
+    good = b"H\x00e\x00l\x00l\x00o\x00"
+    bad = b"\x00\xd8"  # unpaired high surrogate
+    more = b" \x00w\x00o\x00r\x00l\x00d\x00"
+    data = good + bad + more
+    # exercises UnicodeDecodeError catch at line 171-172
+    detect_utf1632_patterns(data)
+
+
+def test_utf16_both_candidates_low_quality() -> None:
+    """Both UTF-16 endiannesses decode but produce garbage."""
+    data = b"\x01\x00\x00\x01" * 20
+    result = detect_utf1632_patterns(data)
+    assert result is None
+
+
+def test_looks_like_text_empty_string() -> None:
+    """_looks_like_text with empty string should return False."""
+    from chardet.pipeline.utf1632 import _looks_like_text
+
+    assert _looks_like_text("") is False

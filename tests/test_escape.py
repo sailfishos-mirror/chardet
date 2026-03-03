@@ -223,3 +223,25 @@ def test_iso2022_jp_ext_codes() -> None:
     result = detect_escape_encoding(data)
     assert result is not None
     assert result.encoding == "iso2022-jp-ext"
+
+
+def test_hz_close_marker_before_open_marker() -> None:
+    """When ~} appears before ~{ but a valid region follows, HZ is still detected."""
+    data = b"prefix ~} text ~{CEDE~}"
+    result = detect_escape_encoding(data)
+    assert result is not None
+    assert result.encoding == "hz-gb-2312"
+
+
+def test_hz_only_close_before_open() -> None:
+    """Data where ~} only appears before ~{ — no valid HZ region."""
+    data = b"~} some text ~{ invalid"
+    result = detect_escape_encoding(data)
+    assert result is None
+
+
+def test_utf7_short_base64_rejected() -> None:
+    """UTF-7 shifted sequence with fewer than 3 base64 chars is rejected."""
+    data = b"text +AB- more text"
+    result = detect_escape_encoding(data)
+    assert result is None

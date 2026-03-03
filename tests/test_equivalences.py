@@ -131,3 +131,23 @@ def test_iso2022_jp_branches_bidirectional() -> None:
     assert is_correct("iso2022-jp-2", "iso2022-jp-2004")
     assert is_correct("iso2022-jp-2004", "iso2022-jp-ext")
     assert is_correct("iso2022-jp-ext", "iso2022-jp-2")
+
+
+def test_is_correct_expected_none_detected_none():
+    """Binary file: expected=None, detected=None -> correct."""
+    assert is_correct(None, None) is True
+
+
+def test_is_correct_expected_none_detected_encoding():
+    """Binary file expected but encoding detected -> incorrect."""
+    assert is_correct(None, "utf-8") is False
+
+
+def test_is_equivalent_expected_none_detected_none():
+    """Binary file: expected=None, detected=None -> equivalent."""
+    assert is_equivalent_detection(b"\x00\x01", None, None) is True
+
+
+def test_is_equivalent_expected_none_detected_encoding():
+    """Binary file expected but encoding detected -> not equivalent."""
+    assert is_equivalent_detection(b"\x00\x01", None, "utf-8") is False
