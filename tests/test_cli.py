@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+import chardet
 from chardet.cli import main
 
 
@@ -109,3 +110,54 @@ def test_cli_partial_failure(tmp_path: Path, capsys: pytest.CaptureFixture[str])
     captured = capsys.readouterr()
     assert "nonexistent_file_xyz.txt" in captured.err
     assert "with confidence" in captured.out
+
+
+def test_cli_python_m_chardet(tmp_path: Path):
+    """Python -m chardet should work (exercises __main__.py)."""
+    f = tmp_path / "test.txt"
+    f.write_bytes(b"Hello world")
+    result = subprocess.run(
+        [sys.executable, "-m", "chardet", str(f)],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert "with confidence" in result.stdout
+
+
+def test_cli_detection_failure_on_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    """Detection exception on file should print error and count as failure."""
+    f = tmp_path / "test.txt"
+    f.write_bytes(b"Hello world")
+    monkeypatch.setattr(
+        chardet,
+        "detect",
+        lambda *_a, **_kw: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+    with pytest.raises(SystemExit, match="1"):
+        main([str(f)])
+    captured = capsys.readouterr()
+    assert "detection failed" in captured.err
+    assert "boom" in captured.err
+
+
+def test_cli_detection_failure_on_stdin(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    """Detection exception on stdin should print error and exit 1."""
+    import io
+
+    fake_stdin = io.TextIOWrapper(io.BytesIO(b"Hello"))
+    monkeypatch.setattr(sys, "stdin", fake_stdin)
+    monkeypatch.setattr(
+        chardet,
+        "detect",
+        lambda *_a, **_kw: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+    with pytest.raises(SystemExit, match="1"):
+        main([])
+    captured = capsys.readouterr()
+    assert "detection failed" in captured.err
+    assert "stdin" in captured.err

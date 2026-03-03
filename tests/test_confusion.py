@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import struct
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 from chardet.pipeline import DetectionResult
 from chardet.pipeline.confusion import (
     load_confusion_data,
@@ -75,3 +80,64 @@ def test_resolve_confusion_groups_preserves_all_results():
     assert len(resolved) == len(results)
     resolved_encs = {r.encoding for r in resolved}
     assert resolved_encs == {"cp1140", "cp500", "windows-1252"}
+
+
+def test_load_confusion_data_empty_file():
+    """Empty confusion.bin should emit RuntimeWarning and return empty dict."""
+    import chardet.pipeline.confusion as mod
+
+    original = mod._CONFUSION_CACHE
+    try:
+        mod._CONFUSION_CACHE = None
+        mock_ref = MagicMock()
+        mock_ref.read_bytes.return_value = b""
+        with (
+            patch.object(
+                mod.importlib.resources,
+                "files",
+                return_value=MagicMock(joinpath=MagicMock(return_value=mock_ref)),
+            ),
+            pytest.warns(RuntimeWarning, match="confusion.bin is empty"),
+        ):
+            result = mod.load_confusion_data()
+        assert result == {}
+    finally:
+        mod._CONFUSION_CACHE = original
+
+
+def test_load_confusion_data_corrupt_file():
+    """Corrupt confusion.bin should raise ValueError."""
+    import chardet.pipeline.confusion as mod
+
+    original = mod._CONFUSION_CACHE
+    try:
+        mod._CONFUSION_CACHE = None
+        mock_ref = MagicMock()
+        # Valid num_pairs=1 but truncated after that
+        mock_ref.read_bytes.return_value = struct.pack("!H", 1)
+        with (
+            patch.object(
+                mod.importlib.resources,
+                "files",
+                return_value=MagicMock(joinpath=MagicMock(return_value=mock_ref)),
+            ),
+            pytest.raises(ValueError, match=r"corrupt confusion\.bin"),
+        ):
+            mod.load_confusion_data()
+    finally:
+        mod._CONFUSION_CACHE = original
+
+
+def test_resolve_confusion_groups_single_result():
+    """A single result should pass through unchanged."""
+    results = [DetectionResult(encoding="utf-8", confidence=0.95, language=None)]
+    resolved = resolve_confusion_groups(b"Hello", results)
+    assert resolved is results
+
+
+def test_resolve_by_bigram_rescore_empty_freq():
+    """When no bigrams contain distinguishing bytes, return None."""
+    diff_bytes = frozenset({0xFE})
+    data = b"Hello world, this is plain ASCII text without any high bytes at all."
+    result = resolve_by_bigram_rescore(data, "enc_a", "enc_b", diff_bytes)
+    assert result is None
