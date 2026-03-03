@@ -61,7 +61,7 @@ def get_candidates(era: EncodingEra) -> tuple[EncodingInfo, ...]:
         return result
     with _CANDIDATES_CACHE_LOCK:
         result = _CANDIDATES_CACHE.get(key)
-        if result is not None:
+        if result is not None:  # pragma: no cover - double-checked locking
             return result
         result = tuple(enc for enc in REGISTRY.values() if enc.era & era)
         _CANDIDATES_CACHE[key] = result

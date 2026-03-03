@@ -135,7 +135,7 @@ def _check_utf16(data: bytes) -> DetectionResult | None:
     """
     sample_len = min(len(data), _SAMPLE_SIZE)
     sample_len -= sample_len % 2
-    if sample_len < _MIN_BYTES_UTF16:
+    if sample_len < _MIN_BYTES_UTF16:  # pragma: no cover - caller checks length
         return None
 
     num_units = sample_len // 2
@@ -228,7 +228,7 @@ def _text_quality(text: str, limit: int = 500) -> float:
     """
     sample = text[:limit]
     n = len(sample)
-    if n == 0:
+    if n == 0:  # pragma: no cover - callers always pass non-empty text
         return -1.0
 
     letters = 0

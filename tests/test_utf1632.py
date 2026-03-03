@@ -447,13 +447,16 @@ def test_utf32_le_decode_error() -> None:
 
 
 def test_utf16_single_candidate_decode_error() -> None:
-    """UTF-16 with only one endianness matching but decode fails."""
-    good = b"H\x00e\x00l\x00l\x00o\x00"
-    bad = b"\x00\xd8"  # unpaired high surrogate
-    more = b" \x00w\x00o\x00r\x00l\x00d\x00"
+    """UTF-16-LE single candidate with unpaired surrogate triggers decode error."""
+    # Build data with nulls only in odd positions (LE pattern) but an
+    # unpaired high surrogate that causes UnicodeDecodeError on decode.
+    good = b"H\x00e\x00l\x00l\x00o\x00"  # UTF-16-LE "Hello"
+    bad = b"\x01\xd8"  # high surrogate D801 — even byte is non-null
+    more = b" \x00w\x00o\x00r\x00l\x00d\x00"  # UTF-16-LE " world"
     data = good + bad + more
-    # exercises UnicodeDecodeError catch at line 171-172
-    detect_utf1632_patterns(data)
+    # Only LE has enough nulls (single candidate), decode raises, returns None
+    result = detect_utf1632_patterns(data)
+    assert result is None
 
 
 def test_utf16_both_candidates_low_quality() -> None:
@@ -468,3 +471,13 @@ def test_looks_like_text_empty_string() -> None:
     from chardet.pipeline.utf1632 import _looks_like_text
 
     assert _looks_like_text("") is False
+
+
+def test_text_quality_rejects_many_combining_marks() -> None:
+    """Text with >20% combining marks should get quality -1.0."""
+    from chardet.pipeline.utf1632 import _text_quality
+
+    # U+0300 (combining grave accent) is category Mn (Mark, nonspacing)
+    text = "a\u0300" * 20  # 50% marks
+    quality = _text_quality(text)
+    assert quality == -1.0

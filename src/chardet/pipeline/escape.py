@@ -58,10 +58,11 @@ def _is_valid_utf7_b64(b64_bytes: bytes) -> bool:
 
     This rejects accidental ``+<alphanum>-`` patterns found in URLs, MIME
     boundaries, and other ASCII data.
+
+    The caller (``_has_valid_utf7_sequences``) already checks ``b64_len >= 3``
+    before calling this function, so *b64_bytes* is always at least 3 bytes.
     """
     n = len(b64_bytes)
-    if n < 3:  # Need at least 18 bits for one UTF-16 code unit
-        return False
     total_bits = n * 6
     # Check that padding bits (trailing bits after last complete code unit)
     # are zero.

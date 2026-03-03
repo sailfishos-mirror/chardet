@@ -549,7 +549,7 @@ def _run_pipeline_core(
     for enc in valid_candidates:
         if enc.is_multibyte:
             score = ctx.mb_scores.get(enc.name)
-            if score is None:
+            if score is None:  # pragma: no cover - gate always populates cache
                 score = compute_structural_score(data, enc, ctx)
             if score > 0.0:
                 structural_scores.append((enc.name, score))

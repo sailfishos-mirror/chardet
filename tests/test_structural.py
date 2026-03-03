@@ -156,3 +156,12 @@ def test_diversity_no_analyzer_returns_256():
     enc = _get_encoding("hz-gb-2312")
     diversity = compute_lead_byte_diversity(b"\x80\x81", enc, PipelineContext())
     assert diversity == 256
+
+
+def test_coverage_single_byte_encoding_returns_zero():
+    """A single-byte encoding should return 0.0 coverage."""
+    enc = _get_encoding("iso-8859-1")
+    coverage = compute_multibyte_byte_coverage(
+        b"\xc0\xc1\xc2", enc, PipelineContext(), non_ascii_count=3
+    )
+    assert coverage == 0.0

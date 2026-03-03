@@ -117,7 +117,7 @@ def load_confusion_data() -> DistinguishingMaps:
     if _CONFUSION_CACHE is not None:
         return _CONFUSION_CACHE
     with _CONFUSION_CACHE_LOCK:
-        if _CONFUSION_CACHE is not None:
+        if _CONFUSION_CACHE is not None:  # pragma: no cover - double-checked locking
             return _CONFUSION_CACHE
         ref = importlib.resources.files("chardet.models").joinpath("confusion.bin")
         raw = ref.read_bytes()

@@ -141,3 +141,20 @@ def test_resolve_by_bigram_rescore_empty_freq():
     data = b"Hello world, this is plain ASCII text without any high bytes at all."
     result = resolve_by_bigram_rescore(data, "enc_a", "enc_b", diff_bytes)
     assert result is None
+
+
+def test_resolve_by_bigram_rescore_short_data():
+    """Data shorter than 2 bytes cannot form any bigrams."""
+    diff_bytes = frozenset({0xFE})
+    result = resolve_by_bigram_rescore(b"x", "enc_a", "enc_b", diff_bytes)
+    assert result is None
+
+
+def test_resolve_confusion_groups_none_encoding():
+    """When top result has encoding=None (binary), skip confusion resolution."""
+    results = [
+        DetectionResult(encoding=None, confidence=0.95, language=None),
+        DetectionResult(encoding="utf-8", confidence=0.90, language=None),
+    ]
+    resolved = resolve_confusion_groups(b"Hello", results)
+    assert resolved is results

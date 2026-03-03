@@ -112,6 +112,11 @@ def test_cli_partial_failure(tmp_path: Path, capsys: pytest.CaptureFixture[str])
     assert "with confidence" in captured.out
 
 
+def test_main_module_importable():
+    """chardet.__main__ should be importable (covers module-level import)."""
+    import chardet.__main__  # noqa: F401
+
+
 def test_cli_python_m_chardet(tmp_path: Path):
     """Python -m chardet should work (exercises __main__.py)."""
     f = tmp_path / "test.txt"
@@ -161,3 +166,29 @@ def test_cli_detection_failure_on_stdin(
     captured = capsys.readouterr()
     assert "detection failed" in captured.err
     assert "stdin" in captured.err
+
+
+def test_cli_minimal_flag_in_process(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
+    """--minimal should print only the encoding name (in-process)."""
+    f = tmp_path / "test.txt"
+    f.write_bytes(b"Hello world")
+    main(["--minimal", str(f)])
+    captured = capsys.readouterr()
+    # Just the encoding name, no "with confidence"
+    assert "with confidence" not in captured.out
+    assert captured.out.strip() != ""
+
+
+def test_cli_stdin_success_in_process(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    """Stdin detection success path should print result (in-process)."""
+    import io
+
+    fake_stdin = io.TextIOWrapper(io.BytesIO(b"Hello world"))
+    monkeypatch.setattr(sys, "stdin", fake_stdin)
+    main([])
+    captured = capsys.readouterr()
+    assert "with confidence" in captured.out

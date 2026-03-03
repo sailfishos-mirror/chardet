@@ -78,5 +78,5 @@ def main(argv: list[str] | None = None) -> None:
         _print_result(result, "stdin", minimal=args.minimal)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()

@@ -1,6 +1,8 @@
 # tests/test_orchestrator.py
 from __future__ import annotations
 
+import pytest
+
 from chardet.enums import EncodingEra
 from chardet.pipeline import DetectionResult
 from chardet.pipeline.orchestrator import run_pipeline
@@ -258,3 +260,31 @@ def test_demote_niche_latin_windows_1254():
     data = bytes([0xC0, 0xC1, 0xE9])
     demoted = _demote_niche_latin(data, results)
     assert demoted[0].encoding == "windows-1252"
+
+
+def test_fallback_when_no_valid_candidates(monkeypatch: pytest.MonkeyPatch):
+    """When validity filtering eliminates all candidates, return fallback."""
+    from chardet.pipeline import orchestrator
+
+    monkeypatch.setattr(orchestrator, "filter_by_validity", lambda _data, _cands: ())
+    # Data must bypass BOM, UTF-16/32, escape, binary, markup, ASCII, and UTF-8
+    data = bytes(range(0x80, 0x100)) * 2
+    result = run_pipeline(data, EncodingEra.ALL)
+    assert result[0].encoding is not None  # fallback, not None
+
+
+def test_fallback_when_cjk_gate_eliminates_all(monkeypatch: pytest.MonkeyPatch):
+    """When CJK gating eliminates all candidates, return fallback."""
+    from chardet.pipeline import orchestrator
+
+    original_gate = orchestrator._gate_cjk_candidates
+
+    def empty_gate(data: bytes, valid_candidates: object, ctx: object) -> tuple[()]:
+        # Run the real gate to populate mb_scores, then return empty
+        original_gate(data, valid_candidates, ctx)
+        return ()
+
+    monkeypatch.setattr(orchestrator, "_gate_cjk_candidates", empty_gate)
+    data = bytes(range(0x80, 0x100)) * 2
+    result = run_pipeline(data, EncodingEra.ALL)
+    assert result[0].encoding is not None  # fallback
