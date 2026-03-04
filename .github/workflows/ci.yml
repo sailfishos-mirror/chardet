@@ -9,6 +9,16 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+      - run: uv sync
+      - run: uv run prek run --all-files --show-diff-on-failure
+
   test:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -29,7 +39,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync
-      - run: uv run ruff check src/chardet/
       - run: uv run pytest tests/ -q --tb=short --ignore=tests/test_accuracy.py --cov --cov-report=xml --cov-report=term-missing
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.14' && matrix.os == 'ubuntu-latest'
