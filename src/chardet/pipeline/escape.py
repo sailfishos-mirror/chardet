@@ -55,9 +55,10 @@ def _is_valid_utf7_b64(b64_bytes: bytes) -> bool:
        UTF-16 code unit).
     2. Have zero-valued trailing padding bits (the unused low bits of the last
        Base64 sextet after the last complete 16-bit code unit).
+    3. Decode to valid UTF-16BE — no lone surrogates.
 
     This rejects accidental ``+<alphanum>-`` patterns found in URLs, MIME
-    boundaries, and other ASCII data.
+    boundaries, hex-encoded hashes (e.g. SHA-1 git refs), and other ASCII data.
 
     The caller (``_has_valid_utf7_sequences``) already checks ``b64_len >= 3``
     before calling this function, so *b64_bytes* is always at least 3 bytes.
@@ -73,7 +74,38 @@ def _is_valid_utf7_b64(b64_bytes: bytes) -> bool:
         mask = (1 << padding_bits) - 1
         if last_val & mask:
             return False
-    return True
+    # Decode the base64 to raw bytes and validate as UTF-16BE.
+    # Lone surrogates (unpaired 0xD800-0xDFFF code units) are illegal in
+    # well-formed UTF-16 and cannot appear in real UTF-7 text.  This catches
+    # hex-encoded hashes and other accidental base64-like sequences.
+    num_bytes = total_bits // 8
+    raw = bytearray(num_bytes)
+    bit_buf = 0
+    bit_count = 0
+    out_idx = 0
+    for c in b64_bytes:
+        bit_buf = (bit_buf << 6) | _B64_DECODE[c]
+        bit_count += 6
+        if bit_count >= 8:
+            bit_count -= 8
+            raw[out_idx] = (bit_buf >> bit_count) & 0xFF
+            out_idx += 1
+    prev_high = False
+    for i in range(0, num_bytes - 1, 2):
+        code_unit = (raw[i] << 8) | raw[i + 1]
+        if 0xD800 <= code_unit <= 0xDBFF:  # high surrogate
+            if prev_high:
+                return False  # consecutive high surrogates
+            prev_high = True
+        elif 0xDC00 <= code_unit <= 0xDFFF:  # low surrogate
+            if not prev_high:
+                return False  # lone low surrogate
+            prev_high = False
+        else:
+            if prev_high:
+                return False  # high surrogate not followed by low surrogate
+            prev_high = False
+    return not prev_high
 
 
 def _is_embedded_in_base64(data: bytes, pos: int) -> bool:

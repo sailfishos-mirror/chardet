@@ -3,7 +3,8 @@
 
 from __future__ import annotations
 
-from chardet.pipeline.escape import detect_escape_encoding
+from chardet import detect
+from chardet.pipeline.escape import _is_valid_utf7_b64, detect_escape_encoding
 
 
 def test_iso_2022_jp_esc_dollar_b() -> None:
@@ -245,3 +246,63 @@ def test_utf7_short_base64_rejected() -> None:
     data = b"text +AB- more text"
     result = detect_escape_encoding(data)
     assert result is None
+
+
+def test_utf7_b64_rejects_consecutive_high_surrogates() -> None:
+    """Two back-to-back high surrogates are invalid UTF-16BE."""
+    # 0xD800 0xD801 encoded as UTF-7 base64
+    assert not _is_valid_utf7_b64(b"2ADYAQ")
+
+
+def test_utf7_b64_rejects_high_surrogate_without_low() -> None:
+    """A high surrogate followed by a non-surrogate is invalid UTF-16BE."""
+    # 0xD800 0x4F60 encoded as UTF-7 base64
+    assert not _is_valid_utf7_b64(b"2ABPYA")
+
+
+def test_utf7_b64_rejects_trailing_high_surrogate() -> None:
+    """A high surrogate at the end of the sequence with no low surrogate."""
+    # 0xD800 alone encoded as UTF-7 base64
+    assert not _is_valid_utf7_b64(b"2AA")
+
+
+def test_utf7_b64_accepts_valid_surrogate_pair() -> None:
+    """A valid surrogate pair (U+10000 = 0xD800 0xDC00) must be accepted."""
+    # 0xD800 0xDC00 encoded as UTF-7 base64
+    assert _is_valid_utf7_b64(b"2ADcAA")
+
+
+def test_utf7_rejects_sha1_git_hash() -> None:
+    """SHA-1 git hash after '+' must not be detected as UTF-7 (regression #323).
+
+    pip-tools and similar tools emit requirements lines where a VCS pin
+    starts with '+', followed by a 40-character lowercase hex SHA-1 digest.
+    These look superficially like a UTF-7 shifted sequence because every hex
+    character is in the Base64 alphabet and 40 chars x 6 bits = 240 bits,
+    which is a multiple of 16 (no padding bits to reject).  However, the
+    decoded UTF-16BE contains a lone low surrogate (0xDDC6), which is invalid
+    UTF-16 and proves the sequence is not real UTF-7.
+    """
+    data = b"+4bafdea31b1a83b6eff5dac6cedcff073cb984f6"
+    result = detect_escape_encoding(data)
+    assert result is None
+
+
+def test_utf7_rejects_hex_hash_in_requirements_file() -> None:
+    """A pure-ASCII requirements file with git VCS pins must not be UTF-7.
+
+    Two formats are tested:
+    - ``+sha1hash`` at the start of a line (the format that triggered #323)
+    - ``git+https://...@sha1hash`` (common pip/uv format, also must not regress)
+    """
+    data = (
+        b"requests==2.31.0\n"
+        b"numpy==1.24.0\n"
+        # Line-leading '+hash' — this is the format that triggered the bug
+        b"+4bafdea31b1a83b6eff5dac6cedcff073cb984f6\n"
+        # Full VCS URL form — the '+' in 'git+https' is terminated early by ':'
+        b"mypackage @ git+https://github.com/org/repo@"
+        b"4bafdea31b1a83b6eff5dac6cedcff073cb984f6\n"
+    )
+    result = detect(data)
+    assert result["encoding"] != "utf-7"
