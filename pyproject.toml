@@ -198,7 +198,7 @@ indent-style = "space"
 source = ["src/chardet"]
 
 [tool.coverage.report]
-fail_under = 85
+fail_under = 95
 show_missing = true
 exclude_lines = [
     "pragma: no cover",
