@@ -1208,12 +1208,56 @@ if __name__ == "__main__":
             ("cchardet", ["faust-cchardet"], None, "cchardet", args.python)
         )
 
-    # Create all venvs in parallel (I/O-bound subprocess waits)
-    # label -> (venv_dir, python_path)
-    venvs: dict[str, tuple[Path, Path]] = {}
-    # label -> detector_type
+    # --- Pre-resolve versions and tags without creating venvs ---
+    print("Resolving detector versions ...")
+    detector_versions: dict[str, str] = {}
+    python_tags: dict[str, str] = {}
+    build_tags: dict[str, str] = {}
     detector_type_map: dict[str, str] = {}
-    print("Setting up venvs ...")
+
+    pre_python_tag = _resolve_python_tag_without_venv(args.python)
+
+    for spec in venv_specs:
+        label, pip_args, _env, det_type, _pyver = spec
+        detector_type_map[label] = det_type
+        detector_versions[label] = _resolve_version_without_venv(
+            det_type, pip_args, project_root
+        )
+        python_tags[label] = pre_python_tag
+        build_tags[label] = _predict_build_tag(
+            det_type,
+            pure=args.pure,
+            mypyc=args.mypyc,
+            python_impl=pre_python_tag.split(".")[0].rstrip("0123456789"),
+        )
+        print(
+            f"  {label}: version={detector_versions[label]}, "
+            f"python={python_tags[label]}, build={build_tags[label]}"
+        )
+
+    # --- Check cache: partition specs into cached vs needs-venv ---
+    cache_dir = _get_cache_dir() if use_cache else None
+    cached_specs: list[VenvSpec] = []
+    uncached_specs: list[VenvSpec] = []
+
+    for spec in venv_specs:
+        label = spec[0]
+        det_type = spec[3]
+        if cache_dir is not None and _has_full_cache(
+            cache_dir,
+            det_type,
+            detector_versions[label],
+            benchmark_hash,
+            python_tags[label],
+            build_tags[label],
+        ):
+            print(f"  {label}: full cache hit, skipping venv creation")
+            cached_specs.append(spec)
+        else:
+            uncached_specs.append(spec)
+
+    # --- Create venvs only for uncached detectors ---
+    venvs: dict[str, tuple[Path, Path]] = {}
 
     def _create_venv_from_spec(
         spec: VenvSpec,
@@ -1224,44 +1268,46 @@ if __name__ == "__main__":
         )
         return label, venv_dir, python_path
 
-    try:
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = {
-                executor.submit(_create_venv_from_spec, spec): spec
-                for spec in venv_specs
-            }
-            for future in concurrent.futures.as_completed(futures):
-                spec = futures[future]
-                label = spec[0]
-                det_type = spec[3]
-                try:
-                    label, venv_dir, python_path = future.result()
-                    venvs[label] = (venv_dir, python_path)
-                    detector_type_map[label] = det_type
-                except subprocess.CalledProcessError as exc:
-                    print(f"  WARNING: failed to create venv for {label}: {exc}")
+    if uncached_specs:
+        print(f"Setting up {len(uncached_specs)} venv(s) ...")
+    else:
+        print("All detectors fully cached, no venvs needed.")
 
-        # Query versions, python tags, and build tags sequentially from each venv
-        detector_versions: dict[str, str] = {}
-        python_tags: dict[str, str] = {}
-        build_tags: dict[str, str] = {}
-        for label, (_, python_path) in venvs.items():
-            det_type = detector_type_map[label]
-            py_exe = str(python_path)
-            detector_versions[label] = _get_detector_version(py_exe, det_type)
-            python_tags[label] = _get_python_tag(py_exe)
-            build_tags[label] = _get_build_tag(py_exe, det_type)
-            print(
-                f"  {label}: version={detector_versions[label]}, "
-                f"python={python_tags[label]}, build={build_tags[label]}"
-            )
+    try:
+        if uncached_specs:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = {
+                    executor.submit(_create_venv_from_spec, spec): spec
+                    for spec in uncached_specs
+                }
+                for future in concurrent.futures.as_completed(futures):
+                    spec = futures[future]
+                    label = spec[0]
+                    try:
+                        label, venv_dir, python_path = future.result()
+                        venvs[label] = (venv_dir, python_path)
+                    except subprocess.CalledProcessError as exc:
+                        print(f"  WARNING: failed to create venv for {label}: {exc}")
+
+            # Update versions/tags from actual venvs (more accurate)
+            for label, (_, python_path) in venvs.items():
+                det_type = detector_type_map[label]
+                py_exe = str(python_path)
+                detector_versions[label] = _get_detector_version(py_exe, det_type)
+                python_tags[label] = _get_python_tag(py_exe)
+                build_tags[label] = _get_build_tag(py_exe, det_type)
+                print(
+                    f"  {label}: version={detector_versions[label]}, "
+                    f"python={python_tags[label]}, build={build_tags[label]}"
+                )
 
         # Rebuild labels to include package name, version, and build tag
         label_remap: dict[str, str] = {}
-        for old_label in list(venvs.keys()):
-            det_type = detector_type_map[old_label]
-            version = detector_versions[old_label]
-            b_tag = build_tags[old_label]
+        for spec in venv_specs:
+            old_label = spec[0]
+            det_type = spec[3]
+            version = detector_versions.get(old_label, "unknown")
+            b_tag = build_tags.get(old_label, "unknown")
             label_remap[old_label] = f"{det_type} {version} ({b_tag})"
 
         venvs = {label_remap.get(k, k): v for k, v in venvs.items()}
@@ -1275,17 +1321,15 @@ if __name__ == "__main__":
         build_tags = {label_remap.get(k, k): v for k, v in build_tags.items()}
 
         # Build unified detector list: (label, detector_type, python_exe, encoding_era)
-        # Maintain the order from venv_specs
         detectors: list[tuple[str, str, str, str]] = []
         for spec in venv_specs:
             old_label = spec[0]
             det_type = spec[3]
             label = label_remap.get(old_label, old_label)
-            if label not in venvs:
-                continue
-            python_exe = str(venvs[label][1])
+            # Cached detectors get dummy exe; run_comparison loads from cache
+            python_exe = str(venvs[label][1]) if label in venvs else "/dev/null"
+            version = detector_versions.get(label, "unknown")
             if det_type == "chardet":
-                version = detector_versions.get(label, "unknown")
                 try:
                     era = "all" if int(version.split(".")[0]) >= 6 else "none"
                 except ValueError:
