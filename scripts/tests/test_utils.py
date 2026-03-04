@@ -8,16 +8,16 @@ from utils import collect_test_files, normalize_language
 
 
 def test_normalize_language_iso_code():
-    """ISO 639-1 code should be mapped to English name."""
-    assert normalize_language("fr") == "french"
-    assert normalize_language("ja") == "japanese"
-    assert normalize_language("zh") == "chinese"
+    """ISO 639-1 code should be returned lowered."""
+    assert normalize_language("fr") == "fr"
+    assert normalize_language("ja") == "ja"
+    assert normalize_language("zh") == "zh"
 
 
 def test_normalize_language_case_insensitive():
-    """Uppercase or mixed-case codes should be normalized."""
-    assert normalize_language("FR") == "french"
-    assert normalize_language("Ja") == "japanese"
+    """Uppercase or mixed-case codes should be lowered."""
+    assert normalize_language("FR") == "fr"
+    assert normalize_language("Ja") == "ja"
 
 
 def test_normalize_language_unknown_code():
@@ -32,7 +32,7 @@ def test_normalize_language_none():
 
 def test_collect_test_files_structure(tmp_path: Path):
     """collect_test_files should parse encoding-language directory names."""
-    enc_dir = tmp_path / "utf-8-english"
+    enc_dir = tmp_path / "utf-8-en"
     enc_dir.mkdir()
     (enc_dir / "sample.txt").write_bytes(b"Hello")
     (enc_dir / "sample2.txt").write_bytes(b"World")
@@ -40,7 +40,7 @@ def test_collect_test_files_structure(tmp_path: Path):
     results = collect_test_files(tmp_path)
     assert len(results) == 2
     assert results[0][0] == "utf-8"
-    assert results[0][1] == "english"
+    assert results[0][1] == "en"
     assert results[0][2].name == "sample.txt"
 
 
@@ -59,7 +59,7 @@ def test_collect_test_files_none_encoding(tmp_path: Path):
 def test_collect_test_files_skips_non_dirs(tmp_path: Path):
     """Files at the top level should be skipped."""
     (tmp_path / "readme.txt").write_text("ignore me")
-    enc_dir = tmp_path / "utf-8-english"
+    enc_dir = tmp_path / "utf-8-en"
     enc_dir.mkdir()
     (enc_dir / "sample.txt").write_bytes(b"Hello")
 
@@ -79,11 +79,11 @@ def test_collect_test_files_skips_bad_names(tmp_path: Path):
 
 def test_collect_test_files_hyphenated_encoding(tmp_path: Path):
     """Encodings with hyphens (e.g., hz-gb-2312) should split on last hyphen."""
-    enc_dir = tmp_path / "hz-gb-2312-chinese"
+    enc_dir = tmp_path / "hz-gb-2312-zh"
     enc_dir.mkdir()
     (enc_dir / "sample.txt").write_bytes(b"Hello")
 
     results = collect_test_files(tmp_path)
     assert len(results) == 1
     assert results[0][0] == "hz-gb-2312"
-    assert results[0][1] == "chinese"
+    assert results[0][1] == "zh"

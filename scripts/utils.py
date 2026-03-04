@@ -126,6 +126,7 @@ ISO_TO_LANGUAGE: dict[str, str] = {
     "da": "danish",
     "de": "german",
     "el": "greek",
+    "en": "english",
     "eo": "esperanto",
     "es": "spanish",
     "et": "estonian",
@@ -169,10 +170,13 @@ ISO_TO_LANGUAGE: dict[str, str] = {
 
 
 def normalize_language(detected_language: str | None) -> str | None:
-    """Map ISO 639-1 code to the English name used in test data directories."""
+    """Normalize a detected language to its ISO 639-1 code for comparison.
+
+    Test data directories now use ISO codes directly, so this just lowercases.
+    """
     if detected_language is None:
         return None
-    return ISO_TO_LANGUAGE.get(detected_language.lower(), detected_language.lower())
+    return detected_language.lower()
 
 
 def collect_test_files(
@@ -180,10 +184,10 @@ def collect_test_files(
 ) -> list[tuple[str | None, str | None, Path]]:
     """Collect (encoding, language, filepath) tuples from test data.
 
-    Directory name format: "{encoding}-{language}" e.g. "utf-8-english",
-    "iso-8859-1-french", "hz-gb-2312-chinese".
+    Directory name format: "{encoding}-{lang_iso}" e.g. "utf-8-en",
+    "iso-8859-1-fr", "hz-gb-2312-zh".
 
-    Since all language names are single words (no hyphens), we can reliably
+    Since all ISO 639-1 codes are two letters (no hyphens), we can reliably
     split on the last hyphen to separate encoding from language.
 
     The binary test directory is named "None-None"; its encoding and language

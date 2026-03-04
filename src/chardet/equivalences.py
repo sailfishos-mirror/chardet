@@ -119,6 +119,49 @@ BIDIRECTIONAL_GROUPS: tuple[tuple[str, ...], ...] = (
     ("iso2022-jp-2", "iso2022-jp-2004", "iso2022-jp-ext"),
 )
 
+# Bidirectional language equivalences — groups of ISO 639-1 codes for
+# languages that are nearly indistinguishable by statistical detection.
+# Detecting any member when another member of the same group was expected
+# is considered acceptable.
+LANGUAGE_EQUIVALENCES: tuple[tuple[str, ...], ...] = (
+    ("sk", "cs"),  # Slovak / Czech — ~85% mutual intelligibility
+    ("uk", "ru"),  # Ukrainian / Russian — shared Cyrillic, overlapping vocabulary
+    ("ms", "id"),  # Malay / Indonesian — standardized variants of one language
+    ("no", "da"),  # Norwegian / Danish — near-identical written forms
+    ("sl", "hr"),  # Slovene / Croatian — closely related South Slavic
+)
+
+
+def _build_language_equiv_index() -> dict[str, frozenset[str]]:
+    """Build a lookup: ISO code -> frozenset of all equivalent ISO codes."""
+    result: dict[str, frozenset[str]] = {}
+    for group in LANGUAGE_EQUIVALENCES:
+        group_set = frozenset(group)
+        for code in group:
+            result[code] = group_set
+    return result
+
+
+_LANGUAGE_EQUIV: dict[str, frozenset[str]] = _build_language_equiv_index()
+
+
+def is_language_equivalent(expected: str, detected: str) -> bool:
+    """Check whether *detected* is an acceptable language for *expected*.
+
+    Returns ``True`` when *expected* and *detected* are the same ISO 639-1
+    code, or belong to the same equivalence group in
+    :data:`LANGUAGE_EQUIVALENCES`.
+
+    :param expected: Expected ISO 639-1 language code.
+    :param detected: Detected ISO 639-1 language code.
+    :returns: ``True`` if the languages are equivalent.
+    """
+    if expected == detected:
+        return True
+    group = _LANGUAGE_EQUIV.get(expected)
+    return group is not None and detected in group
+
+
 # Pre-built normalized lookups for fast comparison.
 _NORMALIZED_SUPERSETS: dict[str, frozenset[str]] = {
     normalize_encoding_name(subset): frozenset(
