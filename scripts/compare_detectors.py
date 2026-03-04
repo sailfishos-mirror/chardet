@@ -193,7 +193,7 @@ def _get_build_tag(python_executable: str, detector_type: str) -> str:
 def _resolve_version_without_venv(
     detector_type: str,
     pip_args: list[str],
-    project_root: str,  # noqa: ARG001
+    project_root: str,
 ) -> str:
     """Resolve a detector's version without creating a venv.
 
@@ -206,7 +206,7 @@ def _resolve_version_without_venv(
         return pip_args[0].split("==", 1)[1]
 
     # Local chardet: query the existing dev install
-    if detector_type == "chardet" and len(pip_args) == 1 and Path(pip_args[0]).is_dir():
+    if detector_type == "chardet" and Path(project_root).is_dir():
         fd, tmp_path = tempfile.mkstemp(suffix=".py")
         tmp = Path(tmp_path)
         try:
@@ -217,7 +217,7 @@ def _resolve_version_without_venv(
                 capture_output=True,
                 text=True,
                 check=True,
-                cwd=pip_args[0],
+                cwd=project_root,
             )
             return result.stdout.strip()
         except subprocess.CalledProcessError:
