@@ -112,6 +112,11 @@ Defines acceptable detection mismatches for accuracy testing: directional supers
 
 `scripts/` directory contains training, benchmarking, and diagnostic tools. `scripts/utils.py` provides shared utilities (e.g., `collect_test_files()`) imported by both tests and scripts.
 
+## Workflow Preferences
+
+- **Never use `python -c`**: Always write Python code to a temp file (e.g., `/tmp/script.py`) and run it instead of using inline `python -c "..."`. Inline commands trigger shell safety prompts due to special characters.
+- **Never use `cd <dir> && git ...`**: Use `git -C <dir> ...` instead to avoid shell safety prompts about compound `cd` + `git` commands.
+
 ## Conventions
 
 - Ruff with `select = ["ALL"]` and targeted ignores — check `pyproject.toml` for the full ignore list
