@@ -26,9 +26,13 @@ _ENC_INDEX_LOCK = threading.Lock()
 _MODEL_NORMS: dict[str, float] | None = None
 _MODEL_NORMS_LOCK = threading.Lock()
 # Encodings that map to exactly one language, derived from the registry.
-_SINGLE_LANG_MAP: dict[str, str] = {
-    enc.name: enc.languages[0] for enc in REGISTRY.values() if len(enc.languages) == 1
-}
+# Includes aliases so that e.g. "big5" resolves the same as "big5hkscs".
+_SINGLE_LANG_MAP: dict[str, str] = {}
+for _enc in REGISTRY.values():
+    if len(_enc.languages) == 1:
+        _SINGLE_LANG_MAP[_enc.name] = _enc.languages[0]
+        for _alias in _enc.aliases:
+            _SINGLE_LANG_MAP[_alias] = _enc.languages[0]
 
 
 def load_models() -> dict[str, bytearray]:
