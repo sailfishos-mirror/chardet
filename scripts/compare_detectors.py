@@ -190,6 +190,138 @@ def _get_build_tag(python_executable: str, detector_type: str) -> str:
         tmp.unlink(missing_ok=True)
 
 
+def _resolve_version_without_venv(
+    detector_type: str,
+    pip_args: list[str],
+    project_root: str,  # noqa: ARG001
+) -> str:
+    """Resolve a detector's version without creating a venv.
+
+    - Local chardet (pip_args is [project_root]): query via ``uv run python``.
+    - Pinned chardet (pip_args like ["chardet==6.0.0"]): parse from arg.
+    - charset-normalizer / cchardet: ``uv pip compile --no-deps``.
+    """
+    # Pinned version: extract from "package==X.Y.Z"
+    if len(pip_args) == 1 and "==" in pip_args[0]:
+        return pip_args[0].split("==", 1)[1]
+
+    # Local chardet: query the existing dev install
+    if detector_type == "chardet" and len(pip_args) == 1 and Path(pip_args[0]).is_dir():
+        fd, tmp_path = tempfile.mkstemp(suffix=".py")
+        tmp = Path(tmp_path)
+        try:
+            os.close(fd)
+            tmp.write_text("import chardet; print(chardet.__version__)")
+            result = subprocess.run(
+                ["uv", "run", "python", str(tmp)],
+                capture_output=True,
+                text=True,
+                check=True,
+                cwd=pip_args[0],
+            )
+            return result.stdout.strip()
+        except subprocess.CalledProcessError:
+            return "unknown"
+        finally:
+            tmp.unlink(missing_ok=True)
+
+    # PyPI package: resolve via uv pip compile
+    pkg_name = {
+        "charset-normalizer": "charset-normalizer",
+        "cchardet": "faust-cchardet",
+        "chardet": "chardet",
+    }.get(detector_type, detector_type)
+    try:
+        result = subprocess.run(
+            ["uv", "pip", "compile", "--no-deps", "-"],
+            input=pkg_name,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        for line in result.stdout.strip().split("\n"):
+            line = line.strip()
+            if line and not line.startswith("#") and "==" in line:
+                return line.split("==", 1)[1]
+    except subprocess.CalledProcessError:
+        pass
+    return "unknown"
+
+
+def _predict_build_tag(
+    detector_type: str,
+    *,
+    pure: bool,
+    mypyc: bool,
+    python_impl: str = "cpython",
+) -> str:
+    """Predict the build tag without creating a venv.
+
+    - ``--pure`` -> ``"pure"`` for all detectors.
+    - ``--mypyc`` -> ``"mypyc"`` for chardet.
+    - Default: chardet checks ``HATCH_BUILD_HOOK_ENABLE_MYPYC`` env var;
+      charset-normalizer and cchardet ship compiled wheels on CPython
+      -> ``"mypyc"``, ``"pure"`` on PyPy.
+    """
+    if pure:
+        return "pure"
+    if mypyc:
+        return "mypyc"
+    if detector_type == "chardet":
+        if os.environ.get("HATCH_BUILD_HOOK_ENABLE_MYPYC", "").lower() in (
+            "true",
+            "1",
+            "yes",
+        ):
+            return "mypyc"
+        return "pure"
+    # charset-normalizer and cchardet ship compiled extensions on CPython
+    if python_impl == "cpython":
+        return "mypyc"
+    return "pure"
+
+
+def _resolve_python_tag_without_venv(python_version: str | None) -> str:
+    """Derive a python tag like ``cpython3.12`` without creating a venv.
+
+    If *python_version* is ``None``, uses the current interpreter.
+    Otherwise parses the ``--python`` argument (e.g. ``"3.11"``,
+    ``"pypy3.10"``).
+    """
+    if python_version is None:
+        import platform as _platform
+
+        impl = _platform.python_implementation().lower()
+        return f"{impl}{sys.version_info.major}.{sys.version_info.minor}"
+
+    # Parse --python arg: "pypy3.10" or "3.11"
+    pv = python_version.lower()
+    if pv.startswith("pypy"):
+        return pv  # already "pypy3.10"
+    if pv.startswith("cpython"):
+        return pv  # already "cpython3.11"
+    # Bare version like "3.11" -> "cpython3.11"
+    return f"cpython{pv}"
+
+
+def _has_full_cache(  # noqa: PLR0913
+    cache_dir: Path,
+    detector_type: str,
+    version: str,
+    benchmark_hash: str,
+    python_tag: str,
+    build_tag: str,
+) -> bool:
+    """Return ``True`` if both time and memory cache files exist."""
+    for kind in ("time", "memory"):
+        fname = _cache_filename(
+            detector_type, version, benchmark_hash, python_tag, build_tag, kind
+        )
+        if not (cache_dir / fname).is_file():
+            return False
+    return True
+
+
 # ---------------------------------------------------------------------------
 # Venv management for isolated detectors
 # ---------------------------------------------------------------------------
