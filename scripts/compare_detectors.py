@@ -1,19 +1,23 @@
 #!/usr/bin/env python
-"""Compare chardet-rewrite vs charset-normalizer accuracy on the chardet test suite.
+"""Compare chardet vs other detectors on the chardet test suite.
 
 Includes:
 - Rich per-encoding comparison with directional equivalences and winner column
 - Pairwise win/loss/tie breakdowns per opponent
 - Memory usage comparison (peak traced allocations)
+- Result caching for faster repeat runs
+- 3x median timing for stable measurements
 
-All detectors — including chardet-rewrite — run in isolated temporary venvs
+All detectors — including chardet — run in isolated temporary venvs
 created with ``uv`` for fair, consistent measurement.  Use ``--pure`` to
-guarantee the chardet-rewrite venv contains no mypyc extensions.
+guarantee the chardet venv contains no mypyc extensions.
 """
 
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
+import hashlib
 import json
 import os
 import shutil
@@ -37,6 +41,152 @@ from chardet.equivalences import (
 )
 
 # ---------------------------------------------------------------------------
+# Cache infrastructure
+# ---------------------------------------------------------------------------
+
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _compute_benchmark_hash() -> str:
+    """SHA-256 (first 12 hex chars) of benchmark-related source files."""
+    scripts_dir = _PROJECT_ROOT / "scripts"
+    equiv_path = _PROJECT_ROOT / "src" / "chardet" / "equivalences.py"
+    paths = [
+        scripts_dir / "benchmark_time.py",
+        scripts_dir / "benchmark_memory.py",
+        scripts_dir / "utils.py",
+        equiv_path,
+    ]
+    h = hashlib.sha256()
+    for p in paths:
+        h.update(p.read_bytes())
+    return h.hexdigest()[:12]
+
+
+def _get_cache_dir() -> Path:
+    """Return the ``.benchmark_results/`` directory, creating it if needed."""
+    cache_dir = _PROJECT_ROOT / ".benchmark_results"
+    cache_dir.mkdir(exist_ok=True)
+    return cache_dir
+
+
+def _cache_filename(  # noqa: PLR0913
+    detector_name: str,
+    detector_version: str,
+    benchmark_hash: str,
+    python_tag: str,
+    build_tag: str,
+    kind: str,
+) -> str:
+    """Build a cache filename like ``chardet_7.0.1_a1b2c3_cpython3.11_mypyc_time.json``."""
+    safe_name = detector_name.replace(" ", "-").replace("/", "-")
+    return f"{safe_name}_{detector_version}_{benchmark_hash}_{python_tag}_{build_tag}_{kind}.json"
+
+
+def _load_cached(cache_dir: Path, filename: str) -> dict | None:
+    """Load a cached JSON result, or return ``None`` on miss."""
+    path = cache_dir / filename
+    if not path.is_file():
+        return None
+    with path.open() as f:
+        return json.load(f)
+
+
+def _save_cache(cache_dir: Path, filename: str, data: dict) -> None:
+    """Save a result dict as JSON to the cache directory."""
+    path = cache_dir / filename
+    with path.open("w") as f:
+        json.dump(data, f)
+
+
+# ---------------------------------------------------------------------------
+# Version & Python info detection
+# ---------------------------------------------------------------------------
+
+
+def _get_detector_version(python_executable: str, detector_type: str) -> str:
+    """Query the detector's ``__version__`` from the venv."""
+    module = {
+        "chardet": "chardet",
+        "charset-normalizer": "charset_normalizer",
+        "cchardet": "cchardet",
+    }[detector_type]
+    script = f"import {module}; print({module}.__version__)"
+    fd, tmp_path = tempfile.mkstemp(suffix=".py")
+    tmp = Path(tmp_path)
+    try:
+        os.close(fd)
+        tmp.write_text(script)
+        result = subprocess.run(
+            [python_executable, str(tmp)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip()
+    except subprocess.CalledProcessError:
+        return "unknown"
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
+def _get_python_tag(python_executable: str) -> str:
+    """Return a tag like ``cpython3.11`` or ``pypy3.10`` from the venv Python."""
+    script = (
+        "import platform, sys; "
+        "print(f'{platform.python_implementation().lower()}{sys.version_info.major}.{sys.version_info.minor}')"
+    )
+    fd, tmp_path = tempfile.mkstemp(suffix=".py")
+    tmp = Path(tmp_path)
+    try:
+        os.close(fd)
+        tmp.write_text(script)
+        result = subprocess.run(
+            [python_executable, str(tmp)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip()
+    except subprocess.CalledProcessError:
+        return "unknown"
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
+def _get_build_tag(python_executable: str, detector_type: str) -> str:
+    """Return ``"mypyc"`` if the detector has native .so/.pyd extensions, else ``"pure"``."""
+    module = {
+        "chardet": "chardet",
+        "charset-normalizer": "charset_normalizer",
+        "cchardet": "cchardet",
+    }[detector_type]
+    # Look for .so/.pyd files under the package directory
+    script = (
+        f"import {module}, pathlib; "
+        f"pkg = pathlib.Path({module}.__file__).parent; "
+        f"exts = [p for p in pkg.rglob('*') if p.suffix in ('.so', '.pyd') and p.is_file()]; "
+        f"print('mypyc' if exts else 'pure')"
+    )
+    fd, tmp_path = tempfile.mkstemp(suffix=".py")
+    tmp = Path(tmp_path)
+    try:
+        os.close(fd)
+        tmp.write_text(script)
+        result = subprocess.run(
+            [python_executable, str(tmp)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip()
+    except subprocess.CalledProcessError:
+        return "unknown"
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
+# ---------------------------------------------------------------------------
 # Venv management for isolated detectors
 # ---------------------------------------------------------------------------
 
@@ -45,6 +195,7 @@ def _create_detector_venv(
     label: str,
     pip_args: list[str],
     *,
+    python_version: str | None = None,
     env: dict[str, str] | None = None,
 ) -> tuple[Path, Path]:
     """Create a temporary venv with a detector package installed.
@@ -55,6 +206,9 @@ def _create_detector_venv(
         Human-readable label used for the temp dir prefix and log messages.
     pip_args : list[str]
         Arguments passed directly to ``uv pip install --python <venv_python>``.
+    python_version : str | None
+        Python version to pass to ``uv venv --python``.  When ``None``,
+        uses ``sys.executable``.
     env : dict[str, str] | None
         Environment variables for the pip install step.  ``None`` inherits the
         parent process environment.
@@ -67,9 +221,10 @@ def _create_detector_venv(
     """
     safe_prefix = label.replace(" ", "-").replace("/", "-")
     venv_dir = Path(tempfile.mkdtemp(prefix=f"{safe_prefix}-"))
+    python_spec = python_version or sys.executable
     print(f"  Creating venv for {label} at {venv_dir} ...")
     subprocess.run(
-        ["uv", "venv", "--python", sys.executable, str(venv_dir)],
+        ["uv", "venv", "--python", python_spec, str(venv_dir)],
         check=True,
         capture_output=True,
         text=True,
@@ -178,6 +333,65 @@ def _run_timing_subprocess(
 
 
 # ---------------------------------------------------------------------------
+# 3x median timing
+# ---------------------------------------------------------------------------
+
+
+def _run_timing_with_median(  # noqa: PLR0913
+    python_executable: str,
+    data_dir: str,
+    *,
+    detector_type: str = "chardet",
+    encoding_era: str = "all",
+    pure: bool = False,
+    num_runs: int = 3,
+) -> tuple[
+    list[tuple[str, str, str, str | None, str | None]], float, list[float], float
+]:
+    """Run timing ``num_runs`` times and return median-aggregated results.
+
+    Detection results (accuracy data) come from the first run.
+    Total time, import time, and per-file times are the element-wise medians.
+    """
+    all_totals: list[float] = []
+    all_import_times: list[float] = []
+    all_file_times: list[list[float]] = []
+    first_results: list[tuple[str, str, str, str | None, str | None]] = []
+
+    for i in range(num_runs):
+        results, elapsed, file_times, import_time = _run_timing_subprocess(
+            python_executable,
+            data_dir,
+            detector_type=detector_type,
+            encoding_era=encoding_era,
+            pure=pure,
+        )
+        if i == 0:
+            first_results = results
+        all_totals.append(elapsed)
+        all_import_times.append(import_time)
+        all_file_times.append(file_times)
+
+    if not all_totals:
+        return [], 0.0, [], 0.0
+
+    median_total = statistics.median(all_totals)
+    median_import = statistics.median(all_import_times)
+
+    # Element-wise median of per-file times
+    if all_file_times and all_file_times[0]:
+        n_files = len(all_file_times[0])
+        median_file_times = [
+            statistics.median(run[j] for run in all_file_times if j < len(run))
+            for j in range(n_files)
+        ]
+    else:
+        median_file_times = []
+
+    return first_results, median_total, median_file_times, median_import
+
+
+# ---------------------------------------------------------------------------
 # Subprocess-isolated measurement (memory + import time)
 # ---------------------------------------------------------------------------
 
@@ -268,11 +482,16 @@ def _record_result(  # noqa: PLR0913
 # ---------------------------------------------------------------------------
 
 
-def run_comparison(
+def run_comparison(  # noqa: PLR0913
     data_dir: Path,
     detectors: list[tuple[str, str, str, str]],
     *,
     pure: bool = False,
+    detector_versions: dict[str, str] | None = None,
+    python_tags: dict[str, str] | None = None,
+    build_tags: dict[str, str] | None = None,
+    use_cache: bool = True,
+    benchmark_hash: str = "",
 ) -> None:
     """Run accuracy and performance comparison across detectors.
 
@@ -284,8 +503,25 @@ def run_comparison(
         Each tuple is ``(label, detector_type, python_executable, encoding_era)``.
     pure : bool
         Propagate ``--pure`` to chardet subprocess scripts.
+    detector_versions : dict[str, str] | None
+        Mapping of label -> version string for cache keys.
+    python_tags : dict[str, str] | None
+        Mapping of label -> python tag (e.g. ``cpython3.11``) for cache keys.
+    build_tags : dict[str, str] | None
+        Mapping of label -> build tag (``"mypyc"`` or ``"pure"``) for cache keys.
+    use_cache : bool
+        Whether to use cached results.
+    benchmark_hash : str
+        Hash of benchmark source files for cache invalidation.
 
     """
+    if detector_versions is None:
+        detector_versions = {}
+    if python_tags is None:
+        python_tags = {}
+    if build_tags is None:
+        build_tags = {}
+
     test_files = collect_test_files(data_dir)
     if not test_files:
         print("ERROR: No test files found!")
@@ -330,32 +566,122 @@ def run_comparison(
         }
 
     data_dir_str = str(data_dir)
+    cache_dir = _get_cache_dir() if use_cache else None
 
-    # --- Subprocess detection for all detectors ---
+    # --- Parallel timing benchmarks ---
     import_times: dict[str, float] = {}
-    for label, detector_type, python_exe, era in detectors:
-        print(f"  Running detection for {label} ...")
-        results, elapsed, file_times, import_time = _run_timing_subprocess(
+
+    def _run_timing_for_detector(
+        label: str, detector_type: str, python_exe: str, era: str
+    ) -> tuple[
+        str,
+        list[tuple[str, str, str, str | None, str | None]],
+        float,
+        list[float],
+        float,
+    ]:
+        version = detector_versions.get(label, "unknown")
+        py_tag = python_tags.get(label, "unknown")
+        b_tag = build_tags.get(label, "unknown")
+
+        # Check cache
+        if cache_dir is not None:
+            fname = _cache_filename(
+                label, version, benchmark_hash, py_tag, b_tag, "time"
+            )
+            cached = _load_cached(cache_dir, fname)
+            if cached is not None:
+                print(f"  Using cached timing results for {label}")
+                return (
+                    label,
+                    [tuple(r) for r in cached["results"]],
+                    cached["total"],
+                    cached["file_times"],
+                    cached["import_time"],
+                )
+
+        # Old chardet (major < 7) gets 1 run (too slow for 3x)
+        num_runs = 3
+        if detector_type == "chardet" and version != "unknown":
+            try:
+                if int(version.split(".")[0]) < 7:
+                    num_runs = 1
+            except ValueError:
+                pass
+
+        is_pure = pure and detector_type == "chardet"
+        print(f"  Running {num_runs}x timing for {label} ...")
+        results, elapsed, file_times, import_time = _run_timing_with_median(
             python_exe,
             data_dir_str,
             detector_type=detector_type,
             encoding_era=era,
-            pure=pure and detector_type == "chardet",
+            pure=is_pure,
+            num_runs=num_runs,
         )
-        stats[label]["time"] = elapsed
-        stats[label]["file_times"] = file_times
-        import_times[label] = import_time
-        for expected, exp_lang, path_str, detected, det_lang in results:
-            _record_result(
-                stats[label], expected, exp_lang, Path(path_str), detected, det_lang
+
+        # Save to cache
+        if cache_dir is not None:
+            fname = _cache_filename(
+                label, version, benchmark_hash, py_tag, b_tag, "time"
             )
+            _save_cache(
+                cache_dir,
+                fname,
+                {
+                    "results": results,
+                    "total": elapsed,
+                    "file_times": file_times,
+                    "import_time": import_time,
+                },
+            )
+
+        return label, results, elapsed, file_times, import_time
+
+    max_workers = max(1, (os.cpu_count() or 2) // 2)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(
+                _run_timing_for_detector, label, detector_type, python_exe, era
+            ): label
+            for label, detector_type, python_exe, era in detectors
+        }
+        for future in concurrent.futures.as_completed(futures):
+            label, results, elapsed, file_times, import_time = future.result()
+            stats[label]["time"] = elapsed
+            stats[label]["file_times"] = file_times
+            import_times[label] = import_time
+            for expected, exp_lang, path_str, detected, det_lang in results:
+                _record_result(
+                    stats[label],
+                    expected,
+                    exp_lang,
+                    Path(path_str),
+                    detected,
+                    det_lang,
+                )
 
     total = stats[detectors[0][0]]["total"]
 
-    # --- Subprocess-isolated memory measurement ---
+    # --- Sequential memory benchmarks (with caching) ---
     print("Measuring memory (isolated subprocesses)...")
     memory: dict[str, dict] = {}
     for label, detector_type, python_exe, era in detectors:
+        version = detector_versions.get(label, "unknown")
+        py_tag = python_tags.get(label, "unknown")
+        b_tag = build_tags.get(label, "unknown")
+
+        # Check cache
+        if cache_dir is not None:
+            fname = _cache_filename(
+                label, version, benchmark_hash, py_tag, b_tag, "memory"
+            )
+            cached = _load_cached(cache_dir, fname)
+            if cached is not None:
+                print(f"  Using cached memory results for {label}")
+                memory[label] = cached
+                continue
+
         print(f"  Measuring memory for {label} ...")
         memory[label] = _measure_memory_subprocess(
             detector_type,
@@ -364,6 +690,13 @@ def run_comparison(
             encoding_era=era,
             pure=pure and detector_type == "chardet",
         )
+
+        # Save to cache
+        if cache_dir is not None:
+            fname = _cache_filename(
+                label, version, benchmark_hash, py_tag, b_tag, "memory"
+            )
+            _save_cache(cache_dir, fname, memory[label])
 
     # ===================================================================
     # Report
@@ -383,13 +716,13 @@ def run_comparison(
             f"  {label + ':':<{max_label + 1}} "
             f"{s['correct']:>4}/{total} = {enc_acc:.1%} encoding  "
             f"{s['lang_correct']:>4}/{s['lang_total']} = {lang_acc:.1%} language  "
-            f"({s['time']:.2f}s)"
+            f"(detection: {s['time']:.2f}s)"
         )
 
     # -- Detection runtime distribution --
     print()
     print("=" * 100)
-    print("DETECTION RUNTIME DISTRIBUTION (per-file, milliseconds)")
+    print("DETECTION RUNTIME DISTRIBUTION (per-file, detection-only, milliseconds)")
     print("=" * 100)
     print(
         f"  {'':>{max_label}}  {'total':>10}  {'mean':>10}  "
@@ -625,8 +958,7 @@ def run_comparison(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Compare chardet-rewrite vs charset-normalizer "
-        "(and optionally old chardet versions) on the chardet test suite.",
+        description="Compare chardet vs other detectors on the chardet test suite.",
     )
     parser.add_argument(
         "-c",
@@ -634,7 +966,7 @@ if __name__ == "__main__":
         action="append",
         default=[],
         metavar="X.Y.Z",
-        help="Old chardet version to include (repeatable, e.g. -c 6.0.0 -c 5.2.0)",
+        help="Chardet version to include (repeatable, e.g. -c 6.0.0 -c 5.2.0)",
     )
     parser.add_argument(
         "--cchardet",
@@ -643,19 +975,47 @@ if __name__ == "__main__":
         help="Include cchardet (faust-cchardet) in the comparison",
     )
     parser.add_argument(
-        "--cn-variants",
+        "--cn",
+        "--charset-normalizer",
         action="store_true",
         default=False,
-        help="Include charset-normalizer pure-Python subprocess variant",
+        dest="charset_normalizer",
+        help="Include charset-normalizer in the comparison",
+    )
+    parser.add_argument(
+        "--python",
+        default=None,
+        metavar="VERSION",
+        help="Python version to pass to 'uv venv --python' (e.g. 3.11, pypy3.10)",
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        default=False,
+        help="Force re-run, ignoring cached results",
     )
     parser.add_argument(
         "--pure",
         action="store_true",
         default=False,
-        help="Ensure chardet-rewrite venv is pure Python (strips HATCH_BUILD_HOOK_ENABLE_MYPYC, "
-        "propagates --pure to subprocesses to abort if .so/.pyd files are found)",
+        help=(
+            "Ensure detectors are pure Python (strips HATCH_BUILD_HOOK_ENABLE_MYPYC, "
+            "propagates --pure to subprocesses to abort if .so/.pyd files are found)"
+        ),
+    )
+    parser.add_argument(
+        "--mypyc",
+        action="store_true",
+        default=False,
+        help=(
+            "Forces mypyc versions of chardet and charset-normalizer"
+            " (sets HATCH_BUILD_HOOK_ENABLE_MYPYC=true)"
+        ),
     )
     args = parser.parse_args()
+
+    if args.pure and args.mypyc:
+        parser.error("--pure and --mypyc are mutually exclusive")
 
     # Force line-buffered stdout so progress is visible when piped (e.g. tee).
     sys.stdout.reconfigure(line_buffering=True)
@@ -666,88 +1026,129 @@ if __name__ == "__main__":
         sys.exit(1)
 
     project_root = str(Path(__file__).resolve().parent.parent)
+    benchmark_hash = _compute_benchmark_hash()
+    use_cache = not args.no_cache
 
-    # When --pure, strip the mypyc build hook env var so the chardet-rewrite
-    # venv is guaranteed to be pure Python even if the caller has it set.
+    # --pure: strip the mypyc build hook env var so the chardet venv is
+    # guaranteed to be pure Python even if the caller has it set.
+    # --mypyc: force HATCH_BUILD_HOOK_ENABLE_MYPYC=true so mypyc extensions
+    # are compiled even if the caller hasn't set the env var.
     install_env: dict[str, str] | None = None
     if args.pure:
         install_env = {
             k: v for k, v in os.environ.items() if k != "HATCH_BUILD_HOOK_ENABLE_MYPYC"
         }
+    elif args.mypyc:
+        install_env = {**os.environ, "HATCH_BUILD_HOOK_ENABLE_MYPYC": "true"}
 
-    # Create temporary venvs for ALL detectors (including chardet-rewrite)
-    # so every detector runs in an isolated subprocess under identical conditions.
+    # Build venv specs: (label, pip_args, env, detector_type, python_version)
+    VenvSpec = tuple[str, list[str], dict[str, str] | None, str, str | None]
+    venv_specs: list[VenvSpec] = [
+        ("chardet", [project_root], install_env, "chardet", args.python),
+    ]
+
+    venv_specs.extend(
+        (f"chardet {version}", [f"chardet=={version}"], None, "chardet", args.python)
+        for version in args.chardet_version
+    )
+
+    if args.charset_normalizer:
+        # --pure: force pure-Python build via --no-binary
+        cn_pip_args = ["charset-normalizer"]
+        if args.pure:
+            cn_pip_args.extend(["--no-binary", "charset-normalizer"])
+        venv_specs.append(
+            (
+                "charset-normalizer",
+                cn_pip_args,
+                None,
+                "charset-normalizer",
+                args.python,
+            )
+        )
+
+    if args.cchardet:
+        venv_specs.append(
+            ("cchardet", ["faust-cchardet"], None, "cchardet", args.python)
+        )
+
+    # Create all venvs in parallel (I/O-bound subprocess waits)
     # label -> (venv_dir, python_path)
     venvs: dict[str, tuple[Path, Path]] = {}
-    try:
-        print("Setting up chardet-rewrite venv ...")
+    # label -> detector_type
+    detector_type_map: dict[str, str] = {}
+    print("Setting up venvs ...")
+
+    def _create_venv_from_spec(
+        spec: VenvSpec,
+    ) -> tuple[str, Path, Path]:
+        label, pip_args, env, _det_type, python_version = spec
         venv_dir, python_path = _create_detector_venv(
-            "chardet-rewrite", [project_root], env=install_env
+            label, pip_args, python_version=python_version, env=env
         )
-        venvs["chardet-rewrite"] = (venv_dir, python_path)
+        return label, venv_dir, python_path
 
-        if args.chardet_version:
-            print("Setting up external chardet venvs ...")
-        for version in args.chardet_version:
-            venv_dir, python_path = _create_detector_venv(
-                f"chardet {version}", [f"chardet=={version}"]
+    try:
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = {
+                executor.submit(_create_venv_from_spec, spec): spec
+                for spec in venv_specs
+            }
+            for future in concurrent.futures.as_completed(futures):
+                spec = futures[future]
+                label = spec[0]
+                det_type = spec[3]
+                try:
+                    label, venv_dir, python_path = future.result()
+                    venvs[label] = (venv_dir, python_path)
+                    detector_type_map[label] = det_type
+                except subprocess.CalledProcessError as exc:
+                    print(f"  WARNING: failed to create venv for {label}: {exc}")
+
+        # Query versions, python tags, and build tags sequentially from each venv
+        detector_versions: dict[str, str] = {}
+        python_tags: dict[str, str] = {}
+        build_tags: dict[str, str] = {}
+        for label, (_, python_path) in venvs.items():
+            det_type = detector_type_map[label]
+            py_exe = str(python_path)
+            detector_versions[label] = _get_detector_version(py_exe, det_type)
+            python_tags[label] = _get_python_tag(py_exe)
+            build_tags[label] = _get_build_tag(py_exe, det_type)
+            print(
+                f"  {label}: version={detector_versions[label]}, "
+                f"python={python_tags[label]}, build={build_tags[label]}"
             )
-            venvs[f"chardet {version}"] = (venv_dir, python_path)
-
-        # extra_detectors: list of (label, detector_type, venv_python)
-        extra_detectors: list[tuple[str, str, Path]] = []
-
-        # Always create an isolated charset-normalizer (mypyc) venv
-        print("Setting up charset-normalizer venv ...")
-        cn_label = "charset-normalizer"
-        try:
-            venv_dir, python_path = _create_detector_venv(
-                cn_label, ["charset-normalizer"]
-            )
-            venvs[cn_label] = (venv_dir, python_path)
-        except subprocess.CalledProcessError as exc:
-            print(f"  WARNING: failed to create venv for {cn_label}: {exc}")
-
-        if args.cn_variants:
-            print("Setting up charset-normalizer pure-Python venv ...")
-            label = "charset-normalizer (pure)"
-            try:
-                venv_dir, python_path = _create_detector_venv(
-                    label,
-                    ["charset-normalizer", "--no-binary", "charset-normalizer"],
-                )
-                venvs[label] = (venv_dir, python_path)
-                extra_detectors.append((label, "charset-normalizer", python_path))
-            except subprocess.CalledProcessError as exc:
-                print(f"  WARNING: failed to create venv for {label}: {exc}")
-
-        if args.cchardet:
-            print("Setting up cchardet venv ...")
-            label = "cchardet"
-            try:
-                venv_dir, python_path = _create_detector_venv(label, ["faust-cchardet"])
-                venvs[label] = (venv_dir, python_path)
-                extra_detectors.append((label, "cchardet", python_path))
-            except subprocess.CalledProcessError as exc:
-                print(f"  WARNING: failed to create venv for {label}: {exc}")
 
         # Build unified detector list: (label, detector_type, python_exe, encoding_era)
-        detectors: list[tuple[str, str, str, str]] = [
-            ("chardet-rewrite", "chardet", str(venvs["chardet-rewrite"][1]), "all"),
-        ]
-        if cn_label in venvs:
-            detectors.append(
-                (cn_label, "charset-normalizer", str(venvs[cn_label][1]), "none")
-            )
-        for version in args.chardet_version:
-            label = f"chardet {version}"
-            if label in venvs:
-                era = "all" if int(version.split(".")[0]) >= 6 else "none"
-                detectors.append((label, "chardet", str(venvs[label][1]), era))
-        for label, det_type, python_path in extra_detectors:
-            detectors.append((label, det_type, str(python_path), "none"))
+        # Maintain the order from venv_specs
+        detectors: list[tuple[str, str, str, str]] = []
+        for spec in venv_specs:
+            label = spec[0]
+            det_type = spec[3]
+            if label not in venvs:
+                continue
+            python_exe = str(venvs[label][1])
+            if det_type == "chardet":
+                version = detector_versions.get(label, "unknown")
+                try:
+                    era = "all" if int(version.split(".")[0]) >= 6 else "none"
+                except ValueError:
+                    era = "all"
+            else:
+                era = "none"
+            detectors.append((label, det_type, python_exe, era))
 
-        run_comparison(data_dir, detectors, pure=args.pure)
+        run_comparison(
+            data_dir,
+            detectors,
+            pure=args.pure,
+            detector_versions=detector_versions,
+            python_tags=python_tags,
+            build_tags=build_tags,
+            use_cache=use_cache,
+            benchmark_hash=benchmark_hash,
+        )
     finally:
         for label, (venv_dir, _) in venvs.items():
             print(f"  Cleaning up venv for {label} ...")

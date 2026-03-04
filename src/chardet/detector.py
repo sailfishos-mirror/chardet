@@ -35,7 +35,9 @@ class UniversalDetector:
     MINIMUM_THRESHOLD = _utils.MINIMUM_THRESHOLD
     # Exposed for backward compatibility with chardet 6.x callers that
     # reference UniversalDetector.LEGACY_MAP directly.
-    LEGACY_MAP: ClassVar[MappingProxyType[str, str]] = MappingProxyType(PREFERRED_SUPERSET)
+    LEGACY_MAP: ClassVar[MappingProxyType[str, str]] = MappingProxyType(
+        PREFERRED_SUPERSET
+    )
 
     def __init__(
         self,
