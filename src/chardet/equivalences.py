@@ -125,10 +125,18 @@ BIDIRECTIONAL_GROUPS: tuple[tuple[str, ...], ...] = (
 # is considered acceptable.
 LANGUAGE_EQUIVALENCES: tuple[tuple[str, ...], ...] = (
     ("sk", "cs"),  # Slovak / Czech — ~85% mutual intelligibility
-    ("uk", "ru"),  # Ukrainian / Russian — shared Cyrillic, overlapping vocabulary
+    (
+        "uk",
+        "ru",
+        "bg",
+        "be",
+    ),  # East Slavic + Bulgarian — shared Cyrillic, high written overlap
     ("ms", "id"),  # Malay / Indonesian — standardized variants of one language
-    ("no", "da"),  # Norwegian / Danish — near-identical written forms
-    ("sl", "hr"),  # Slovene / Croatian — closely related South Slavic
+    (
+        "no",
+        "da",
+        "sv",
+    ),  # Scandinavian — mutual intelligibility across the dialect continuum
 )
 
 
