@@ -1237,7 +1237,6 @@ if __name__ == "__main__":
 
     # --- Check cache: partition specs into cached vs needs-venv ---
     cache_dir = _get_cache_dir() if use_cache else None
-    cached_specs: list[VenvSpec] = []
     uncached_specs: list[VenvSpec] = []
 
     for spec in venv_specs:
@@ -1252,7 +1251,6 @@ if __name__ == "__main__":
             build_tags[label],
         ):
             print(f"  {label}: full cache hit, skipping venv creation")
-            cached_specs.append(spec)
         else:
             uncached_specs.append(spec)
 
@@ -1293,9 +1291,15 @@ if __name__ == "__main__":
             for label, (_, python_path) in venvs.items():
                 det_type = detector_type_map[label]
                 py_exe = str(python_path)
+                old_version = detector_versions[label]
                 detector_versions[label] = _get_detector_version(py_exe, det_type)
                 python_tags[label] = _get_python_tag(py_exe)
                 build_tags[label] = _get_build_tag(py_exe, det_type)
+                if old_version != detector_versions[label]:
+                    print(
+                        f"  NOTE: {label} pre-resolved version {old_version} "
+                        f"differs from venv version {detector_versions[label]}"
+                    )
                 print(
                     f"  {label}: version={detector_versions[label]}, "
                     f"python={python_tags[label]}, build={build_tags[label]}"
