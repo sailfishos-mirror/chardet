@@ -12,17 +12,17 @@ Python 3.10+, zero runtime dependencies, works on PyPy.
 
 ## Why chardet 7.0?
 
-**96.8% accuracy** on 2,179 test files. **41x faster** than chardet 6.0.0
-and **7.5x faster** than
+**98.1% accuracy** on 2,510 test files. **43x faster** than chardet 6.0.0
+and **6.8x faster** than
 charset-normalizer. **Language
 detection** for every result. **MIT licensed.**
 
 |                        | chardet 7.0 (mypyc) | chardet 7.0 (pure) | chardet 6.0.0 | [charset-normalizer] |
 | ---------------------- | :-----------------: | :----------------: | :-----------: | :------------------: |
-| Accuracy (2,179 files) |      **96.8%**      |     **96.8%**      |     94.5%     |        89.1%         |
-| Speed                  |   **494 files/s**   |  **336 files/s**   |  12 files/s   |      66 files/s      |
-| Language detection     |      **90.5%**      |     **90.5%**      |     47.0%     |          --          |
-| Peak memory            |    **22.5 MiB**     |    **22.5 MiB**    |   16.4 MiB    |      102.2 MiB       |
+| Accuracy (2,510 files) |      **98.1%**      |     **98.1%**      |     88.2%     |        78.5%         |
+| Speed                  |   **546 files/s**   |  **383 files/s**   |  13 files/s   |      80 files/s      |
+| Language detection     |      **95.1%**      |     **95.1%**      |       --      |          --          |
+| Peak memory            |    **26.2 MiB**     |    **26.3 MiB**    |   29.5 MiB    |      101.2 MiB       |
 | Streaming detection    |       **yes**       |      **yes**       |      yes      |          no          |
 | Encoding era filtering |       **yes**       |      **yes**       |      no       |          no          |
 | Supported encodings    |         99          |         99         |      84       |          99          |
@@ -123,12 +123,12 @@ cat somefile.txt | chardetect
 
 - **MIT license** (previous versions were LGPL)
 - **Ground-up rewrite** — 12-stage detection pipeline using BOM detection, structural probing, byte validity filtering, and bigram statistical models
-- **41x faster** than chardet 6.0.0 with mypyc (**28x** pure Python), **7.5x faster** than charset-normalizer
-- **96.8% accuracy** — +2.3pp vs chardet 6.0.0, +7.7pp vs charset-normalizer
-- **Language detection** — 90.5% accuracy across 49 languages, returned with every result
+- **43x faster** than chardet 6.0.0 with mypyc (**30x** pure Python), **6.8x faster** than charset-normalizer
+- **98.1% accuracy** — +9.9pp vs chardet 6.0.0, +19.6pp vs charset-normalizer
+- **Language detection** — 95.1% accuracy across 49 languages, returned with every result
 - **99 encodings** — full coverage including EBCDIC, Mac, DOS, and Baltic/Central European families
 - **`EncodingEra` filtering** — scope detection to modern web encodings, legacy ISO/Mac/DOS, mainframe, or all
-- **Optional mypyc compilation** — 1.49x additional speedup on CPython
+- **Optional mypyc compilation** — 1.42x additional speedup on CPython
 - **Thread-safe** — `detect()` and `detect_all()` are safe to call concurrently; scales on free-threaded Python
 - **Same API** — `detect()`, `detect_all()`, `UniversalDetector`, and the `chardetect` CLI all work as before
 

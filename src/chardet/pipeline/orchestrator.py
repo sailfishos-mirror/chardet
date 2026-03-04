@@ -408,7 +408,7 @@ def _to_utf8(data: bytes, encoding: str) -> bytes | None:
         return data.decode(encoding, errors="ignore").encode(
             "utf-8", errors="surrogatepass"
         )
-    except LookupError:
+    except (LookupError, TypeError):
         return None
 
 
