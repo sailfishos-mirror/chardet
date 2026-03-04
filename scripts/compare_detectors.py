@@ -78,7 +78,11 @@ def _cache_filename(  # noqa: PLR0913
     build_tag: str,
     kind: str,
 ) -> str:
-    """Build a cache filename like ``chardet_7.0.1_a1b2c3_cpython3.11_mypyc_time.json``."""
+    """Build a cache filename like ``chardet_7.0.1_a1b2c3_cpython3.11_mypyc_time.json``.
+
+    *detector_name* should be the package name (e.g. ``"chardet"``,
+    ``"charset-normalizer"``), **not** the display label.
+    """
     safe_name = detector_name.replace(" ", "-").replace("/", "-")
     return f"{safe_name}_{detector_version}_{benchmark_hash}_{python_tag}_{build_tag}_{kind}.json"
 
@@ -587,7 +591,7 @@ def run_comparison(  # noqa: PLR0913
         # Check cache
         if cache_dir is not None:
             fname = _cache_filename(
-                label, version, benchmark_hash, py_tag, b_tag, "time"
+                detector_type, version, benchmark_hash, py_tag, b_tag, "time"
             )
             cached = _load_cached(cache_dir, fname)
             if cached is not None:
@@ -623,7 +627,7 @@ def run_comparison(  # noqa: PLR0913
         # Save to cache
         if cache_dir is not None:
             fname = _cache_filename(
-                label, version, benchmark_hash, py_tag, b_tag, "time"
+                detector_type, version, benchmark_hash, py_tag, b_tag, "time"
             )
             _save_cache(
                 cache_dir,
@@ -674,7 +678,7 @@ def run_comparison(  # noqa: PLR0913
         # Check cache
         if cache_dir is not None:
             fname = _cache_filename(
-                label, version, benchmark_hash, py_tag, b_tag, "memory"
+                detector_type, version, benchmark_hash, py_tag, b_tag, "memory"
             )
             cached = _load_cached(cache_dir, fname)
             if cached is not None:
@@ -694,7 +698,7 @@ def run_comparison(  # noqa: PLR0913
         # Save to cache
         if cache_dir is not None:
             fname = _cache_filename(
-                label, version, benchmark_hash, py_tag, b_tag, "memory"
+                detector_type, version, benchmark_hash, py_tag, b_tag, "memory"
             )
             _save_cache(cache_dir, fname, memory[label])
 
@@ -1120,12 +1124,31 @@ if __name__ == "__main__":
                 f"python={python_tags[label]}, build={build_tags[label]}"
             )
 
+        # Rebuild labels to include package name, version, and build tag
+        label_remap: dict[str, str] = {}
+        for old_label in list(venvs.keys()):
+            det_type = detector_type_map[old_label]
+            version = detector_versions[old_label]
+            b_tag = build_tags[old_label]
+            label_remap[old_label] = f"{det_type} {version} ({b_tag})"
+
+        venvs = {label_remap.get(k, k): v for k, v in venvs.items()}
+        detector_type_map = {
+            label_remap.get(k, k): v for k, v in detector_type_map.items()
+        }
+        detector_versions = {
+            label_remap.get(k, k): v for k, v in detector_versions.items()
+        }
+        python_tags = {label_remap.get(k, k): v for k, v in python_tags.items()}
+        build_tags = {label_remap.get(k, k): v for k, v in build_tags.items()}
+
         # Build unified detector list: (label, detector_type, python_exe, encoding_era)
         # Maintain the order from venv_specs
         detectors: list[tuple[str, str, str, str]] = []
         for spec in venv_specs:
-            label = spec[0]
+            old_label = spec[0]
             det_type = spec[3]
+            label = label_remap.get(old_label, old_label)
             if label not in venvs:
                 continue
             python_exe = str(venvs[label][1])
