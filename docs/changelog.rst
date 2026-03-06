@@ -1,6 +1,23 @@
 Changelog
 =========
 
+7.0.1 (2026-03-04)
+-------------------
+
+**Fixes:**
+
+- Fixed false UTF-7 detection of SHA-1 git hashes (`#324
+  <https://github.com/chardet/chardet/issues/324>`_)
+- Fixed ``_SINGLE_LANG_MAP`` missing aliases for single-language encoding
+  lookup (e.g., ``big5`` → ``big5hkscs``)
+- Fixed PyPy ``TypeError`` in UTF-7 codec handling
+
+**Improvements:**
+
+- Retrained bigram models — 24 previously failing test cases now pass
+- Updated language equivalences for mutual intelligibility (Slovak/Czech,
+  East Slavic + Bulgarian, Malay/Indonesian, Scandinavian languages)
+
 7.0.0 (2026-03-02)
 -------------------
 
