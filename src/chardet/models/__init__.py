@@ -18,13 +18,11 @@ from chardet.registry import REGISTRY
 NON_ASCII_BIGRAM_WEIGHT: int = 8
 
 _MODEL_CACHE: dict[str, bytearray] | None = None
+_MODEL_NORMS: dict[str, float] | None = None
 _MODEL_CACHE_LOCK = threading.Lock()
 # Pre-grouped index: encoding name -> [(lang, model, model_key), ...]
 _ENC_INDEX: dict[str, list[tuple[str | None, bytearray, str]]] | None = None
 _ENC_INDEX_LOCK = threading.Lock()
-# Cached L2 norms for all models, keyed by model key string (e.g. "French/windows-1252")
-_MODEL_NORMS: dict[str, float] | None = None
-_MODEL_NORMS_LOCK = threading.Lock()
 # Encodings that map to exactly one language, derived from the registry.
 # Includes aliases so that e.g. "big5" resolves the same as "big5hkscs".
 _SINGLE_LANG_MAP: dict[str, str] = {}
@@ -41,9 +39,12 @@ def load_models() -> dict[str, bytearray]:
     Each model is a bytearray of length 65536 (256*256).
     Index: (b1 << 8) | b2 -> weight (0-255).
 
+    Also computes and caches L2 norms for each model as a side-product of
+    loading, since we already iterate over the sparse non-zero entries.
+
     :returns: A dict mapping model key strings to 65536-byte lookup tables.
     """
-    global _MODEL_CACHE  # noqa: PLW0603
+    global _MODEL_CACHE, _MODEL_NORMS  # noqa: PLW0603
     if _MODEL_CACHE is not None:
         return _MODEL_CACHE
 
@@ -52,6 +53,7 @@ def load_models() -> dict[str, bytearray]:
         # outer check, so a re-read here would hit a TypeError under mypyc.
         # Worst case two threads both build on first call (idempotent).
         models: dict[str, bytearray] = {}
+        norms: dict[str, float] = {}
         ref = importlib.resources.files("chardet.models").joinpath("models.bin")
         data = ref.read_bytes()
 
@@ -62,9 +64,11 @@ def load_models() -> dict[str, bytearray]:
                 RuntimeWarning,
                 stacklevel=2,
             )
+            _MODEL_NORMS = norms
             _MODEL_CACHE = models
             return models
 
+        _sqrt = math.sqrt
         try:
             offset = 0
             (num_encodings,) = struct.unpack_from("!I", data, offset)
@@ -89,15 +93,19 @@ def load_models() -> dict[str, bytearray]:
                     raise ValueError(msg)
 
                 table = bytearray(65536)
+                sq_sum = 0
                 for _ in range(num_entries):
                     b1, b2, weight = struct.unpack_from("!BBB", data, offset)
                     offset += 3
                     table[(b1 << 8) | b2] = weight
+                    sq_sum += weight * weight
                 models[name] = table
+                norms[name] = _sqrt(sq_sum)
         except (struct.error, UnicodeDecodeError) as e:
             msg = f"corrupt models.bin: {e}"
             raise ValueError(msg) from e
 
+        _MODEL_NORMS = norms
         _MODEL_CACHE = models
         return models
 
@@ -151,23 +159,11 @@ def has_model_variants(encoding: str) -> bool:
 
 def _get_model_norms() -> dict[str, float]:
     """Return cached L2 norms for all models, keyed by model key string."""
-    global _MODEL_NORMS  # noqa: PLW0603
-    if _MODEL_NORMS is not None:
-        return _MODEL_NORMS
-    with _MODEL_NORMS_LOCK:
-        # No re-check: mypyc type-narrows _MODEL_NORMS to None after the
-        # outer check, so a re-read here would hit a TypeError under mypyc.
-        models = load_models()
-        norms: dict[str, float] = {}
-        for key, model in models.items():
-            sq_sum = 0
-            for i in range(65536):
-                v = model[i]
-                if v:
-                    sq_sum += v * v
-            norms[key] = math.sqrt(sq_sum)
-        _MODEL_NORMS = norms
-        return norms
+    # Norms are computed as a side-product of load_models(), so just ensure
+    # models are loaded and return the cached norms.
+    load_models()
+    # _MODEL_NORMS is guaranteed non-None after load_models() returns.
+    return _MODEL_NORMS  # type: ignore[return-value]
 
 
 class BigramProfile:

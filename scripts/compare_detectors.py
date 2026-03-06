@@ -862,11 +862,11 @@ def run_comparison(  # noqa: PLR0913
     print("=" * 100)
     print(
         f"  {'':>{max_label}}  {'total':>10}  {'mean':>10}  "
-        f"{'median':>10}  {'p90':>10}  {'p95':>10}"
+        f"{'median':>10}  {'p90':>10}  {'p95':>10}  {'max':>10}"
     )
     print(
         f"  {'-' * max_label}  {'-' * 10}  {'-' * 10}  "
-        f"{'-' * 10}  {'-' * 10}  {'-' * 10}"
+        f"{'-' * 10}  {'-' * 10}  {'-' * 10}  {'-' * 10}"
     )
     for label in detector_labels:
         ft = stats[label]["file_times"]
@@ -874,6 +874,7 @@ def run_comparison(  # noqa: PLR0913
             total_ms = sum(ft) * 1000
             mean_ms = statistics.mean(ft) * 1000
             median_ms = statistics.median(ft) * 1000
+            max_ms = max(ft) * 1000
             if len(ft) >= 20:
                 q = statistics.quantiles(ft, n=20)
                 p90_ms = q[17] * 1000  # 18/20 = 90th percentile
@@ -881,14 +882,15 @@ def run_comparison(  # noqa: PLR0913
             else:
                 p90_ms = p95_ms = 0.0
         else:
-            total_ms = mean_ms = median_ms = p90_ms = p95_ms = 0.0
+            total_ms = mean_ms = median_ms = p90_ms = p95_ms = max_ms = 0.0
         print(
             f"  {label:<{max_label}} "
             f"{total_ms:>9.0f}ms "
             f"{mean_ms:>9.2f}ms "
             f"{median_ms:>9.2f}ms "
             f"{p90_ms:>9.2f}ms "
-            f"{p95_ms:>9.2f}ms"
+            f"{p95_ms:>9.2f}ms "
+            f"{max_ms:>9.2f}ms"
         )
 
     # -- Startup & memory --
