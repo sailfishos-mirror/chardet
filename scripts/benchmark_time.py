@@ -124,6 +124,13 @@ def main() -> None:
             best = r.best()
             return (best.encoding if best else None), None
 
+    # Warm-up: first detect() call triggers lazy initialization (model loading,
+    # norm computation, etc.).  Time it separately so compare_detectors.py can
+    # report it as "1st detect".
+    t_warmup = time.perf_counter()
+    detect(b"Hello, world!")
+    first_detect_time = time.perf_counter() - t_warmup
+
     # Run detection over all files, collect per-file times + results
     file_times: list[float] = []
     t_total_start = time.perf_counter()
@@ -150,7 +157,15 @@ def main() -> None:
 
     if args.json_only:
         # Summary line (last)
-        print(json.dumps({"__timing__": total_elapsed, "import_time": import_time}))
+        print(
+            json.dumps(
+                {
+                    "__timing__": total_elapsed,
+                    "import_time": import_time,
+                    "first_detect_time": first_detect_time,
+                }
+            )
+        )
     else:
         # Human-readable summary
         total_ms = sum(file_times) * 1000
@@ -170,6 +185,7 @@ def main() -> None:
         print()
         print("Timing:")
         print(f"  Import:       {import_time:.3f}s")
+        print(f"  1st detect:   {first_detect_time:.3f}s")
         print(f"  Detection:    {total_ms:.0f}ms total")
         print(
             f"  Per-file:     mean={mean_ms:.2f}ms  median={median_ms:.2f}ms"
