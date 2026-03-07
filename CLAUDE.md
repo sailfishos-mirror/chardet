@@ -10,6 +10,8 @@ MIT-licensed, ground-up rewrite of chardet (the Python character encoding detect
 
 Version is derived from git tags via `hatch-vcs`. The tag is the single source of truth — no hardcoded version strings. At tag `v7.0.0` the version is `7.0.0`; between tags it's auto-incremented (e.g., `7.0.1.dev3+g...`). The generated `src/chardet/_version.py` is gitignored and should never be committed.
 
+When releasing `vX.Y.Z`, also tag the `chardet/test-data` repo with `vX.Y.Z` at its current `main` HEAD. The accuracy test suite clones test-data at the matching version tag for release builds, falling back to `main` for dev builds. This ensures `test_accuracy.py` continues to pass for released versions even after test-data is updated.
+
 ## Commands
 
 ### Development Setup
