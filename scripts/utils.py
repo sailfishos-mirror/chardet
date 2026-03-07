@@ -8,45 +8,64 @@ import sys
 import tempfile
 from pathlib import Path
 
+import chardet
+
 _TEST_DATA_REPO = "https://github.com/chardet/test-data.git"
-_COMMIT_HASH_FILE = ".commit-hash"
+_REF_FILE = ".test-data-ref"
 
 
-def _cache_is_stale(local_data: Path) -> bool:
-    """Return True if the cached test data is outdated."""
-    hash_file = local_data / _COMMIT_HASH_FILE
-    if not hash_file.is_file():
-        return False
-    local_hash = hash_file.read_text().strip()
-    try:
-        result = subprocess.run(
-            ["git", "ls-remote", _TEST_DATA_REPO, "HEAD"],
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=10,
-        )
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
-        return False
-    remote_hash = result.stdout.split()[0] if result.stdout.strip() else ""
-    return local_hash != remote_hash
+def _get_test_data_ref() -> str | None:
+    """Derive the test-data git ref from the installed chardet version.
+
+    Returns a tag like ``"v7.0.1"`` for release versions, or ``None`` for
+    dev builds (which will clone the default branch instead).
+    """
+    version = chardet.__version__
+    if ".dev" in version:
+        return None
+    return f"v{version}"
 
 
-def _clone_test_data(local_data: Path) -> None:
-    """Shallow-clone the test-data repo into *local_data* and record the commit hash."""
+def _clone_test_data(local_data: Path, *, ref: str | None) -> None:
+    """Shallow-clone the test-data repo into *local_data*.
+
+    If *ref* is not ``None``, clone the specific tag/branch. Falls back to
+    the default branch if the ref does not exist.
+    """
     with tempfile.TemporaryDirectory() as tmp:
-        subprocess.run(
-            ["git", "clone", "--depth=1", _TEST_DATA_REPO, tmp],
-            check=True,
-            capture_output=True,
-        )
-        head = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=tmp,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
+        if ref is not None:
+            try:
+                subprocess.run(
+                    [
+                        "git",
+                        "clone",
+                        f"--branch={ref}",
+                        "--depth=1",
+                        _TEST_DATA_REPO,
+                        tmp,
+                    ],
+                    check=True,
+                    capture_output=True,
+                )
+            except subprocess.CalledProcessError:
+                print(
+                    f"WARNING: test-data ref '{ref}' not found, "
+                    f"falling back to default branch",
+                    file=sys.stderr,
+                )
+                subprocess.run(
+                    ["git", "clone", "--depth=1", _TEST_DATA_REPO, tmp],
+                    check=True,
+                    capture_output=True,
+                )
+                ref = None
+        else:
+            subprocess.run(
+                ["git", "clone", "--depth=1", _TEST_DATA_REPO, tmp],
+                check=True,
+                capture_output=True,
+            )
+
         src = Path(tmp)
         local_data.mkdir(parents=True, exist_ok=True)
         for item in src.iterdir():
@@ -54,7 +73,8 @@ def _clone_test_data(local_data: Path) -> None:
                 continue
             dest = local_data / item.name
             shutil.copytree(item, dest, dirs_exist_ok=True)
-        (local_data / _COMMIT_HASH_FILE).write_text(head.stdout.strip() + "\n")
+        ref_label = ref if ref is not None else "main"
+        (local_data / _REF_FILE).write_text(ref_label + "\n")
 
 
 def get_data_dir() -> Path:
@@ -62,17 +82,26 @@ def get_data_dir() -> Path:
 
     If ``tests/data`` is a symlink (e.g. to a local ``chardet/test-data``
     checkout), it is used as-is — no staleness check or clone is performed.
+
+    Otherwise, the desired ref is derived from the installed chardet version.
+    If the cached data's ``.test-data-ref`` matches the desired ref, it is
+    reused; otherwise the cache is cleared and re-cloned.
     """
     repo_root = Path(__file__).parent.parent
     local_data = repo_root / "tests" / "data"
     if local_data.is_symlink():
         return local_data.resolve()
+
+    ref = _get_test_data_ref()
+    desired_label = ref if ref is not None else "main"
+
     if local_data.is_dir() and any(local_data.iterdir()):
-        if _cache_is_stale(local_data):
-            shutil.rmtree(local_data)
-            _clone_test_data(local_data)
-        return local_data
-    _clone_test_data(local_data)
+        ref_file = local_data / _REF_FILE
+        if ref_file.is_file() and ref_file.read_text().strip() == desired_label:
+            return local_data
+        shutil.rmtree(local_data)
+
+    _clone_test_data(local_data, ref=ref)
     return local_data
 
 
