@@ -111,22 +111,113 @@ Available eras (can be combined with ``|``):
 Legacy Renaming
 ---------------
 
-By default, chardet remaps legacy encoding names to their modern
-equivalents (e.g., ``"gb2312"`` becomes ``"gb18030"``). Set
-``should_rename_legacy=False`` to get the raw detection name:
+By default, chardet returns encoding names compatible with chardet 5.x/6.x
+(e.g., ``"utf-8"``, ``"ascii"``, ``"SHIFT_JIS"``).  Set
+``should_rename_legacy=True`` to get canonical display-cased names and remap
+legacy ISO encodings to their modern Windows superset equivalents:
 
 .. code-block:: python
 
-   # Default: legacy names are remapped
+   # Default: chardet 5.x compatible names
    chardet.detect(data)
-   # {'encoding': 'gb18030', ...}
+   # {'encoding': 'ascii', ...}
 
-   # Disable renaming to get the original detection name
-   chardet.detect(data, should_rename_legacy=False)
-   # {'encoding': 'gb2312', ...}
+   # Enable modern naming + superset remapping
+   chardet.detect(data, should_rename_legacy=True)
+   # {'encoding': 'Windows-1252', ...}
 
 This applies to :func:`~chardet.detect`, :func:`~chardet.detect_all`,
 and :class:`~chardet.UniversalDetector`.
+
+The following table shows every encoding whose name changes depending on
+the ``should_rename_legacy`` setting.  Encodings not listed here return the
+same name in both modes.
+
+.. list-table:: Encoding names by ``should_rename_legacy`` value
+   :header-rows: 1
+   :widths: 30 30 30
+
+   * - Detected encoding
+     - ``False`` (default)
+     - ``True``
+   * - ASCII
+     - ``ascii``
+     - ``Windows-1252``
+   * - Big5-HKSCS
+     - ``Big5``
+     - ``Big5-HKSCS``
+   * - CP855
+     - ``IBM855``
+     - ``CP855``
+   * - CP866
+     - ``IBM866``
+     - ``CP866``
+   * - EUC-JIS-2004
+     - ``EUC-JP``
+     - ``EUC-JIS-2004``
+   * - EUC-KR
+     - ``EUC-KR``
+     - ``CP949``
+   * - ISO-2022-JP-2
+     - ``ISO-2022-JP``
+     - ``ISO-2022-JP-2``
+   * - ISO-8859-1
+     - ``ISO-8859-1``
+     - ``Windows-1252``
+   * - ISO-8859-2
+     - ``ISO-8859-2``
+     - ``Windows-1250``
+   * - ISO-8859-5
+     - ``ISO-8859-5``
+     - ``Windows-1251``
+   * - ISO-8859-6
+     - ``ISO-8859-6``
+     - ``Windows-1256``
+   * - ISO-8859-7
+     - ``ISO-8859-7``
+     - ``Windows-1253``
+   * - ISO-8859-8
+     - ``ISO-8859-8``
+     - ``Windows-1255``
+   * - ISO-8859-9
+     - ``ISO-8859-9``
+     - ``Windows-1254``
+   * - ISO-8859-11
+     - ``ISO-8859-11``
+     - ``CP874``
+   * - ISO-8859-13
+     - ``ISO-8859-13``
+     - ``Windows-1257``
+   * - KZ-1048
+     - ``KZ1048``
+     - ``KZ-1048``
+   * - Mac-Cyrillic
+     - ``MacCyrillic``
+     - ``Mac-Cyrillic``
+   * - Mac-Greek
+     - ``MacGreek``
+     - ``Mac-Greek``
+   * - Mac-Iceland
+     - ``MacIceland``
+     - ``Mac-Iceland``
+   * - Mac-Latin2
+     - ``MacLatin2``
+     - ``Mac-Latin2``
+   * - Mac-Roman
+     - ``MacRoman``
+     - ``Mac-Roman``
+   * - Mac-Turkish
+     - ``MacTurkish``
+     - ``Mac-Turkish``
+   * - Shift-JIS-2004
+     - ``SHIFT_JIS``
+     - ``Shift-JIS-2004``
+   * - TIS-620
+     - ``TIS-620``
+     - ``CP874``
+   * - UTF-8
+     - ``utf-8``
+     - ``UTF-8``
 
 Limiting Bytes
 --------------

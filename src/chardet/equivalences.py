@@ -4,7 +4,7 @@ This module defines:
 
 1. **Directional supersets** for accuracy evaluation: detecting a superset
    encoding when the expected encoding is a subset is correct (e.g., detecting
-   utf-8 when expected is ascii), but not the reverse.
+   UTF-8 when expected is ASCII), but not the reverse.
 
 2. **Bidirectional equivalents**: groups of encodings where detecting any
    member when another member was expected is considered correct.  This
@@ -15,6 +15,11 @@ This module defines:
 3. **Preferred superset mapping** for the ``should_rename_legacy`` API option:
    replaces detected ISO/subset encoding names with their Windows/CP superset
    equivalents that modern software actually uses.
+
+4. **Legacy compatibility names** for the default ``should_rename_legacy=False``
+   mode: maps canonical display-cased names back to the names chardet 5.x
+   returned, preserving backward compatibility for callers that compare
+   encoding strings directly.
 """
 
 from __future__ import annotations
@@ -47,31 +52,35 @@ def normalize_encoding_name(name: str) -> str:
 # chardet test-suite expected values use these names, so the superset
 # mapping is needed for accuracy evaluation only.
 SUPERSETS: dict[str, frozenset[str]] = {
-    "ascii": frozenset({"utf-8", "windows-1252"}),
-    "tis-620": frozenset({"iso-8859-11", "cp874"}),
-    "iso-8859-11": frozenset({"cp874"}),
-    "gb2312": frozenset({"gb18030"}),
-    "gbk": frozenset({"gb18030"}),
-    "big5": frozenset({"big5hkscs", "cp950"}),
-    "shift_jis": frozenset({"cp932", "shift_jis_2004"}),
-    "shift-jisx0213": frozenset({"shift_jis_2004"}),
-    "euc-jp": frozenset({"euc-jis-2004"}),
-    "euc-jisx0213": frozenset({"euc-jis-2004"}),
-    "euc-kr": frozenset({"cp949"}),
-    "cp037": frozenset({"cp1140"}),
-    # ISO-2022-JP subsets: any branch variant is acceptable
-    "iso-2022-jp": frozenset({"iso2022-jp-2", "iso2022-jp-2004", "iso2022-jp-ext"}),
-    "iso2022-jp-1": frozenset({"iso2022-jp-2", "iso2022-jp-ext"}),
-    "iso2022-jp-3": frozenset({"iso2022-jp-2004"}),
+    "ASCII": frozenset({"UTF-8", "Windows-1252"}),
+    "TIS-620": frozenset({"ISO-8859-11", "CP874"}),
+    "ISO-8859-11": frozenset({"CP874"}),
+    "GB2312": frozenset({"GB18030"}),
+    "GBK": frozenset({"GB18030"}),
+    "Big5": frozenset({"Big5-HKSCS", "CP950"}),
+    "Shift_JIS": frozenset({"CP932", "Shift-JIS-2004"}),
+    "Shift-JISX0213": frozenset({"Shift-JIS-2004"}),
+    "EUC-JP": frozenset({"EUC-JIS-2004"}),
+    "EUC-JISX0213": frozenset({"EUC-JIS-2004"}),
+    "EUC-KR": frozenset({"CP949"}),
+    "CP037": frozenset({"CP1140"}),
+    # ISO-2022-JP subsets: any branch variant is acceptable.
+    # ISO2022-JP-1 and ISO2022-JP-3 use Python codec names (no hyphen between
+    # "ISO" and "2022") because they appear as expected values in the test suite,
+    # not as canonical chardet output.  They are consumed through
+    # _NORMALIZED_SUPERSETS which normalizes via codecs.lookup().
+    "ISO-2022-JP": frozenset({"ISO-2022-JP-2", "ISO-2022-JP-2004", "ISO-2022-JP-EXT"}),
+    "ISO2022-JP-1": frozenset({"ISO-2022-JP-2", "ISO-2022-JP-EXT"}),
+    "ISO2022-JP-3": frozenset({"ISO-2022-JP-2004"}),
     # ISO/Windows superset pairs
-    "iso-8859-1": frozenset({"windows-1252"}),
-    "iso-8859-2": frozenset({"windows-1250"}),
-    "iso-8859-5": frozenset({"windows-1251"}),
-    "iso-8859-6": frozenset({"windows-1256"}),
-    "iso-8859-7": frozenset({"windows-1253"}),
-    "iso-8859-8": frozenset({"windows-1255"}),
-    "iso-8859-9": frozenset({"windows-1254"}),
-    "iso-8859-13": frozenset({"windows-1257"}),
+    "ISO-8859-1": frozenset({"Windows-1252"}),
+    "ISO-8859-2": frozenset({"Windows-1250"}),
+    "ISO-8859-5": frozenset({"Windows-1251"}),
+    "ISO-8859-6": frozenset({"Windows-1256"}),
+    "ISO-8859-7": frozenset({"Windows-1253"}),
+    "ISO-8859-8": frozenset({"Windows-1255"}),
+    "ISO-8859-9": frozenset({"Windows-1254"}),
+    "ISO-8859-13": frozenset({"Windows-1257"}),
 }
 
 # Preferred superset name for each encoding, used by the ``should_rename_legacy``
@@ -80,18 +89,18 @@ SUPERSETS: dict[str, frozenset[str]] = {
 # etc. treat these ISO subsets as their Windows counterparts).
 # Values use display-cased names (e.g. "Windows-1252") to match chardet 6.x output.
 PREFERRED_SUPERSET: dict[str, str] = {
-    "ascii": "Windows-1252",
-    "euc-kr": "CP949",
-    "iso-8859-1": "Windows-1252",
-    "iso-8859-2": "Windows-1250",
-    "iso-8859-5": "Windows-1251",
-    "iso-8859-6": "Windows-1256",
-    "iso-8859-7": "Windows-1253",
-    "iso-8859-8": "Windows-1255",
-    "iso-8859-9": "Windows-1254",
-    "iso-8859-11": "CP874",
-    "iso-8859-13": "Windows-1257",
-    "tis-620": "CP874",
+    "ASCII": "Windows-1252",
+    "EUC-KR": "CP949",
+    "ISO-8859-1": "Windows-1252",
+    "ISO-8859-2": "Windows-1250",
+    "ISO-8859-5": "Windows-1251",
+    "ISO-8859-6": "Windows-1256",
+    "ISO-8859-7": "Windows-1253",
+    "ISO-8859-8": "Windows-1255",
+    "ISO-8859-9": "Windows-1254",
+    "ISO-8859-11": "CP874",
+    "ISO-8859-13": "Windows-1257",
+    "TIS-620": "CP874",
 }
 
 
@@ -108,15 +117,57 @@ def apply_legacy_rename(
     """
     enc = result.get("encoding")
     if isinstance(enc, str):
-        result["encoding"] = PREFERRED_SUPERSET.get(enc.lower(), enc)
+        result["encoding"] = PREFERRED_SUPERSET.get(enc, enc)
+    return result
+
+
+# Mapping from canonical display-cased names to the names chardet 5.x/6.x
+# returned.  Only entries that differ are listed; unlisted names pass through
+# unchanged (they are either new encodings with no legacy equivalent, or
+# already match the old name exactly).
+_LEGACY_NAMES: dict[str, str] = {
+    # 5.x compat — these encodings existed in chardet 5.x with different names
+    "ASCII": "ascii",
+    "Big5-HKSCS": "Big5",
+    "CP855": "IBM855",
+    "CP866": "IBM866",
+    "EUC-JIS-2004": "EUC-JP",
+    "ISO-2022-JP-2": "ISO-2022-JP",
+    "Mac-Cyrillic": "MacCyrillic",
+    "Mac-Roman": "MacRoman",
+    "Shift-JIS-2004": "SHIFT_JIS",
+    "UTF-8": "utf-8",
+    # 6.x compat — these encodings were new in 6.x with different names
+    "KZ-1048": "KZ1048",
+    "Mac-Greek": "MacGreek",
+    "Mac-Iceland": "MacIceland",
+    "Mac-Latin2": "MacLatin2",
+    "Mac-Turkish": "MacTurkish",
+}
+
+
+def apply_compat_names(
+    result: DetectionDict,
+) -> DetectionDict:
+    """Convert canonical encoding names to chardet 5.x/6.x compatible names.
+
+    Modifies the ``"encoding"`` value in *result* in-place and returns *result*
+    for fluent chaining.
+
+    :param result: A detection result dict containing an ``"encoding"`` key.
+    :returns: The same *result* dict, modified in-place.
+    """
+    enc = result.get("encoding")
+    if isinstance(enc, str):
+        result["encoding"] = _LEGACY_NAMES.get(enc, enc)
     return result
 
 
 # Bidirectional equivalents -- groups where any member is acceptable for any other.
 BIDIRECTIONAL_GROUPS: tuple[tuple[str, ...], ...] = (
-    ("utf-16", "utf-16-le", "utf-16-be"),
-    ("utf-32", "utf-32-le", "utf-32-be"),
-    ("iso2022-jp-2", "iso2022-jp-2004", "iso2022-jp-ext"),
+    ("UTF-16", "UTF-16-LE", "UTF-16-BE"),
+    ("UTF-32", "UTF-32-LE", "UTF-32-BE"),
+    ("ISO-2022-JP-2", "ISO-2022-JP-2004", "ISO-2022-JP-EXT"),
 )
 
 # Bidirectional language equivalences — groups of ISO 639-1 codes for

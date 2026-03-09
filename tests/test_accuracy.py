@@ -21,7 +21,7 @@ from chardet.equivalences import (
     is_equivalent_detection,
     is_language_equivalent,
 )
-from chardet.registry import REGISTRY
+from chardet.registry import REGISTRY, lookup_encoding
 
 # ---------------------------------------------------------------------------
 # Known accuracy failures — marked xfail so they don't block CI but are
@@ -125,12 +125,9 @@ def _encoding_era(name: str | None) -> EncodingEra:
     """Look up the encoding era for a test-data encoding name."""
     if name is None:
         return EncodingEra.ALL
-    if name in REGISTRY:
-        return REGISTRY[name].era
-    lower = name.lower()
-    for info in REGISTRY.values():
-        if lower in (a.lower() for a in info.aliases):
-            return info.era
+    canonical = lookup_encoding(name)
+    if canonical is not None:
+        return REGISTRY[canonical].era
     return EncodingEra.ALL
 
 
@@ -164,7 +161,11 @@ def test_detect(
 ) -> None:
     """Detect encoding of a single test file and verify correctness."""
     data = test_file_path.read_bytes()
-    result = chardet.detect(data, encoding_era=EncodingEra.ALL)
+    # Use should_rename_legacy=True so the accuracy test sees canonical names
+    # with ISO→Windows superset remapping, not chardet 5.x compat names.
+    result = chardet.detect(
+        data, encoding_era=EncodingEra.ALL, should_rename_legacy=True
+    )
     detected = result["encoding"]
 
     # Binary files: expect encoding=None
@@ -206,7 +207,7 @@ def test_detect_era_filtered(
     """Detect encoding using only the expected encoding's own era."""
     era = _encoding_era(expected_encoding)
     data = test_file_path.read_bytes()
-    result = chardet.detect(data, encoding_era=era)
+    result = chardet.detect(data, encoding_era=era, should_rename_legacy=True)
     detected = result["encoding"]
 
     # Binary files: expect encoding=None

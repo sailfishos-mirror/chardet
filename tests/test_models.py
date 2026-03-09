@@ -19,10 +19,10 @@ from chardet.models import (
 def test_enc_index_resolves_aliases() -> None:
     index = get_enc_index()
     # Models keyed by old names should be accessible under new primary names
-    assert "big5hkscs" in index
-    assert "euc-jis-2004" in index
-    assert "shift_jis_2004" in index
-    assert "cp1140" in index
+    assert "Big5-HKSCS" in index
+    assert "EUC-JIS-2004" in index
+    assert "Shift-JIS-2004" in index
+    assert "CP1140" in index
 
 
 def test_load_models_returns_dict() -> None:
@@ -44,7 +44,7 @@ def test_model_keys_are_strings() -> None:
 def test_score_best_language_returns_float() -> None:
     """score_best_language should work with plain encoding names (not lang/enc keys)."""
     load_models()
-    score, _ = score_best_language(b"Hello world this is a test", "windows-1252")
+    score, _ = score_best_language(b"Hello world this is a test", "Windows-1252")
     assert isinstance(score, float)
     assert 0.0 < score <= 1.0
 
@@ -329,3 +329,32 @@ def test_score_with_profile_all_zeros_model():
     model = bytearray(65536)  # all zeros
     score = score_with_profile(profile, model, model_key="")
     assert score == 0.0
+
+
+def test_enc_index_alias_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
+    """When a model key uses a non-canonical name, the canonical name is added.
+
+    The index should contain both the original key and the canonical name
+    pointing to the same entries.
+    """
+    import chardet.models as mod
+
+    # Reset the index cache so get_enc_index() rebuilds it
+    monkeypatch.setattr(mod, "_ENC_INDEX", None)
+
+    # Create a fake model dict with a non-canonical encoding name.
+    # "utf8" is a non-canonical alias for "UTF-8".
+    fake_model = bytearray(65536)
+    fake_model[(0xC3 << 8) | 0xA9] = 100
+    fake_models = {"French/utf8": fake_model}
+
+    monkeypatch.setattr(mod, "load_models", lambda: fake_models)
+
+    index = mod.get_enc_index()
+
+    # The non-canonical key "utf8" should be in the index
+    assert "utf8" in index
+    # The canonical name "UTF-8" should also be present via alias resolution
+    assert "UTF-8" in index
+    # Both should point to the same entries
+    assert index["UTF-8"] is index["utf8"]
