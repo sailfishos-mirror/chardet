@@ -1,6 +1,46 @@
 Changelog
 =========
 
+7.0.2 (2026-03-09)
+-------------------
+
+**Fixes:**
+
+- Fixed false UTF-7 detection of ASCII text containing ``++`` or ``+word``
+  patterns (`#332 <https://github.com/chardet/chardet/issues/332>`_)
+- Fixed 0.5s startup cost on first ``detect()`` call — model norms are now
+  computed during loading instead of lazily iterating 21M entries (`#333
+  <https://github.com/chardet/chardet/issues/333>`_)
+- Fixed undocumented encoding name changes between chardet 5.x and 7.0 —
+  ``detect()`` now returns chardet 5.x-compatible names by default (`#338
+  <https://github.com/chardet/chardet/issues/338>`_)
+- Fixed silent truncation of corrupt model data (``iter_unpack`` yielded
+  fewer tuples instead of raising)
+- Fixed incorrect date in LICENSE
+
+**Performance:**
+
+- 5.5x faster first-detect time (~0.42s → ~0.075s) by computing model
+  norms as a side-product of ``load_models()``
+- ~40% faster model parsing via ``struct.iter_unpack`` for bulk entry
+  extraction (eliminates ~305K individual ``unpack`` calls)
+
+**Improvements:**
+
+- Unified all internal encoding names to a single canonical display-cased
+  convention (e.g., ``"UTF-8"``, ``"Windows-1252"``, ``"ISO-8859-1"``).
+  The ``should_rename_legacy`` parameter controls output names: ``False``
+  (default) returns chardet 5.x-compatible names, ``True`` applies
+  canonical names with ISO→Windows superset remapping. See
+  :doc:`usage` for the full mapping table.
+- Added ``lookup_encoding()`` to ``registry`` for case-insensitive
+  resolution of arbitrary encoding name input to canonical names
+- Achieved 100% line coverage across all source modules (+31 tests)
+- Updated benchmark numbers: 98.2% encoding accuracy, 95.1% language
+  accuracy on 2,510 test files
+- Pinned test-data cloning to chardet release version tags for
+  reproducible builds
+
 7.0.1 (2026-03-04)
 -------------------
 
