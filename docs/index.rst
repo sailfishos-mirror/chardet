@@ -16,10 +16,10 @@ chardet 7.0 is a ground-up, MIT-licensed rewrite — same package name, same
 public API, drop-in replacement for chardet 5.x/6.x. Python 3.10+, zero
 runtime dependencies, works on PyPy.
 
-- **98.2% accuracy** on 2,510 test files
-- **46x faster** than chardet 6.0.0 with mypyc, **31x faster** pure Python
-- **4.3x faster** than charset-normalizer with mypyc, **5.5x faster** pure Python
-- **Language detection** for every result (95.1% accuracy)
+- **98.0% accuracy** on 2,510 test files
+- **42x faster** than chardet 6.0.0 with mypyc, **34x faster** pure Python
+- **4.2x faster** than charset-normalizer with mypyc, **5.8x faster** pure Python
+- **Language detection** for every result (95.2% accuracy)
 - **99 encodings** across six encoding eras
 - **Thread-safe** ``detect()`` and ``detect_all()``
 

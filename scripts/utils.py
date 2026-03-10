@@ -8,8 +8,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-import chardet
-
 _TEST_DATA_REPO = "https://github.com/chardet/test-data.git"
 _REF_FILE = ".test-data-ref"
 
@@ -20,6 +18,8 @@ def _get_test_data_ref() -> str | None:
     Returns a tag like ``"7.0.1"`` for release versions, or ``None`` for
     dev builds (which will clone the default branch instead).
     """
+    import chardet
+
     version = chardet.__version__
     if ".dev" in version:
         return None

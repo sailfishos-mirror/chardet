@@ -36,7 +36,7 @@ Changelog
 - Added ``lookup_encoding()`` to ``registry`` for case-insensitive
   resolution of arbitrary encoding name input to canonical names
 - Achieved 100% line coverage across all source modules (+31 tests)
-- Updated benchmark numbers: 98.2% encoding accuracy, 95.1% language
+- Updated benchmark numbers: 98.0% encoding accuracy, 95.2% language
   accuracy on 2,510 test files
 - Pinned test-data cloning to chardet release version tags for
   reproducible builds

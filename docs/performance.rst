@@ -18,28 +18,28 @@ Accuracy
      - Accuracy
      - Speed
    * - **chardet 7.0.2 (mypyc)**
-     - **2464/2510**
-     - **98.2%**
-     - **555 files/s**
+     - **2459/2510**
+     - **98.0%**
+     - **476 files/s**
    * - chardet 7.0.2 (pure)
-     - 2464/2510
-     - 98.2%
-     - 370 files/s
+     - 2459/2510
+     - 98.0%
+     - 384 files/s
    * - chardet 6.0.0
      - 2213/2510
      - 88.2%
-     - 12 files/s
+     - 11 files/s
    * - charset-normalizer
      - 2114/2510
      - 84.2%
-     - 130 files/s
+     - 113 files/s
    * - cchardet
      - 1405/2510
      - 56.0%
      - 1,803 files/s
 
-chardet leads all detectors on accuracy: **+10.0pp** vs chardet 6.0.0,
-**+14.0pp** vs charset-normalizer, and **+42.2pp** vs cchardet.
+chardet leads all detectors on accuracy: **+9.8pp** vs chardet 6.0.0,
+**+13.8pp** vs charset-normalizer, and **+42.0pp** vs cchardet.
 
 Speed
 -----
@@ -61,40 +61,40 @@ Speed
      - 0.64ms
      - 1.09ms
    * - **chardet 7.0.2 (mypyc)**
-     - **555**
-     - **1.80ms**
-     - **0.58ms**
-     - **4.14ms**
-     - **5.49ms**
+     - **476**
+     - **2.10ms**
+     - **0.62ms**
+     - **5.09ms**
+     - **6.71ms**
    * - chardet 7.0.2 (pure)
-     - 370
-     - 2.70ms
-     - 1.02ms
-     - 5.85ms
-     - 7.70ms
+     - 384
+     - 2.61ms
+     - 0.98ms
+     - 5.75ms
+     - 7.35ms
    * - charset-normalizer (mypyc)
-     - 130
-     - 7.70ms
-     - 2.64ms
-     - 22.52ms
-     - 38.75ms
+     - 113
+     - 8.86ms
+     - 3.04ms
+     - 25.32ms
+     - 44.25ms
    * - charset-normalizer (pure)
-     - 67
-     - 14.87ms
-     - 5.06ms
-     - 42.83ms
-     - 76.24ms
+     - 66
+     - 15.07ms
+     - 5.22ms
+     - 43.02ms
+     - 77.43ms
    * - chardet 6.0.0
-     - 12
-     - 82.29ms
-     - 2.29ms
-     - 182.19ms
-     - 381.65ms
+     - 11
+     - 87.95ms
+     - 2.30ms
+     - 194.84ms
+     - 398.06ms
 
-With mypyc compilation, chardet 7.0.2 is **46x faster** than chardet 6.0.0 and
-**4.3x faster** than charset-normalizer (mypyc). Even the pure-Python build is
-**31x faster** than chardet 6.0.0 and **5.5x faster** than charset-normalizer
-(pure). Median time per file is 0.58ms (mypyc) / 1.02ms (pure).
+With mypyc compilation, chardet 7.0.2 is **42x faster** than chardet 6.0.0 and
+**4.2x faster** than charset-normalizer (mypyc). Even the pure-Python build is
+**34x faster** than chardet 6.0.0 and **5.8x faster** than charset-normalizer
+(pure). Median time per file is 0.62ms (mypyc) / 0.98ms (pure).
 
 Memory
 ------
@@ -143,8 +143,8 @@ Language Detection
      - Correct
      - Accuracy
    * - **chardet 7.0.2**
-     - **2380/2502**
-     - **95.1%**
+     - **2383/2502**
+     - **95.2%**
    * - charset-normalizer
      - 1476/2502
      - 59.0%
@@ -155,8 +155,8 @@ Language Detection
      - 0/2502
      - 0.0%
 
-chardet detects language with **95.1% accuracy** — +36.1pp vs
-charset-normalizer and +55.1pp vs chardet 6.0.0. cchardet does not report
+chardet detects language with **95.2% accuracy** — +36.2pp vs
+charset-normalizer and +55.2pp vs chardet 6.0.0. cchardet does not report
 language.
 
 Thread Safety
@@ -205,11 +205,11 @@ needed.
      - Files/s
      - Speedup
    * - Pure Python
-     - 370
+     - 384
      - baseline
    * - mypyc compiled
-     - 555
-     - **1.50x**
+     - 476
+     - **1.24x**
 
 Pure-Python wheels are always available for PyPy and platforms without
 prebuilt binaries.
