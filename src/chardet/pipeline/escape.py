@@ -205,36 +205,52 @@ def detect_escape_encoding(data: bytes) -> DetectionResult | None:
     if not has_esc and not has_tilde and not has_plus:
         return None
 
-    # ISO-2022-JP family: check for base ESC sequences, then classify variant.
-    if has_esc and (b"\x1b$B" in data or b"\x1b$@" in data or b"\x1b(J" in data):
-        # JIS X 0213 designation -> modern Japanese branch
-        if b"\x1b$(O" in data or b"\x1b$(P" in data:
+    if has_esc:
+        # ISO-2022-JP-2004: JIS X 0213 designations are unique to this variant.
+        if b"\x1b$(O" in data or b"\x1b$(P" in data or b"\x1b$(Q" in data:
             return DetectionResult(
                 encoding="ISO-2022-JP-2004",
                 confidence=DETERMINISTIC_CONFIDENCE,
                 language="ja",
             )
-        # Half-width katakana SI/SO markers (0x0E / 0x0F)
-        if b"\x0e" in data and b"\x0f" in data:
+
+        # ISO-2022-JP-EXT: JIS X 0201 Kana designation is unique to this variant.
+        if b"\x1b(I" in data:
             return DetectionResult(
                 encoding="ISO-2022-JP-EXT",
                 confidence=DETERMINISTIC_CONFIDENCE,
                 language="ja",
             )
-        # Multinational designations or base codes -> broadest multinational
-        return DetectionResult(
-            encoding="ISO-2022-JP-2",
-            confidence=DETERMINISTIC_CONFIDENCE,
-            language="ja",
-        )
 
-    # ISO-2022-KR: ESC sequence for KS C 5601
-    if has_esc and b"\x1b$)C" in data:
-        return DetectionResult(
-            encoding="ISO-2022-KR",
-            confidence=DETERMINISTIC_CONFIDENCE,
-            language="ko",
-        )
+        # ISO-2022-JP base: JIS X 0208/0201/0212 designations.
+        if (
+            b"\x1b$B" in data
+            or b"\x1b$@" in data
+            or b"\x1b(J" in data
+            or b"\x1b$(D" in data  # JIS X 0212-1990 (JP-1/JP-2/JP-EXT)
+        ):
+            # SI/SO (0x0E / 0x0F) shift controls -> JP-EXT
+            if b"\x0e" in data and b"\x0f" in data:
+                return DetectionResult(
+                    encoding="ISO-2022-JP-EXT",
+                    confidence=DETERMINISTIC_CONFIDENCE,
+                    language="ja",
+                )
+            # Default to JP-2: a strict superset of JP and JP-1 that
+            # decodes all base sequences correctly.
+            return DetectionResult(
+                encoding="ISO-2022-JP-2",
+                confidence=DETERMINISTIC_CONFIDENCE,
+                language="ja",
+            )
+
+        # ISO-2022-KR: ESC sequence for KS C 5601
+        if b"\x1b$)C" in data:
+            return DetectionResult(
+                encoding="ISO-2022-KR",
+                confidence=DETERMINISTIC_CONFIDENCE,
+                language="ko",
+            )
 
     # HZ-GB-2312: tilde escapes for GB2312
     # Require valid GB2312 byte pairs (0x21-0x7E range) between ~{ and ~} markers.

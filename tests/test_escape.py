@@ -217,6 +217,14 @@ def test_iso2022_jp_2004_codes() -> None:
     assert result.encoding == "ISO-2022-JP-2004"
 
 
+def test_iso2022_jp_2004_esc_dollar_paren_q() -> None:
+    """ESC$(Q designates JIS X 0213:2000 plane 1 -> ISO-2022-JP-2004."""
+    data = b"\x1b$B$3$s\x1b(B\x1b$(Q\x21\x21\x1b(B"
+    result = detect_escape_encoding(data)
+    assert result is not None
+    assert result.encoding == "ISO-2022-JP-2004"
+
+
 def test_iso2022_jp_ext_codes() -> None:
     """Half-width katakana SI/SO should return iso2022-jp-ext."""
     # ESC $ B for JIS X 0208, then SI (0x0E) / SO (0x0F) for half-width katakana
@@ -224,6 +232,38 @@ def test_iso2022_jp_ext_codes() -> None:
     result = detect_escape_encoding(data)
     assert result is not None
     assert result.encoding == "ISO-2022-JP-EXT"
+
+
+def test_iso2022_jp_ext_esc_kana() -> None:
+    """ESC(I (JIS X 0201 Kana designation) should trigger JP-EXT even without SI/SO."""
+    data = b"\x1b$B$3$s\x1b(B\x1b(I\x31\x32\x1b(B"
+    result = detect_escape_encoding(data)
+    assert result is not None
+    assert result.encoding == "ISO-2022-JP-EXT"
+
+
+def test_iso2022_jp_ext_esc_kana_only() -> None:
+    """ESC(I alone (no base sequences, no SI/SO) should detect JP-EXT."""
+    data = b"\x1b(I\x31\x32\x1b(B"
+    result = detect_escape_encoding(data)
+    assert result is not None
+    assert result.encoding == "ISO-2022-JP-EXT"
+
+
+def test_iso2022_jp_jis_x_0212_entry() -> None:
+    """ESC$(D (JIS X 0212-1990) alone should enter the JP branch -> JP-2."""
+    data = b"\x1b$(D\x30\x21\x1b(B"
+    result = detect_escape_encoding(data)
+    assert result is not None
+    assert result.encoding == "ISO-2022-JP-2"
+
+
+def test_iso2022_jp_2004_without_base() -> None:
+    """JIS X 0213 escape alone (no ESC$B/ESC$@/ESC(J) should detect JP-2004."""
+    data = b"\x1b$(O\x21\x21\x1b(B"
+    result = detect_escape_encoding(data)
+    assert result is not None
+    assert result.encoding == "ISO-2022-JP-2004"
 
 
 def test_hz_close_marker_before_open_marker() -> None:
