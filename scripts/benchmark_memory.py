@@ -9,7 +9,6 @@ machine-readable JSON (used by ``compare_detectors.py``).
 
 from __future__ import annotations
 
-import argparse
 import json
 import platform
 import sys
@@ -32,65 +31,13 @@ tracemalloc.start()
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Benchmark a single encoding detector (memory only).",
-    )
-    parser.add_argument(
-        "--detector",
-        choices=["chardet", "charset-normalizer", "cchardet"],
-        default="chardet",
-        help="Detector library to benchmark (default: chardet)",
-    )
-    parser.add_argument(
-        "--data-dir",
-        type=Path,
-        default=Path("tests/data"),
-        help="Path to test data directory (default: tests/data)",
-    )
-    parser.add_argument(
-        "--encoding-era",
-        choices=["all", "modern_web", "none"],
-        default="all",
-        help=(
-            "Encoding era for chardet.detect(): "
-            "'all' (default) for EncodingEra.ALL, "
-            "'modern_web' for EncodingEra.MODERN_WEB, "
-            "'none' to omit (for chardet < 6.0)"
-        ),
-    )
-    parser.add_argument(
-        "--json-only",
-        action="store_true",
-        default=False,
-        help="Print only JSON output (for consumption by other scripts)",
-    )
-    parser.add_argument(
-        "--pure",
-        action="store_true",
-        default=False,
-        help="Abort if mypyc .so/.pyd files are present (ensure pure-Python measurement)",
+    from utils import build_benchmark_parser, load_benchmark_data
+
+    parser = build_benchmark_parser(
+        "Benchmark a single encoding detector (memory only)."
     )
     args = parser.parse_args()
-
-    if args.pure and args.detector == "chardet":
-        from utils import abort_if_mypyc_compiled
-
-        abort_if_mypyc_compiled()
-
-    data_dir: Path = args.data_dir.resolve()
-    if not data_dir.is_dir():
-        print(f"ERROR: data directory not found: {data_dir}", file=sys.stderr)
-        sys.exit(1)
-
-    from utils import collect_test_files
-
-    test_files = collect_test_files(data_dir)
-    if not test_files:
-        print("ERROR: no test files found!", file=sys.stderr)
-        sys.exit(1)
-
-    # Pre-read all file data so I/O doesn't affect measurement
-    all_data = [(enc, lang, fp, fp.read_bytes()) for enc, lang, fp in test_files]
+    all_data = load_benchmark_data(args)
 
     # Baseline: utils + file data loaded, detector library NOT yet imported
     baseline_current, _ = tracemalloc.get_traced_memory()

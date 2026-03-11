@@ -25,6 +25,7 @@ This module defines:
 from __future__ import annotations
 
 import unicodedata
+from collections.abc import Callable
 
 from chardet.pipeline import DetectionDict
 from chardet.registry import lookup_encoding
@@ -91,6 +92,14 @@ PREFERRED_SUPERSET: dict[str, str] = {
 }
 
 
+def _remap_encoding(result: DetectionDict, mapping: dict[str, str]) -> DetectionDict:
+    """Replace the encoding name using *mapping*, modifying *result* in-place."""
+    enc = result.get("encoding")
+    if isinstance(enc, str):
+        result["encoding"] = mapping.get(enc, enc)
+    return result
+
+
 def apply_preferred_superset(
     result: DetectionDict,
 ) -> DetectionDict:
@@ -102,10 +111,7 @@ def apply_preferred_superset(
     :param result: A detection result dict containing an ``"encoding"`` key.
     :returns: The same *result* dict, modified in-place.
     """
-    enc = result.get("encoding")
-    if isinstance(enc, str):
-        result["encoding"] = PREFERRED_SUPERSET.get(enc, enc)
-    return result
+    return _remap_encoding(result, PREFERRED_SUPERSET)
 
 
 # Deprecated alias — kept for external consumers.
@@ -170,10 +176,7 @@ def apply_compat_names(
     :param result: A detection result dict containing an ``"encoding"`` key.
     :returns: The same *result* dict, modified in-place.
     """
-    enc = result.get("encoding")
-    if isinstance(enc, str):
-        result["encoding"] = _COMPAT_NAMES.get(enc, enc)
-    return result
+    return _remap_encoding(result, _COMPAT_NAMES)
 
 
 # Bidirectional equivalents -- groups where any member is acceptable for any other.
@@ -204,17 +207,20 @@ LANGUAGE_EQUIVALENCES: tuple[tuple[str, ...], ...] = (
 )
 
 
-def _build_language_equiv_index() -> dict[str, frozenset[str]]:
-    """Build a lookup: ISO code -> frozenset of all equivalent ISO codes."""
+def _build_group_index(
+    groups: tuple[tuple[str, ...], ...],
+    normalize: Callable[[str], str] = lambda x: x,
+) -> dict[str, frozenset[str]]:
+    """Build a lookup: key -> frozenset of all equivalent keys in the same group."""
     result: dict[str, frozenset[str]] = {}
-    for group in LANGUAGE_EQUIVALENCES:
-        group_set = frozenset(group)
-        for code in group:
-            result[code] = group_set
+    for group in groups:
+        normed = frozenset(normalize(n) for n in group)
+        for name in group:
+            result[normalize(name)] = normed
     return result
 
 
-_LANGUAGE_EQUIV: dict[str, frozenset[str]] = _build_language_equiv_index()
+_LANGUAGE_EQUIV: dict[str, frozenset[str]] = _build_group_index(LANGUAGE_EQUIVALENCES)
 
 
 def is_language_equivalent(expected: str, detected: str) -> bool:
@@ -245,17 +251,9 @@ for _subset, _supersets in SUPERSETS.items():
     _NORMALIZED_SUPERSETS[_key] = _NORMALIZED_SUPERSETS.get(_key, frozenset()) | _normed
 
 
-def _build_bidir_index() -> dict[str, frozenset[str]]:
-    """Build the bidirectional equivalence lookup index."""
-    result: dict[str, frozenset[str]] = {}
-    for group in BIDIRECTIONAL_GROUPS:
-        normed = frozenset(lookup_encoding(n) or n for n in group)
-        for name in group:
-            result[lookup_encoding(name) or name] = normed
-    return result
-
-
-_NORMALIZED_BIDIR: dict[str, frozenset[str]] = _build_bidir_index()
+_NORMALIZED_BIDIR: dict[str, frozenset[str]] = _build_group_index(
+    BIDIRECTIONAL_GROUPS, normalize=lambda n: lookup_encoding(n) or n
+)
 
 
 def is_correct(expected: str | None, detected: str | None) -> bool:

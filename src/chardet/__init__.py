@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import warnings
-
 from chardet._utils import (
     _DEFAULT_CHUNK_SIZE,
     DEFAULT_MAX_BYTES,
     MINIMUM_THRESHOLD,
+    _resolve_prefer_superset,
     _validate_max_bytes,
     _warn_deprecated_chunk_size,
 )
@@ -60,13 +59,7 @@ def detect(  # noqa: PLR0913
     """
     _warn_deprecated_chunk_size(chunk_size)
     _validate_max_bytes(max_bytes)
-    if should_rename_legacy:
-        warnings.warn(
-            "should_rename_legacy is deprecated, use prefer_superset instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        prefer_superset = True
+    prefer_superset = _resolve_prefer_superset(should_rename_legacy, prefer_superset)
     data = byte_str if isinstance(byte_str, bytes) else bytes(byte_str)
     results = run_pipeline(data, encoding_era, max_bytes=max_bytes)
     result = results[0].to_dict()
@@ -112,13 +105,7 @@ def detect_all(  # noqa: PLR0913
     """
     _warn_deprecated_chunk_size(chunk_size)
     _validate_max_bytes(max_bytes)
-    if should_rename_legacy:
-        warnings.warn(
-            "should_rename_legacy is deprecated, use prefer_superset instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        prefer_superset = True
+    prefer_superset = _resolve_prefer_superset(should_rename_legacy, prefer_superset)
     data = byte_str if isinstance(byte_str, bytes) else bytes(byte_str)
     results = run_pipeline(data, encoding_era, max_bytes=max_bytes)
     dicts = [r.to_dict() for r in results]

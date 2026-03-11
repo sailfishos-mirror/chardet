@@ -117,57 +117,24 @@ def _make_scaled_input(base: bytes, target_bytes: int) -> bytes:
 _MIN_SPEEDUP = 3  # fast path must be at least 3x faster than statistical
 
 
-def test_ratio_bom_vs_statistical():
-    fast = _median_time(lambda: chardet.detect(BOM_DATA), _ITERS_RATIO)
+@pytest.mark.parametrize(
+    ("label", "fast_data"),
+    [
+        ("BOM", BOM_DATA),
+        ("UTF-16", UTF16LE_NOBOM),
+        ("Escape", ESCAPE_ISO2022JP),
+        ("Markup", MARKUP_DATA),
+        ("ASCII", ASCII_DATA),
+        ("UTF-8", UTF8_DATA),
+    ],
+    ids=["BOM", "UTF-16", "Escape", "Markup", "ASCII", "UTF-8"],
+)
+def test_ratio_fast_vs_statistical(label: str, fast_data: bytes):
+    fast = _median_time(lambda: chardet.detect(fast_data), _ITERS_RATIO)
     slow = _median_time(lambda: chardet.detect(CYRILLIC_WIN1251), _ITERS_RATIO)
     ratio = slow / fast
     assert ratio >= _MIN_SPEEDUP, (
-        f"BOM not fast enough vs statistical: {ratio:.1f}x (need {_MIN_SPEEDUP}x)"
-    )
-
-
-def test_ratio_utf16_vs_statistical():
-    fast = _median_time(lambda: chardet.detect(UTF16LE_NOBOM), _ITERS_RATIO)
-    slow = _median_time(lambda: chardet.detect(CYRILLIC_WIN1251), _ITERS_RATIO)
-    ratio = slow / fast
-    assert ratio >= _MIN_SPEEDUP, (
-        f"UTF-16 not fast enough vs statistical: {ratio:.1f}x (need {_MIN_SPEEDUP}x)"
-    )
-
-
-def test_ratio_escape_vs_statistical():
-    fast = _median_time(lambda: chardet.detect(ESCAPE_ISO2022JP), _ITERS_RATIO)
-    slow = _median_time(lambda: chardet.detect(CYRILLIC_WIN1251), _ITERS_RATIO)
-    ratio = slow / fast
-    assert ratio >= _MIN_SPEEDUP, (
-        f"Escape not fast enough vs statistical: {ratio:.1f}x (need {_MIN_SPEEDUP}x)"
-    )
-
-
-def test_ratio_markup_vs_statistical():
-    fast = _median_time(lambda: chardet.detect(MARKUP_DATA), _ITERS_RATIO)
-    slow = _median_time(lambda: chardet.detect(CYRILLIC_WIN1251), _ITERS_RATIO)
-    ratio = slow / fast
-    assert ratio >= _MIN_SPEEDUP, (
-        f"Markup not fast enough vs statistical: {ratio:.1f}x (need {_MIN_SPEEDUP}x)"
-    )
-
-
-def test_ratio_ascii_vs_statistical():
-    fast = _median_time(lambda: chardet.detect(ASCII_DATA), _ITERS_RATIO)
-    slow = _median_time(lambda: chardet.detect(CYRILLIC_WIN1251), _ITERS_RATIO)
-    ratio = slow / fast
-    assert ratio >= _MIN_SPEEDUP, (
-        f"ASCII not fast enough vs statistical: {ratio:.1f}x (need {_MIN_SPEEDUP}x)"
-    )
-
-
-def test_ratio_utf8_vs_statistical():
-    fast = _median_time(lambda: chardet.detect(UTF8_DATA), _ITERS_RATIO)
-    slow = _median_time(lambda: chardet.detect(CYRILLIC_WIN1251), _ITERS_RATIO)
-    ratio = slow / fast
-    assert ratio >= _MIN_SPEEDUP, (
-        f"UTF-8 not fast enough vs statistical: {ratio:.1f}x (need {_MIN_SPEEDUP}x)"
+        f"{label} not fast enough vs statistical: {ratio:.1f}x (need {_MIN_SPEEDUP}x)"
     )
 
 

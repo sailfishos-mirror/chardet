@@ -373,11 +373,7 @@ def _promote_koi8t(
     if not results or results[0].encoding != "koi8-r":
         return results
     # Check if KOI8-T is anywhere in the results
-    koi8t_idx = None
-    for i, r in enumerate(results):
-        if r.encoding == "koi8-t":
-            koi8t_idx = i
-            break
+    koi8t_idx = next((i for i, r in enumerate(results) if r.encoding == "koi8-t"), None)
     if koi8t_idx is None:
         return results
     # Check for Tajik-specific bytes

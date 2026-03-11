@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import shutil
 import subprocess
 import sys
@@ -26,6 +27,15 @@ def _get_test_data_ref() -> str | None:
     return version
 
 
+def _git_clone_shallow(repo: str, dest: str, *, branch: str | None = None) -> None:
+    """Shallow-clone *repo* into *dest*, optionally at a specific *branch*/tag."""
+    cmd = ["git", "clone", "--depth=1"]
+    if branch:
+        cmd.append(f"--branch={branch}")
+    cmd.extend([repo, dest])
+    subprocess.run(cmd, check=True, capture_output=True)
+
+
 def _clone_test_data(local_data: Path, *, ref: str | None) -> None:
     """Shallow-clone the test-data repo into *local_data*.
 
@@ -35,36 +45,17 @@ def _clone_test_data(local_data: Path, *, ref: str | None) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         if ref is not None:
             try:
-                subprocess.run(
-                    [
-                        "git",
-                        "clone",
-                        f"--branch={ref}",
-                        "--depth=1",
-                        _TEST_DATA_REPO,
-                        tmp,
-                    ],
-                    check=True,
-                    capture_output=True,
-                )
+                _git_clone_shallow(_TEST_DATA_REPO, tmp, branch=ref)
             except subprocess.CalledProcessError:
                 print(
                     f"WARNING: test-data ref '{ref}' not found, "
                     f"falling back to default branch",
                     file=sys.stderr,
                 )
-                subprocess.run(
-                    ["git", "clone", "--depth=1", _TEST_DATA_REPO, tmp],
-                    check=True,
-                    capture_output=True,
-                )
+                _git_clone_shallow(_TEST_DATA_REPO, tmp)
                 ref = None
         else:
-            subprocess.run(
-                ["git", "clone", "--depth=1", _TEST_DATA_REPO, tmp],
-                check=True,
-                capture_output=True,
-            )
+            _git_clone_shallow(_TEST_DATA_REPO, tmp)
 
         src = Path(tmp)
         local_data.mkdir(parents=True, exist_ok=True)
@@ -208,56 +199,12 @@ ISO_TO_LANGUAGE: dict[str, str] = {
 
 # Mapping from English language names (as returned by chardet ≤6 and
 # charset-normalizer) to ISO 639-1 codes (used by chardet 7+ and test dirs).
-_LANGUAGE_NAME_TO_ISO: dict[str, str] = {
-    "arabic": "ar",
-    "belarusian": "be",
-    "breton": "br",
-    "bulgarian": "bg",
-    "chinese": "zh",
-    "croatian": "hr",
-    "czech": "cs",
-    "danish": "da",
-    "dutch": "nl",
-    "english": "en",
-    "esperanto": "eo",
-    "estonian": "et",
-    "farsi": "fa",
-    "finnish": "fi",
-    "french": "fr",
-    "german": "de",
-    "greek": "el",
-    "hebrew": "he",
-    "hungarian": "hu",
-    "icelandic": "is",
-    "indonesian": "id",
-    "irish": "ga",
-    "italian": "it",
-    "japanese": "ja",
-    "kazakh": "kk",
-    "korean": "ko",
-    "latvian": "lv",
-    "lithuanian": "lt",
-    "macedonian": "mk",
-    "malay": "ms",
-    "maltese": "mt",
-    "norwegian": "no",
-    "polish": "pl",
-    "portuguese": "pt",
-    "romanian": "ro",
-    "russian": "ru",
-    "scottish gaelic": "gd",
-    "serbian": "sr",
-    "slovak": "sk",
-    "slovene": "sl",
-    "spanish": "es",
-    "swedish": "sv",
-    "tajik": "tg",
-    "thai": "th",
-    "turkish": "tr",
-    "ukrainian": "uk",
-    "vietnamese": "vi",
-    "welsh": "cy",
-}
+# Derived from ISO_TO_LANGUAGE to avoid maintaining two dicts that must stay
+# in sync.
+_LANGUAGE_NAME_TO_ISO: dict[str, str] = {v: k for k, v in ISO_TO_LANGUAGE.items()}
+# "scottish gaelic" is the full name used by some detectors; ISO_TO_LANGUAGE
+# maps gd -> "gaelic" (the short form).
+_LANGUAGE_NAME_TO_ISO["scottish gaelic"] = "gd"
 
 
 def normalize_language(detected_language: str | None) -> str | None:
@@ -305,3 +252,64 @@ def collect_test_files(
             if filepath.is_file()
         )
     return test_files
+
+
+def build_benchmark_parser(description: str) -> argparse.ArgumentParser:
+    """Create an argument parser with common benchmark options."""
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument(
+        "--detector",
+        choices=["chardet", "charset-normalizer", "cchardet"],
+        default="chardet",
+        help="Detector library to benchmark (default: chardet)",
+    )
+    parser.add_argument(
+        "--data-dir",
+        type=Path,
+        default=Path("tests/data"),
+        help="Path to test data directory (default: tests/data)",
+    )
+    parser.add_argument(
+        "--encoding-era",
+        choices=["all", "modern_web", "none"],
+        default="all",
+        help=(
+            "Encoding era for chardet.detect(): "
+            "'all' (default) for EncodingEra.ALL, "
+            "'modern_web' for EncodingEra.MODERN_WEB, "
+            "'none' to omit (for chardet < 6.0)"
+        ),
+    )
+    parser.add_argument(
+        "--json-only",
+        action="store_true",
+        default=False,
+        help="Print only JSON output (for consumption by other scripts)",
+    )
+    parser.add_argument(
+        "--pure",
+        action="store_true",
+        default=False,
+        help="Abort if mypyc .so/.pyd files are present (ensure pure-Python measurement)",
+    )
+    return parser
+
+
+def load_benchmark_data(
+    args: argparse.Namespace,
+) -> list[tuple[str | None, str | None, Path, bytes]]:
+    """Validate args, check --pure, load test files, and pre-read bytes."""
+    if args.pure and args.detector == "chardet":
+        abort_if_mypyc_compiled()
+
+    data_dir: Path = args.data_dir.resolve()
+    if not data_dir.is_dir():
+        print(f"ERROR: data directory not found: {data_dir}", file=sys.stderr)
+        sys.exit(1)
+
+    test_files = collect_test_files(data_dir)
+    if not test_files:
+        print("ERROR: no test files found!", file=sys.stderr)
+        sys.exit(1)
+
+    return [(enc, lang, fp, fp.read_bytes()) for enc, lang, fp in test_files]

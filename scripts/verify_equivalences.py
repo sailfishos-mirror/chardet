@@ -128,24 +128,19 @@ def compare_single_byte_pair(enc_a: str, enc_b: str) -> None:
     map_a = build_printable_map(enc_a)
     map_b = build_printable_map(enc_b)
 
-    # Characters that decode successfully in each encoding
-    chars_a = {b: c for b, c in map_a.items() if c is not None}
-
-    # Find bytes where both decode but to different characters
+    # Single pass: classify each printable byte
     different_bytes = []
-    for b in PRINTABLE_BYTES:
-        ca = map_a[b]
-        cb = map_b[b]
-        if ca is not None and cb is not None and ca != cb:
-            different_bytes.append((b, ca, cb))
-
-    # Find bytes that only decode in one encoding
     only_in_a = []
     only_in_b = []
+    decodable_a = 0
     for b in PRINTABLE_BYTES:
         ca = map_a[b]
         cb = map_b[b]
-        if ca is not None and cb is None:
+        if ca is not None:
+            decodable_a += 1
+        if ca is not None and cb is not None and ca != cb:
+            different_bytes.append((b, ca, cb))
+        elif ca is not None and cb is None:
             only_in_a.append((b, ca))
         elif ca is None and cb is not None:
             only_in_b.append((b, cb))
@@ -154,7 +149,7 @@ def compare_single_byte_pair(enc_a: str, enc_b: str) -> None:
     if not different_bytes and not only_in_a and not only_in_b:
         # All printable bytes decode identically
         print(f"  {enc_a} = {enc_b}  (identical for all printable bytes)")
-        print(f"    All {len(chars_a)} printable byte mappings are identical.")
+        print(f"    All {decodable_a} printable byte mappings are identical.")
         return
 
     if not different_bytes and not only_in_a and only_in_b:

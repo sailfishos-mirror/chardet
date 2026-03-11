@@ -7,7 +7,11 @@ from types import MappingProxyType
 from typing import ClassVar
 
 from chardet import _utils
-from chardet._utils import DEFAULT_MAX_BYTES, _validate_max_bytes
+from chardet._utils import (
+    DEFAULT_MAX_BYTES,
+    _resolve_prefer_superset,
+    _validate_max_bytes,
+)
 from chardet.enums import EncodingEra, LanguageFilter
 from chardet.equivalences import (
     PREFERRED_SUPERSET,
@@ -76,13 +80,9 @@ class UniversalDetector:
                 DeprecationWarning,
                 stacklevel=2,
             )
-        if should_rename_legacy:
-            warnings.warn(
-                "should_rename_legacy is deprecated, use prefer_superset instead",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            prefer_superset = True
+        prefer_superset = _resolve_prefer_superset(
+            should_rename_legacy, prefer_superset
+        )
         self._prefer_superset = prefer_superset
         self._compat_names = compat_names
         _validate_max_bytes(max_bytes)

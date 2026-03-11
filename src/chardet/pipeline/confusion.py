@@ -65,6 +65,9 @@ _INT_TO_CATEGORY: dict[int, str] = {
     29: "Cn",
 }
 
+# Inverse mapping for serialization — used by scripts/confusion_training.py.
+_CATEGORY_TO_INT: dict[str, int] = {v: k for k, v in _INT_TO_CATEGORY.items()}
+
 
 def deserialize_confusion_data_from_bytes(data: bytes) -> DistinguishingMaps:
     """Load confusion group data from raw bytes.
@@ -214,6 +217,21 @@ def resolve_by_category_voting(
     return None
 
 
+def _best_variant_score(
+    profile: BigramProfile,
+    index: dict[str, list[tuple[str | None, bytearray, str]]],
+    enc: str,
+) -> float:
+    """Return the best bigram score across all language variants for *enc*."""
+    variants = index.get(enc)
+    if not variants:
+        return 0.0
+    return max(
+        score_with_profile(profile, model, model_key)
+        for _, model, model_key in variants
+    )
+
+
 def resolve_by_bigram_rescore(
     data: bytes,
     enc_a: str,
@@ -251,20 +269,8 @@ def resolve_by_bigram_rescore(
     profile = BigramProfile.from_weighted_freq(freq)
 
     index = get_enc_index()
-
-    best_a = 0.0
-    variants_a = index.get(enc_a)
-    if variants_a:
-        for _, model, model_key in variants_a:
-            s = score_with_profile(profile, model, model_key)
-            best_a = max(best_a, s)
-
-    best_b = 0.0
-    variants_b = index.get(enc_b)
-    if variants_b:
-        for _, model, model_key in variants_b:
-            s = score_with_profile(profile, model, model_key)
-            best_b = max(best_b, s)
+    best_a = _best_variant_score(profile, index, enc_a)
+    best_b = _best_variant_score(profile, index, enc_b)
 
     if best_a > best_b:
         return enc_a
