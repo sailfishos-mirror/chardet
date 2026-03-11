@@ -1,8 +1,19 @@
 Changelog
 =========
 
-7.0.2 (2026-03-09)
+7.1.0 (2026-03-11)
 -------------------
+
+**Features:**
+
+- Added PEP 263 encoding declaration detection — ``# -*- coding: ... -*-``
+  and ``# coding=...`` declarations on lines 1–2 of Python source files are
+  now recognized with confidence 0.95 (`#249
+  <https://github.com/chardet/chardet/issues/249>`_)
+- Added ``chardet.universaldetector`` backward-compatibility stub so that
+  ``from chardet.universaldetector import UniversalDetector`` works with a
+  deprecation warning (`#341
+  <https://github.com/chardet/chardet/issues/341>`_)
 
 **Fixes:**
 
@@ -14,6 +25,8 @@ Changelog
 - Fixed undocumented encoding name changes between chardet 5.x and 7.0 —
   ``detect()`` now returns chardet 5.x-compatible names by default (`#338
   <https://github.com/chardet/chardet/issues/338>`_)
+- Improved ISO-2022-JP family detection — recognizes ESC sequences for
+  ISO-2022-JP-2004 (JIS X 0213) and ISO-2022-JP-EXT (JIS X 0201 Kana)
 - Fixed silent truncation of corrupt model data (``iter_unpack`` yielded
   fewer tuples instead of raising)
 - Fixed incorrect date in LICENSE

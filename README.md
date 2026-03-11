@@ -12,17 +12,17 @@ Python 3.10+, zero runtime dependencies, works on PyPy.
 
 ## Why chardet 7.0?
 
-**98.2% accuracy** on 2,510 test files. **42x faster** than chardet 6.0.0
-and **4.2x faster** than
+**98.2% accuracy** on 2,510 test files. **44x faster** than chardet 6.0.0
+and **4.1x faster** than
 charset-normalizer. **Language
 detection** for every result. **MIT licensed.**
 
-|                        | chardet 7.0.2 (mypyc) | chardet 7.0.2 (pure) | chardet 6.0.0 | [charset-normalizer] |
+|                        | chardet 7.1.0 (mypyc) | chardet 7.1.0 (pure) | chardet 6.0.0 | [charset-normalizer] |
 | ---------------------- | :--------------------: | :------------------: | :-----------: | :------------------: |
-| Accuracy (2,510 files) |       **98.2%**        |      **98.2%**       |     88.2%     |        84.2%         |
-| Speed                  |    **476 files/s**     |   **384 files/s**    |  11 files/s   |     113 files/s      |
+| Accuracy (2,510 files) |       **98.2%**        |      **98.2%**       |     88.3%     |        84.2%         |
+| Speed                  |    **533 files/s**     |   **372 files/s**    |  12 files/s   |     129 files/s      |
 | Language detection     |       **95.2%**        |      **95.2%**       |     40.0%     |        59.0%         |
-| Peak memory            |     **26.2 MiB**       |    **26.3 MiB**      |   29.5 MiB    |      101.2 MiB       |
+| Peak memory            |     **25.9 MiB**       |    **25.9 MiB**      |   29.5 MiB    |      101.3 MiB       |
 | Streaming detection    |        **yes**         |       **yes**        |      yes      |          no          |
 | Encoding era filtering |        **yes**         |       **yes**        |      no       |          no          |
 | Supported encodings    |          99            |         99           |      84       |          99          |

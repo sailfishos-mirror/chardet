@@ -17,28 +17,28 @@ Accuracy
      - Correct
      - Accuracy
      - Speed
-   * - **chardet 7.0.2 (mypyc)**
+   * - **chardet 7.1.0 (mypyc)**
      - **2464/2510**
      - **98.2%**
-     - **476 files/s**
-   * - chardet 7.0.2 (pure)
+     - **533 files/s**
+   * - chardet 7.1.0 (pure)
      - 2464/2510
      - 98.2%
-     - 384 files/s
+     - 372 files/s
    * - chardet 6.0.0
-     - 2213/2510
-     - 88.2%
-     - 11 files/s
+     - 2216/2510
+     - 88.3%
+     - 12 files/s
    * - charset-normalizer
      - 2114/2510
      - 84.2%
-     - 113 files/s
+     - 129 files/s
    * - cchardet
-     - 1405/2510
+     - 1406/2510
      - 56.0%
-     - 1,803 files/s
+     - 1,662 files/s
 
-chardet leads all detectors on accuracy: **+10.0pp** vs chardet 6.0.0,
+chardet leads all detectors on accuracy: **+9.9pp** vs chardet 6.0.0,
 **+14.0pp** vs charset-normalizer, and **+42.2pp** vs cchardet.
 
 Speed
@@ -55,46 +55,46 @@ Speed
      - p90
      - p95
    * - cchardet
-     - 1,803
-     - 0.55ms
+     - 1,662
+     - 0.60ms
      - 0.05ms
-     - 0.64ms
-     - 1.09ms
-   * - **chardet 7.0.2 (mypyc)**
-     - **476**
-     - **2.10ms**
-     - **0.62ms**
-     - **5.09ms**
-     - **6.71ms**
-   * - chardet 7.0.2 (pure)
-     - 384
-     - 2.61ms
-     - 0.98ms
-     - 5.75ms
-     - 7.35ms
+     - 0.70ms
+     - 1.18ms
+   * - **chardet 7.1.0 (mypyc)**
+     - **533**
+     - **1.88ms**
+     - **0.57ms**
+     - **4.44ms**
+     - **5.86ms**
+   * - chardet 7.1.0 (pure)
+     - 372
+     - 2.69ms
+     - 0.99ms
+     - 5.89ms
+     - 7.71ms
    * - charset-normalizer (mypyc)
-     - 113
-     - 8.86ms
-     - 3.04ms
-     - 25.32ms
-     - 44.25ms
+     - 129
+     - 7.75ms
+     - 2.68ms
+     - 22.47ms
+     - 39.36ms
    * - charset-normalizer (pure)
-     - 66
-     - 15.07ms
-     - 5.22ms
-     - 43.02ms
-     - 77.43ms
+     - 67
+     - 15.00ms
+     - 5.11ms
+     - 43.44ms
+     - 77.37ms
    * - chardet 6.0.0
-     - 11
-     - 87.95ms
-     - 2.30ms
-     - 194.84ms
-     - 398.06ms
+     - 12
+     - 82.70ms
+     - 2.31ms
+     - 180.02ms
+     - 372.50ms
 
-With mypyc compilation, chardet 7.0.2 is **42x faster** than chardet 6.0.0 and
-**4.2x faster** than charset-normalizer (mypyc). Even the pure-Python build is
-**34x faster** than chardet 6.0.0 and **5.8x faster** than charset-normalizer
-(pure). Median time per file is 0.62ms (mypyc) / 0.98ms (pure).
+With mypyc compilation, chardet 7.1.0 is **44x faster** than chardet 6.0.0 and
+**4.1x faster** than charset-normalizer (mypyc). Even the pure-Python build is
+**31x faster** than chardet 6.0.0 and **5.6x faster** than charset-normalizer
+(pure). Median time per file is 0.57ms (mypyc) / 0.99ms (pure).
 
 Memory
 ------
@@ -108,29 +108,29 @@ Memory
      - Import Memory
      - Peak Memory
      - RSS
-   * - **chardet 7.0.2**
-     - **0.019s**
-     - **2.7 MiB**
-     - **26.2 MiB**
-     - **115.9 MiB**
+   * - **chardet 7.1.0**
+     - **0.015s**
+     - **1.9 MiB**
+     - **25.9 MiB**
+     - **115.6 MiB**
    * - chardet 6.0.0
-     - 0.036s
+     - 0.053s
      - 13.0 MiB
      - 29.5 MiB
-     - 123.3 MiB
+     - 122.3 MiB
    * - charset-normalizer
-     - 0.009s
-     - 1.3 MiB
-     - 101.2 MiB
-     - 323.2 MiB
+     - 0.010s
+     - 1.4 MiB
+     - 101.3 MiB
+     - 273.3 MiB
    * - cchardet
      - 0.001s
-     - 23.6 KiB
-     - 27.2 KiB
-     - 81.7 MiB
+     - 23.2 KiB
+     - 26.8 KiB
+     - 81.9 MiB
 
 chardet uses **3.9x less peak memory** than charset-normalizer and
-**2.8x less RSS**.
+**2.4x less RSS**.
 
 Language Detection
 ------------------
@@ -142,7 +142,7 @@ Language Detection
    * - Detector
      - Correct
      - Accuracy
-   * - **chardet 7.0.2**
+   * - **chardet 7.1.0**
      - **2383/2502**
      - **95.2%**
    * - charset-normalizer
@@ -166,25 +166,67 @@ Thread Safety
 Each call carries its own state with no shared mutable data between threads.
 Thread safety adds no measurable overhead (< 0.1%).
 
-On free-threaded Python (3.13t+, GIL disabled), detection scales with
-threads:
+On free-threaded Python (GIL disabled), detection scales with threads.
+Benchmarked with 2,510 files, ``encoding_era=ALL``:
 
 .. list-table::
    :header-rows: 1
-   :widths: 20 20 20
+   :widths: 10 16 12 12 12 12
 
    * - Threads
-     - Time
+     - Build
+     - CPython 3.13t
+     - Speedup
+     - CPython 3.14t
      - Speedup
    * - 1
-     - 4,361ms
+     - pure
+     - 10,150ms
+     - baseline
+     - 7,280ms
      - baseline
    * - 2
-     - 2,337ms
-     - 1.9x
+     - pure
+     - 8,530ms
+     - 1.2x
+     - 6,330ms
+     - 1.2x
    * - 4
-     - 1,930ms
+     - pure
+     - 4,360ms
      - 2.3x
+     - 3,000ms
+     - 2.4x
+   * - 8
+     - pure
+     - 5,050ms
+     - 2.0x
+     - 1,830ms
+     - 4.0x
+   * - 1
+     - mypyc
+     - 4,630ms
+     - baseline
+     - 5,390ms
+     - baseline
+   * - 2
+     - mypyc
+     - 2,350ms
+     - 2.0x
+     - 2,690ms
+     - 2.0x
+   * - 4
+     - mypyc
+     - 1,300ms
+     - 3.6x
+     - 1,450ms
+     - 3.7x
+   * - 8
+     - mypyc
+     - 1,120ms
+     - **4.1x**
+     - 1,160ms
+     - **4.6x**
 
 Individual :class:`~chardet.UniversalDetector` instances are not thread-safe.
 Create one instance per thread when using the streaming API.
@@ -205,11 +247,11 @@ needed.
      - Files/s
      - Speedup
    * - Pure Python
-     - 384
+     - 390
      - baseline
    * - mypyc compiled
-     - 476
-     - **1.24x**
+     - 581
+     - **1.49x**
 
 Pure-Python wheels are always available for PyPy and platforms without
 prebuilt binaries.
@@ -217,7 +259,7 @@ prebuilt binaries.
 Performance Across Python Versions
 -----------------------------------
 
-Benchmarked chardet 7.0.2 across all supported Python versions
+Benchmarked chardet 7.1.0 across all supported Python versions
 (macOS aarch64, 2,510 files, ``encoding_era=ALL``). CPython versions
 install mypyc-compiled wheels automatically; PyPy receives the
 pure-Python wheel.
@@ -236,103 +278,103 @@ pure-Python wheel.
      - p95
    * - CPython 3.10
      - mypyc
-     - 4,475ms
-     - 561
-     - 1.78ms
-     - 0.53ms
-     - 3.95ms
-     - 5.09ms
+     - 4,336ms
+     - 579
+     - 1.73ms
+     - 0.54ms
+     - 4.15ms
+     - 5.16ms
    * - CPython 3.10
      - pure
-     - 8,796ms
-     - 285
-     - 3.50ms
-     - 1.22ms
-     - 7.33ms
-     - 9.31ms
+     - 7,987ms
+     - 314
+     - 3.18ms
+     - 1.16ms
+     - 7.03ms
+     - 9.02ms
    * - **CPython 3.11**
      - **mypyc**
-     - **4,079ms**
-     - **615**
-     - **1.63ms**
-     - **0.48ms**
-     - **3.54ms**
-     - **4.60ms**
+     - **3,746ms**
+     - **670**
+     - **1.49ms**
+     - **0.46ms**
+     - **3.56ms**
+     - **4.51ms**
    * - CPython 3.11
      - pure
-     - 6,797ms
-     - 369
-     - 2.71ms
-     - 0.92ms
-     - 5.65ms
-     - 7.41ms
-   * - CPython 3.12
-     - mypyc
-     - 4,597ms
-     - 546
-     - 1.83ms
-     - 0.55ms
-     - 3.91ms
-     - 5.06ms
-   * - CPython 3.12
-     - pure
-     - 6,545ms
-     - 383
-     - 2.61ms
+     - 6,490ms
+     - 387
+     - 2.59ms
      - 0.94ms
-     - 5.12ms
-     - 6.74ms
+     - 5.73ms
+     - 7.44ms
+   * - CPython 3.12
+     - mypyc
+     - 4,320ms
+     - 581
+     - 1.72ms
+     - 0.54ms
+     - 4.02ms
+     - 5.16ms
+   * - CPython 3.12
+     - pure
+     - 6,433ms
+     - 390
+     - 2.56ms
+     - 0.95ms
+     - 5.55ms
+     - 7.20ms
    * - CPython 3.13
      - mypyc
-     - 5,046ms
-     - 497
-     - 2.01ms
+     - 4,703ms
+     - 534
+     - 1.87ms
      - 0.58ms
-     - 4.32ms
-     - 5.65ms
+     - 4.37ms
+     - 5.67ms
    * - CPython 3.13
      - pure
-     - 9,293ms
-     - 270
-     - 3.70ms
-     - 1.30ms
-     - 7.41ms
-     - 9.66ms
+     - 8,560ms
+     - 293
+     - 3.41ms
+     - 1.28ms
+     - 7.44ms
+     - 9.44ms
    * - CPython 3.14
      - mypyc
-     - 5,064ms
-     - 496
-     - 2.02ms
-     - 0.60ms
-     - 4.39ms
-     - 5.64ms
+     - 4,616ms
+     - 544
+     - 1.84ms
+     - 0.58ms
+     - 4.36ms
+     - 5.61ms
    * - CPython 3.14
      - pure
-     - 6,977ms
-     - 360
-     - 2.78ms
-     - 0.98ms
-     - 5.64ms
-     - 7.32ms
+     - 6,514ms
+     - 385
+     - 2.60ms
+     - 0.97ms
+     - 5.67ms
+     - 7.43ms
    * - PyPy 3.10
      - pure
-     - 6,111ms
-     - 411
-     - 2.43ms
-     - 0.24ms
-     - 4.99ms
-     - 7.43ms
+     - 6,194ms
+     - 405
+     - 2.47ms
+     - 0.26ms
+     - 5.15ms
+     - 7.37ms
    * - PyPy 3.11
      - pure
-     - 6,114ms
+     - 6,128ms
      - 410
      - 2.44ms
-     - 0.25ms
-     - 4.97ms
-     - 7.33ms
+     - 0.26ms
+     - 5.08ms
+     - 7.83ms
 
-**CPython 3.11 + mypyc is the fastest combination** at 615 files/s.
-mypyc provides a 1.5--2.0x speedup across CPython versions. PyPy's JIT
-is competitive with mypyc: pure Python on PyPy (411 files/s) beats every
-pure CPython version and reaches 67--100% of mypyc-compiled CPython
+**CPython 3.11 + mypyc is the fastest combination** at 670 files/s.
+mypyc provides a 1.4--1.8x speedup across CPython versions. PyPy's JIT
+is competitive with mypyc: pure Python on PyPy (410 files/s) beats every
+pure CPython version and reaches 61--100% of mypyc-compiled CPython
 throughput.

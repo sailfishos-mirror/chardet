@@ -28,8 +28,9 @@ order:
    it is classified as binary (encoding ``None``).
 
 5. **Markup Charset** — Extracts explicit charset declarations from
-   ``<meta charset="...">`` tags or ``<?xml encoding="..."?>``
-   processing instructions.
+   ``<meta charset="...">`` tags, ``<?xml encoding="..."?>``
+   processing instructions, and PEP 263 ``# -*- coding: ... -*-``
+   declarations in the first two lines of Python source files.
 
 6. **ASCII Check** — If every byte is in the 7-bit ASCII range, returns
    ``ascii`` immediately.
