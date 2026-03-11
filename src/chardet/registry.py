@@ -132,7 +132,6 @@ class EncodingInfo:
     aliases: tuple[str, ...]
     era: EncodingEra
     is_multibyte: bool
-    python_codec: str
     languages: tuple[str, ...]
 
 
@@ -160,7 +159,6 @@ def get_candidates(era: EncodingEra) -> tuple[EncodingInfo, ...]:
 
 
 # Era assignments match chardet 6.0.0's chardet/metadata/charsets.py
-# python_codec values verified via codecs.lookup()
 
 _REGISTRY_ENTRIES = (
     # === MODERN_WEB ===
@@ -169,7 +167,6 @@ _REGISTRY_ENTRIES = (
         aliases=("us-ascii",),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="ascii",
         languages=(),
     ),
     EncodingInfo(
@@ -177,7 +174,6 @@ _REGISTRY_ENTRIES = (
         aliases=("utf-8", "utf8"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="utf-8",
         languages=(),
     ),
     EncodingInfo(
@@ -185,7 +181,6 @@ _REGISTRY_ENTRIES = (
         aliases=("UTF-8-SIG", "utf-8-bom"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="utf-8-sig",
         languages=(),
     ),
     EncodingInfo(
@@ -193,7 +188,6 @@ _REGISTRY_ENTRIES = (
         aliases=("UTF-16", "utf16"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="utf-16",
         languages=(),
     ),
     EncodingInfo(
@@ -201,7 +195,6 @@ _REGISTRY_ENTRIES = (
         aliases=("UTF-16-BE", "utf-16be"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="utf-16-be",
         languages=(),
     ),
     EncodingInfo(
@@ -209,7 +202,6 @@ _REGISTRY_ENTRIES = (
         aliases=("UTF-16-LE", "utf-16le"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="utf-16-le",
         languages=(),
     ),
     EncodingInfo(
@@ -217,7 +209,6 @@ _REGISTRY_ENTRIES = (
         aliases=("UTF-32", "utf32"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="utf-32",
         languages=(),
     ),
     EncodingInfo(
@@ -225,7 +216,6 @@ _REGISTRY_ENTRIES = (
         aliases=("UTF-32-BE", "utf-32be"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="utf-32-be",
         languages=(),
     ),
     EncodingInfo(
@@ -233,7 +223,6 @@ _REGISTRY_ENTRIES = (
         aliases=("UTF-32-LE", "utf-32le"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="utf-32-le",
         languages=(),
     ),
     EncodingInfo(
@@ -241,7 +230,6 @@ _REGISTRY_ENTRIES = (
         aliases=("UTF-7", "utf7"),
         era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=False,
-        python_codec="utf-7",
         languages=(),
     ),
     # CJK - Modern Web
@@ -250,7 +238,6 @@ _REGISTRY_ENTRIES = (
         aliases=("Big5-HKSCS", "Big5HKSCS", "big5", "big5-tw", "csbig5", "cp950"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
-        python_codec="big5hkscs",
         languages=("zh",),
     ),
     EncodingInfo(
@@ -258,7 +245,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP932", "ms932", "mskanji", "ms-kanji"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
-        python_codec="cp932",
         languages=("ja",),
     ),
     EncodingInfo(
@@ -266,7 +252,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP949", "ms949", "uhc"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
-        python_codec="cp949",
         languages=("ko",),
     ),
     EncodingInfo(
@@ -274,7 +259,6 @@ _REGISTRY_ENTRIES = (
         aliases=("EUC-JIS-2004", "euc-jp", "eucjp", "ujis", "u-jis", "euc-jisx0213"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
-        python_codec="euc_jis_2004",
         languages=("ja",),
     ),
     EncodingInfo(
@@ -282,7 +266,6 @@ _REGISTRY_ENTRIES = (
         aliases=("EUC-KR", "euckr"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
-        python_codec="euc-kr",
         languages=("ko",),
     ),
     EncodingInfo(
@@ -290,7 +273,6 @@ _REGISTRY_ENTRIES = (
         aliases=("GB18030", "gb-18030", "gb2312", "gbk"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
-        python_codec="gb18030",
         languages=("zh",),
     ),
     EncodingInfo(
@@ -298,7 +280,6 @@ _REGISTRY_ENTRIES = (
         aliases=("HZ-GB-2312", "hz"),
         era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=True,
-        python_codec="hz",
         languages=("zh",),
     ),
     EncodingInfo(
@@ -306,7 +287,6 @@ _REGISTRY_ENTRIES = (
         aliases=("ISO-2022-JP-2", "iso-2022-jp", "csiso2022jp", "iso2022-jp-1"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
-        python_codec="iso2022_jp_2",
         languages=("ja",),
     ),
     EncodingInfo(
@@ -314,7 +294,6 @@ _REGISTRY_ENTRIES = (
         aliases=("ISO-2022-JP-2004", "iso2022-jp-3"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
-        python_codec="iso2022_jp_2004",
         languages=("ja",),
     ),
     EncodingInfo(
@@ -322,7 +301,6 @@ _REGISTRY_ENTRIES = (
         aliases=("ISO-2022-JP-EXT",),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
-        python_codec="iso2022_jp_ext",
         languages=("ja",),
     ),
     EncodingInfo(
@@ -330,7 +308,6 @@ _REGISTRY_ENTRIES = (
         aliases=("ISO-2022-KR", "csiso2022kr"),
         era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=True,
-        python_codec="iso2022-kr",
         languages=("ko",),
     ),
     EncodingInfo(
@@ -346,7 +323,6 @@ _REGISTRY_ENTRIES = (
         ),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=True,
-        python_codec="shift_jis_2004",
         languages=("ja",),
     ),
     # Windows code pages - Modern Web
@@ -355,7 +331,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP874", "windows-874"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="cp874",
         languages=("th",),
     ),
     EncodingInfo(
@@ -363,7 +338,6 @@ _REGISTRY_ENTRIES = (
         aliases=("Windows-1250", "cp1250"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="cp1250",
         languages=_CENTRAL_EU,
     ),
     EncodingInfo(
@@ -371,7 +345,6 @@ _REGISTRY_ENTRIES = (
         aliases=("Windows-1251", "cp1251"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="cp1251",
         languages=_CYRILLIC,
     ),
     EncodingInfo(
@@ -379,7 +352,6 @@ _REGISTRY_ENTRIES = (
         aliases=("Windows-1252", "cp1252"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="cp1252",
         languages=_WESTERN,
     ),
     EncodingInfo(
@@ -387,7 +359,6 @@ _REGISTRY_ENTRIES = (
         aliases=("Windows-1253", "cp1253"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="cp1253",
         languages=("el",),
     ),
     EncodingInfo(
@@ -395,7 +366,6 @@ _REGISTRY_ENTRIES = (
         aliases=("Windows-1254", "cp1254"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="cp1254",
         languages=("tr",),
     ),
     EncodingInfo(
@@ -403,7 +373,6 @@ _REGISTRY_ENTRIES = (
         aliases=("Windows-1255", "cp1255"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="cp1255",
         languages=("he",),
     ),
     EncodingInfo(
@@ -411,7 +380,6 @@ _REGISTRY_ENTRIES = (
         aliases=("Windows-1256", "cp1256"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="cp1256",
         languages=_ARABIC,
     ),
     EncodingInfo(
@@ -419,7 +387,6 @@ _REGISTRY_ENTRIES = (
         aliases=("Windows-1257", "cp1257"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="cp1257",
         languages=_BALTIC,
     ),
     EncodingInfo(
@@ -427,7 +394,6 @@ _REGISTRY_ENTRIES = (
         aliases=("Windows-1258", "cp1258"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="cp1258",
         languages=("vi",),
     ),
     # KOI8 - Modern Web
@@ -436,7 +402,6 @@ _REGISTRY_ENTRIES = (
         aliases=("KOI8-R", "koi8r"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="koi8-r",
         languages=("ru",),
     ),
     EncodingInfo(
@@ -444,7 +409,6 @@ _REGISTRY_ENTRIES = (
         aliases=("KOI8-U", "koi8u"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="koi8-u",
         languages=("uk",),
     ),
     # TIS-620 - Modern Web
@@ -453,7 +417,6 @@ _REGISTRY_ENTRIES = (
         aliases=("TIS-620", "tis620", "iso-8859-11"),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="tis-620",
         languages=("th",),
     ),
     # === LEGACY_ISO ===
@@ -462,7 +425,6 @@ _REGISTRY_ENTRIES = (
         aliases=("ISO-8859-1", "latin-1", "latin1", "iso8859-1"),
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
-        python_codec="iso-8859-1",
         languages=_WESTERN,
     ),
     EncodingInfo(
@@ -470,7 +432,6 @@ _REGISTRY_ENTRIES = (
         aliases=("ISO-8859-2", "latin-2", "latin2", "iso8859-2"),
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
-        python_codec="iso-8859-2",
         languages=_CENTRAL_EU,
     ),
     EncodingInfo(
@@ -478,7 +439,6 @@ _REGISTRY_ENTRIES = (
         aliases=("ISO-8859-3", "latin-3", "latin3", "iso8859-3"),
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
-        python_codec="iso-8859-3",
         languages=("eo", "mt", "tr"),
     ),
     EncodingInfo(
@@ -486,7 +446,6 @@ _REGISTRY_ENTRIES = (
         aliases=("ISO-8859-4", "latin-4", "latin4", "iso8859-4"),
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
-        python_codec="iso-8859-4",
         languages=_BALTIC,
     ),
     EncodingInfo(
@@ -494,7 +453,6 @@ _REGISTRY_ENTRIES = (
         aliases=("ISO-8859-5", "iso8859-5", "cyrillic"),
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
-        python_codec="iso-8859-5",
         languages=_CYRILLIC,
     ),
     EncodingInfo(
@@ -502,7 +460,6 @@ _REGISTRY_ENTRIES = (
         aliases=("ISO-8859-6", "iso8859-6", "arabic"),
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
-        python_codec="iso-8859-6",
         languages=_ARABIC,
     ),
     EncodingInfo(
@@ -510,7 +467,6 @@ _REGISTRY_ENTRIES = (
         aliases=("ISO-8859-7", "iso8859-7", "greek"),
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
-        python_codec="iso-8859-7",
         languages=("el",),
     ),
     EncodingInfo(
@@ -518,7 +474,6 @@ _REGISTRY_ENTRIES = (
         aliases=("ISO-8859-8", "iso8859-8", "hebrew"),
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
-        python_codec="iso-8859-8",
         languages=("he",),
     ),
     EncodingInfo(
@@ -526,7 +481,6 @@ _REGISTRY_ENTRIES = (
         aliases=("ISO-8859-9", "latin-5", "latin5", "iso8859-9"),
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
-        python_codec="iso-8859-9",
         languages=("tr",),
     ),
     EncodingInfo(
@@ -534,7 +488,6 @@ _REGISTRY_ENTRIES = (
         aliases=("ISO-8859-10", "latin-6", "latin6", "iso8859-10"),
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
-        python_codec="iso-8859-10",
         languages=("is", "fi"),
     ),
     EncodingInfo(
@@ -542,7 +495,6 @@ _REGISTRY_ENTRIES = (
         aliases=("ISO-8859-13", "latin-7", "latin7", "iso8859-13"),
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
-        python_codec="iso-8859-13",
         languages=_BALTIC,
     ),
     EncodingInfo(
@@ -550,7 +502,6 @@ _REGISTRY_ENTRIES = (
         aliases=("ISO-8859-14", "latin-8", "latin8", "iso8859-14"),
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
-        python_codec="iso-8859-14",
         languages=("cy", "ga", "br", "gd"),
     ),
     EncodingInfo(
@@ -558,7 +509,6 @@ _REGISTRY_ENTRIES = (
         aliases=("ISO-8859-15", "latin-9", "latin9", "iso8859-15"),
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
-        python_codec="iso-8859-15",
         languages=_WESTERN,
     ),
     EncodingInfo(
@@ -566,7 +516,6 @@ _REGISTRY_ENTRIES = (
         aliases=("ISO-8859-16", "latin-10", "latin10", "iso8859-16"),
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=False,
-        python_codec="iso-8859-16",
         languages=("ro", "pl", "hr", "hu", "sk", "sl"),
     ),
     # Johab - Legacy ISO per chardet 6.0.0
@@ -575,7 +524,6 @@ _REGISTRY_ENTRIES = (
         aliases=("Johab",),
         era=EncodingEra.LEGACY_ISO,
         is_multibyte=True,
-        python_codec="johab",
         languages=("ko",),
     ),
     # === LEGACY_MAC ===
@@ -584,7 +532,6 @@ _REGISTRY_ENTRIES = (
         aliases=("Mac-Cyrillic", "MacCyrillic", "maccyrillic"),
         era=EncodingEra.LEGACY_MAC,
         is_multibyte=False,
-        python_codec="mac-cyrillic",
         languages=_CYRILLIC,
     ),
     EncodingInfo(
@@ -592,7 +539,6 @@ _REGISTRY_ENTRIES = (
         aliases=("Mac-Greek", "MacGreek", "macgreek"),
         era=EncodingEra.LEGACY_MAC,
         is_multibyte=False,
-        python_codec="mac-greek",
         languages=("el",),
     ),
     EncodingInfo(
@@ -600,7 +546,6 @@ _REGISTRY_ENTRIES = (
         aliases=("Mac-Iceland", "MacIceland", "maciceland"),
         era=EncodingEra.LEGACY_MAC,
         is_multibyte=False,
-        python_codec="mac-iceland",
         languages=("is",),
     ),
     EncodingInfo(
@@ -608,7 +553,6 @@ _REGISTRY_ENTRIES = (
         aliases=("Mac-Latin2", "MacLatin2", "maclatin2", "maccentraleurope"),
         era=EncodingEra.LEGACY_MAC,
         is_multibyte=False,
-        python_codec="mac-latin2",
         languages=_CENTRAL_EU_NO_RO,
     ),
     EncodingInfo(
@@ -616,7 +560,6 @@ _REGISTRY_ENTRIES = (
         aliases=("Mac-Roman", "MacRoman", "macroman", "macintosh"),
         era=EncodingEra.LEGACY_MAC,
         is_multibyte=False,
-        python_codec="mac-roman",
         languages=_WESTERN,
     ),
     EncodingInfo(
@@ -624,7 +567,6 @@ _REGISTRY_ENTRIES = (
         aliases=("Mac-Turkish", "MacTurkish", "macturkish"),
         era=EncodingEra.LEGACY_MAC,
         is_multibyte=False,
-        python_codec="mac-turkish",
         languages=("tr",),
     ),
     # === LEGACY_REGIONAL ===
@@ -633,7 +575,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP720",),
         era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=False,
-        python_codec="cp720",
         languages=_ARABIC,
     ),
     EncodingInfo(
@@ -641,7 +582,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP1006",),
         era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=False,
-        python_codec="cp1006",
         languages=("ur",),
     ),
     EncodingInfo(
@@ -649,7 +589,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP1125",),
         era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=False,
-        python_codec="cp1125",
         languages=("uk",),
     ),
     EncodingInfo(
@@ -657,7 +596,6 @@ _REGISTRY_ENTRIES = (
         aliases=("KOI8-T",),
         era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=False,
-        python_codec="koi8-t",
         languages=("tg",),
     ),
     EncodingInfo(
@@ -665,7 +603,6 @@ _REGISTRY_ENTRIES = (
         aliases=("KZ-1048", "kz1048", "strk1048-2002", "rk1048"),
         era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=False,
-        python_codec="kz1048",
         languages=("kk",),
     ),
     EncodingInfo(
@@ -673,7 +610,6 @@ _REGISTRY_ENTRIES = (
         aliases=("PTCP154", "pt154", "cp154"),
         era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=False,
-        python_codec="ptcp154",
         languages=("kk",),
     ),
     EncodingInfo(
@@ -681,7 +617,6 @@ _REGISTRY_ENTRIES = (
         aliases=("HP-Roman8", "roman8", "r8", "csHPRoman8"),
         era=EncodingEra.LEGACY_REGIONAL,
         is_multibyte=False,
-        python_codec="hp-roman8",
         languages=_WESTERN,
     ),
     # === DOS ===
@@ -690,7 +625,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP437",),
         era=EncodingEra.DOS,
         is_multibyte=False,
-        python_codec="cp437",
         languages=("en", "fr", "de", "es", "pt", "it", "nl", "da", "sv", "fi"),
     ),
     EncodingInfo(
@@ -698,7 +632,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP737",),
         era=EncodingEra.DOS,
         is_multibyte=False,
-        python_codec="cp737",
         languages=("el",),
     ),
     EncodingInfo(
@@ -706,7 +639,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP775",),
         era=EncodingEra.DOS,
         is_multibyte=False,
-        python_codec="cp775",
         languages=_BALTIC,
     ),
     EncodingInfo(
@@ -714,7 +646,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP850",),
         era=EncodingEra.DOS,
         is_multibyte=False,
-        python_codec="cp850",
         languages=_WESTERN,
     ),
     EncodingInfo(
@@ -722,7 +653,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP852",),
         era=EncodingEra.DOS,
         is_multibyte=False,
-        python_codec="cp852",
         languages=_CENTRAL_EU_NO_RO,
     ),
     EncodingInfo(
@@ -730,7 +660,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP855",),
         era=EncodingEra.DOS,
         is_multibyte=False,
-        python_codec="cp855",
         languages=_CYRILLIC,
     ),
     EncodingInfo(
@@ -738,7 +667,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP856",),
         era=EncodingEra.DOS,
         is_multibyte=False,
-        python_codec="cp856",
         languages=("he",),
     ),
     EncodingInfo(
@@ -746,7 +674,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP857",),
         era=EncodingEra.DOS,
         is_multibyte=False,
-        python_codec="cp857",
         languages=("tr",),
     ),
     EncodingInfo(
@@ -754,7 +681,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP858",),
         era=EncodingEra.DOS,
         is_multibyte=False,
-        python_codec="cp858",
         languages=_WESTERN,
     ),
     EncodingInfo(
@@ -762,7 +688,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP860",),
         era=EncodingEra.DOS,
         is_multibyte=False,
-        python_codec="cp860",
         languages=("pt",),
     ),
     EncodingInfo(
@@ -770,7 +695,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP861",),
         era=EncodingEra.DOS,
         is_multibyte=False,
-        python_codec="cp861",
         languages=("is",),
     ),
     EncodingInfo(
@@ -778,7 +702,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP862",),
         era=EncodingEra.DOS,
         is_multibyte=False,
-        python_codec="cp862",
         languages=("he",),
     ),
     EncodingInfo(
@@ -786,7 +709,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP863",),
         era=EncodingEra.DOS,
         is_multibyte=False,
-        python_codec="cp863",
         languages=("fr",),
     ),
     EncodingInfo(
@@ -794,7 +716,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP864",),
         era=EncodingEra.DOS,
         is_multibyte=False,
-        python_codec="cp864",
         languages=("ar",),
     ),
     EncodingInfo(
@@ -802,7 +723,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP865",),
         era=EncodingEra.DOS,
         is_multibyte=False,
-        python_codec="cp865",
         languages=("da", "no"),
     ),
     EncodingInfo(
@@ -810,7 +730,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP866",),
         era=EncodingEra.DOS,
         is_multibyte=False,
-        python_codec="cp866",
         languages=_CYRILLIC,
     ),
     EncodingInfo(
@@ -818,7 +737,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP869",),
         era=EncodingEra.DOS,
         is_multibyte=False,
-        python_codec="cp869",
         languages=("el",),
     ),
     # === MAINFRAME ===
@@ -827,7 +745,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP1140", "cp037"),
         era=EncodingEra.MAINFRAME,
         is_multibyte=False,
-        python_codec="cp1140",
         languages=_WESTERN_TR,
     ),
     EncodingInfo(
@@ -835,7 +752,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP424",),
         era=EncodingEra.MAINFRAME,
         is_multibyte=False,
-        python_codec="cp424",
         languages=("he",),
     ),
     EncodingInfo(
@@ -843,7 +759,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP500",),
         era=EncodingEra.MAINFRAME,
         is_multibyte=False,
-        python_codec="cp500",
         languages=_WESTERN,
     ),
     EncodingInfo(
@@ -851,7 +766,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP875",),
         era=EncodingEra.MAINFRAME,
         is_multibyte=False,
-        python_codec="cp875",
         languages=("el",),
     ),
     EncodingInfo(
@@ -859,7 +773,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP1026",),
         era=EncodingEra.MAINFRAME,
         is_multibyte=False,
-        python_codec="cp1026",
         languages=("tr",),
     ),
     EncodingInfo(
@@ -867,7 +780,6 @@ _REGISTRY_ENTRIES = (
         aliases=("CP273",),
         era=EncodingEra.MAINFRAME,
         is_multibyte=False,
-        python_codec="cp273",
         languages=("de",),
     ),
 )
@@ -891,7 +803,7 @@ def _build_lookup_cache() -> dict[str, EncodingName]:
     codec_to_name: dict[str, EncodingName] = {}
     for entry in REGISTRY.values():
         try:
-            codec_name = codecs.lookup(entry.python_codec).name
+            codec_name = codecs.lookup(entry.name).name
             codec_to_name.setdefault(codec_name, entry.name)
         except LookupError:
             pass

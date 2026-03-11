@@ -23,7 +23,7 @@ def filter_by_validity(
     valid = []
     for enc in candidates:
         try:
-            data.decode(enc.python_codec, errors="strict")
+            data.decode(enc.name, errors="strict")
             valid.append(enc)
         except (UnicodeDecodeError, LookupError):
             continue

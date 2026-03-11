@@ -99,7 +99,7 @@ def compute_confusion_groups(
         if enc.is_multibyte:
             continue
         try:
-            codecs.lookup(enc.python_codec)
+            codecs.lookup(enc.name)
             single_byte.append(enc)
         except LookupError:
             continue
@@ -107,7 +107,7 @@ def compute_confusion_groups(
     # Compute byte tables
     tables: dict[str, list[str | None]] = {}
     for enc in single_byte:
-        tables[enc.name] = _decode_byte_table(enc.python_codec)
+        tables[enc.name] = _decode_byte_table(enc.name)
 
     # Build adjacency: which encodings are similar
     adjacency: dict[str, set[str]] = {enc.name: set() for enc in single_byte}
@@ -159,7 +159,7 @@ def compute_distinguishing_maps(
         if enc.is_multibyte:
             continue
         try:
-            codecs.lookup(enc.python_codec)
+            codecs.lookup(enc.name)
             single_byte.append(enc)
         except LookupError:
             continue
@@ -167,7 +167,7 @@ def compute_distinguishing_maps(
     # Compute byte tables
     tables: dict[str, list[str | None]] = {}
     for enc in single_byte:
-        tables[enc.name] = _decode_byte_table(enc.python_codec)
+        tables[enc.name] = _decode_byte_table(enc.name)
 
     names = [enc.name for enc in single_byte]
     result: DistinguishingMaps = {}

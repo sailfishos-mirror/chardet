@@ -77,22 +77,22 @@ def test_registry_cp273_is_mainframe():
     cp273 = REGISTRY["cp273"]
     assert EncodingEra.MAINFRAME in cp273.era
     assert cp273.is_multibyte is False
-    assert cp273.python_codec == "cp273"
+    assert cp273.name == "cp273"
 
 
 def test_registry_hp_roman8_is_legacy_regional():
     hp = REGISTRY["hp-roman8"]
     assert EncodingEra.LEGACY_REGIONAL in hp.era
     assert hp.is_multibyte is False
-    assert hp.python_codec == "hp-roman8"
+    assert hp.name == "hp-roman8"
 
 
-def test_python_codec_is_valid():
+def test_name_is_valid_codec():
     import codecs
 
     for enc in REGISTRY.values():
-        codec_info = codecs.lookup(enc.python_codec)
-        assert codec_info is not None, f"Invalid codec: {enc.python_codec}"
+        codec_info = codecs.lookup(enc.name)
+        assert codec_info is not None, f"Invalid codec: {enc.name}"
 
 
 def test_languages_field_exists():
@@ -142,7 +142,7 @@ def test_utf7_in_registry():
 def test_big5_family_uses_broadest_superset():
     """big5hkscs is the primary name; big5 is an alias."""
     entry = REGISTRY["big5hkscs"]
-    assert entry.python_codec == "big5hkscs"
+    assert entry.name == "big5hkscs"
     assert "big5" in entry.aliases
     assert "big5-tw" in entry.aliases
     assert "csbig5" in entry.aliases
@@ -168,7 +168,7 @@ def test_gb18030_has_subset_aliases():
 def test_euc_jp_family_uses_broadest_superset():
     """euc-jis-2004 is the primary name; euc-jp is an alias."""
     entry = REGISTRY["euc_jis_2004"]
-    assert entry.python_codec == "euc_jis_2004"
+    assert entry.name == "euc_jis_2004"
     assert "euc-jp" in entry.aliases
     assert "eucjp" in entry.aliases
     assert "ujis" in entry.aliases
@@ -184,7 +184,7 @@ def test_euc_jp_family_uses_broadest_superset():
 def test_shift_jis_family_uses_broadest_superset():
     """shift_jis_2004 is the primary name; shift_jis is an alias."""
     entry = REGISTRY["shift_jis_2004"]
-    assert entry.python_codec == "shift_jis_2004"
+    assert entry.name == "shift_jis_2004"
     assert "shift_jis" in entry.aliases
     assert "sjis" in entry.aliases
     assert "shiftjis" in entry.aliases
@@ -207,21 +207,21 @@ def test_iso2022_jp_split_into_branches():
     assert "iso-2022-jp" in jp2.aliases
     assert "csiso2022jp" in jp2.aliases
     assert "iso2022-jp-1" in jp2.aliases
-    assert jp2.python_codec == "iso2022_jp_2"
+    assert jp2.name == "iso2022_jp_2"
     assert jp2.is_multibyte is True
     assert jp2.languages == ("ja",)
 
     # iso2022-jp-2004 is the modern Japanese branch
     jp2004 = REGISTRY["iso2022_jp_2004"]
     assert "iso2022-jp-3" in jp2004.aliases
-    assert jp2004.python_codec == "iso2022_jp_2004"
+    assert jp2004.name == "iso2022_jp_2004"
     assert jp2004.is_multibyte is True
     assert jp2004.languages == ("ja",)
 
     # iso2022-jp-ext is the katakana branch
     jpext = REGISTRY["iso2022_jp_ext"]
     assert jpext.aliases == ("ISO-2022-JP-EXT",)
-    assert jpext.python_codec == "iso2022_jp_ext"
+    assert jpext.name == "iso2022_jp_ext"
     assert jpext.is_multibyte is True
     assert jpext.languages == ("ja",)
 
@@ -234,11 +234,11 @@ def test_cp037_flipped_to_cp1140():
     assert "cp1140" in REGISTRY
     entry = REGISTRY["cp1140"]
     assert "cp037" in entry.aliases
-    assert entry.python_codec == "cp1140"
+    assert entry.name == "cp1140"
     assert EncodingEra.MAINFRAME in entry.era
     # cp500 should still be its own entry (different EBCDIC variant)
     assert "cp500" in REGISTRY
-    assert REGISTRY["cp500"].python_codec == "cp500"
+    assert REGISTRY["cp500"].name == "cp500"
 
 
 # === Task 6b: tis-620 gets iso-8859-11 alias ===
@@ -280,8 +280,8 @@ def test_lookup_encoding_alias():
     assert lookup_encoding("gb2312") == "gb18030"
 
 
-def test_lookup_encoding_python_codec():
-    """lookup_encoding resolves Python codec names to canonical names."""
+def test_lookup_encoding_by_name():
+    """lookup_encoding resolves encoding names to canonical names."""
     assert lookup_encoding("cp1252") == "cp1252"
 
 
@@ -307,15 +307,14 @@ def test_lookup_encoding_codecs_fallback():
 def test_build_lookup_cache_handles_invalid_codec(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """_build_lookup_cache skips entries whose python_codec is unrecognised."""
+    """_build_lookup_cache skips entries whose name is not a valid codec."""
     import chardet.registry as reg
 
     bad_entry = reg.EncodingInfo(
-        name="ASCII",
+        name="no_such_codec_xyz",
         aliases=(),
         era=EncodingEra.MODERN_WEB,
         is_multibyte=False,
-        python_codec="no_such_codec_xyz",
         languages=(),
     )
     monkeypatch.setattr(reg, "_REGISTRY_ENTRIES", (bad_entry,))
@@ -323,4 +322,4 @@ def test_build_lookup_cache_handles_invalid_codec(
 
     # Should not raise — the LookupError is caught
     cache = reg._build_lookup_cache()
-    assert "ascii" in cache
+    assert "no_such_codec_xyz" in cache

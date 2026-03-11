@@ -27,7 +27,7 @@ def main() -> None:
     codec_names: set[str] = set()
     for info in REGISTRY.values():
         with contextlib.suppress(LookupError):
-            codec_names.add(codecs.lookup(info.python_codec).name)
+            codec_names.add(info.name)
         for alias in info.aliases:
             with contextlib.suppress(LookupError):
                 codec_names.add(codecs.lookup(alias).name)
