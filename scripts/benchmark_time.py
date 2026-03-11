@@ -10,6 +10,7 @@ machine-readable JSON (used by ``compare_detectors.py``).
 
 from __future__ import annotations
 
+import concurrent.futures
 import json
 import statistics
 import sys
@@ -25,7 +26,16 @@ def main() -> None:
     parser = build_benchmark_parser(
         "Benchmark a single encoding detector (timing only)."
     )
+    parser.add_argument(
+        "--threads",
+        type=int,
+        default=1,
+        metavar="N",
+        help="Number of detection threads (default: 1, no threading overhead)",
+    )
     args = parser.parse_args()
+    if args.threads < 1:
+        parser.error("--threads must be >= 1")
     all_data = load_benchmark_data(args)
 
     # Import detector and build detect function — timed with perf_counter only
@@ -80,27 +90,71 @@ def main() -> None:
 
     # Run detection over all files, collect per-file times + results
     file_times: list[float] = []
-    t_total_start = time.perf_counter()
-    for enc, lang, fp, data in all_data:
-        ft0 = time.perf_counter()
-        detected, detected_language = detect(data)
-        file_elapsed = time.perf_counter() - ft0
-        file_times.append(file_elapsed)
 
-        if args.json_only:
-            print(
-                json.dumps(
-                    {
-                        "expected": enc,
-                        "language": lang,
-                        "path": str(fp),
-                        "detected": detected,
-                        "detected_language": detected_language,
-                        "elapsed": file_elapsed,
-                    }
+    if args.threads > 1:
+        # Multi-threaded path: distribute detect() calls across threads
+        def _detect_one(
+            item: tuple[str | None, str | None, Path, bytes],
+        ) -> tuple[str | None, str | None, Path, str | None, str | None, float]:
+            enc, lang, fp, data = item
+            ft0 = time.perf_counter()
+            detected, detected_language = detect(data)
+            file_elapsed = time.perf_counter() - ft0
+            return enc, lang, fp, detected, detected_language, file_elapsed
+
+        results_for_json: list[dict] = []
+        t_total_start = time.perf_counter()
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=args.threads
+        ) as executor:
+            for (
+                enc,
+                lang,
+                fp,
+                detected,
+                detected_language,
+                file_elapsed,
+            ) in executor.map(_detect_one, all_data):
+                file_times.append(file_elapsed)
+                if args.json_only:
+                    results_for_json.append(
+                        {
+                            "expected": enc,
+                            "language": lang,
+                            "path": str(fp),
+                            "detected": detected,
+                            "detected_language": detected_language,
+                            "elapsed": file_elapsed,
+                        }
+                    )
+        total_elapsed = time.perf_counter() - t_total_start
+
+        # Print buffered JSON results (preserves file order)
+        for obj in results_for_json:
+            print(json.dumps(obj))
+    else:
+        # Single-threaded path: no executor overhead
+        t_total_start = time.perf_counter()
+        for enc, lang, fp, data in all_data:
+            ft0 = time.perf_counter()
+            detected, detected_language = detect(data)
+            file_elapsed = time.perf_counter() - ft0
+            file_times.append(file_elapsed)
+
+            if args.json_only:
+                print(
+                    json.dumps(
+                        {
+                            "expected": enc,
+                            "language": lang,
+                            "path": str(fp),
+                            "detected": detected,
+                            "detected_language": detected_language,
+                            "elapsed": file_elapsed,
+                        }
+                    )
                 )
-            )
-    total_elapsed = time.perf_counter() - t_total_start
+        total_elapsed = time.perf_counter() - t_total_start
 
     if args.json_only:
         # Summary line (last)
@@ -110,6 +164,7 @@ def main() -> None:
                     "__timing__": total_elapsed,
                     "import_time": import_time,
                     "first_detect_time": first_detect_time,
+                    "threads": args.threads,
                 }
             )
         )
@@ -129,6 +184,7 @@ def main() -> None:
         if args.detector == "chardet":
             print(f"  encoding_era: {args.encoding_era}")
         print(f"  Files:        {len(all_data)}")
+        print(f"  Threads:      {args.threads}")
         print()
         print("Timing:")
         print(f"  Import:       {import_time:.3f}s")
