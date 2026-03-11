@@ -268,6 +268,27 @@ def test_resolve_confusion_groups_bigram_wins_over_category():
     assert resolved[1].encoding == "iso8859-1"
 
 
+def test_bigram_rescore_no_variants_for_one_encoding():
+    """When one encoding has no model variants, its score is 0.0."""
+    diff_bytes = frozenset({0x80, 0x81})
+    data = bytes([0x80, 0x81] * 10)
+
+    def fake_score(_profile: object, _model: object, key: str) -> float:
+        return 0.5
+
+    fake_model = MagicMock()
+    # Only enc_a has variants; enc_b is absent from the index
+    fake_index = {
+        "ENC_A": [("lang_a", fake_model, "enc_a_lang/ENC_A")],
+    }
+    with (
+        patch("chardet.pipeline.confusion.get_enc_index", return_value=fake_index),
+        patch("chardet.pipeline.confusion.score_with_profile", side_effect=fake_score),
+    ):
+        result = resolve_by_bigram_rescore(data, "ENC_A", "ENC_B", diff_bytes)
+    assert result == "ENC_A"
+
+
 def test_resolve_confusion_groups_no_swap_when_winner_is_top():
     """When the winner matches the top result, no swap should happen."""
     top = DetectionResult(encoding="cp1252", confidence=0.95, language="English")

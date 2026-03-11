@@ -1,6 +1,9 @@
 # tests/test_markup.py
 from __future__ import annotations
 
+import re
+from unittest.mock import patch
+
 from chardet.pipeline.markup import detect_markup_charset
 
 
@@ -102,4 +105,15 @@ def test_non_ascii_charset_name_ignored():
     # Build a meta tag whose charset value contains a non-ASCII byte (0xff)
     data = b'<meta charset="' + b"\xff\xfe" + b'">'
     result = detect_markup_charset(data)
+    assert result is None
+
+
+def test_pep263_non_ascii_coding_name():
+    """PEP 263 coding name with non-ASCII bytes should return None."""
+    # The default PEP263 regex only captures ASCII via \\w on bytes, so
+    # swap in a broader regex that can capture high bytes.
+    broad_re = re.compile(rb"^[ \t\f]*#.*?coding[:=][ \t]*([^\s]+)", re.MULTILINE)
+    data = b"# -*- coding: \xff\xfe -*-\n"
+    with patch("chardet.pipeline.markup._PEP263_RE", broad_re):
+        result = detect_markup_charset(data)
     assert result is None
