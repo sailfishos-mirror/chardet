@@ -388,6 +388,49 @@ def test_detect_hp_roman8():
     assert result["encoding"] == "hp-roman8"
 
 
+# --- PEP 263 encoding declaration tests ---
+
+
+def test_detect_pep263_emacs_style():
+    """PEP 263 Emacs-style declaration on line 1."""
+    data = b"# -*- coding: iso-8859-1 -*-\nx = '\xe9l\xe8ve'\n"
+    result = chardet.detect(data, compat_names=False)
+    assert result["encoding"] == "iso8859-1"
+    assert result["confidence"] == 0.95
+
+
+def test_detect_pep263_bare_form():
+    """PEP 263 bare form: # coding=<encoding>."""
+    data = b"# coding=utf-8\nx = 'hello'\n"
+    result = chardet.detect(data, compat_names=False)
+    assert result["encoding"] == "utf-8"
+    assert result["confidence"] == 0.95
+
+
+def test_detect_pep263_line2_with_shebang():
+    """PEP 263 on line 2 after a shebang."""
+    data = b"#!/usr/bin/env python\n# -*- coding: iso-8859-1 -*-\nx = '\xe9'\n"
+    result = chardet.detect(data, compat_names=False)
+    assert result["encoding"] == "iso8859-1"
+    assert result["confidence"] == 0.95
+
+
+def test_detect_pep263_line3_ignored():
+    """PEP 263 on line 3 should be ignored (only lines 1-2 are valid)."""
+    data = b"#!/usr/bin/env python\n# a comment\n# -*- coding: iso-8859-1 -*-\n"
+    result = chardet.detect(data)
+    # Should NOT return iso-8859-1 from PEP 263 — line 3 is too late.
+    # The data is pure ASCII, so expect ascii.
+    assert result["encoding"] == "ascii"
+
+
+def test_detect_pep263_invalid_encoding_ignored():
+    """PEP 263 with an unknown encoding name should fall through."""
+    data = b"# -*- coding: not-a-real-encoding -*-\nhello world\n"
+    result = chardet.detect(data)
+    assert result["encoding"] == "ascii"
+
+
 # --- compat_names and prefer_superset tests ---
 
 
