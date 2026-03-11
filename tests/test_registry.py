@@ -304,22 +304,6 @@ def test_lookup_encoding_codecs_fallback():
     assert lookup_encoding("latin_1") == "iso8859-1"
 
 
-def test_build_lookup_cache_handles_invalid_codec(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """_build_lookup_cache skips entries whose name is not a valid codec."""
-    import chardet.registry as reg
-
-    bad_entry = reg.EncodingInfo(
-        name="no_such_codec_xyz",
-        aliases=(),
-        era=EncodingEra.MODERN_WEB,
-        is_multibyte=False,
-        languages=(),
-    )
-    monkeypatch.setattr(reg, "_REGISTRY_ENTRIES", (bad_entry,))
-    monkeypatch.setattr(reg, "REGISTRY", MappingProxyType({bad_entry.name: bad_entry}))
-
-    # Should not raise — the LookupError is caught
-    cache = reg._build_lookup_cache()
-    assert "no_such_codec_xyz" in cache
+def test_lookup_encoding_unknown_codec():
+    """lookup_encoding returns None for unknown names."""
+    assert lookup_encoding("no_such_codec_xyz") is None

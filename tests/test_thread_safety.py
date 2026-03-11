@@ -81,10 +81,9 @@ def test_concurrent_detect_high_concurrency():
 def test_cold_cache_concurrent_init():
     """Race on first-call cache initialization from a cold state.
 
-    Resets all five load-once caches to their initial empty state, then
-    has many threads simultaneously call detect().  This stresses the
-    locking on the cache population path — the most dangerous codepath
-    for thread safety.
+    Clears all functools.cache-backed caches, then has many threads
+    simultaneously call detect().  This stresses the cache population
+    path — the most dangerous codepath for thread safety.
 
     Marked ``serial`` because the global cache mutations are not safe to
     run concurrently with other tests that call ``detect()``.
@@ -93,33 +92,23 @@ def test_cold_cache_concurrent_init():
     import chardet.pipeline.confusion as _confusion
     import chardet.registry as _registry
 
-    # Save originals.
-    saved = (
-        _models._MODEL_CACHE,
-        _models._ENC_INDEX,
-        _models._MODEL_NORMS,
-        _confusion._CONFUSION_CACHE,
-        _registry._CANDIDATES_CACHE.copy(),
-    )
-
     try:
-        # Reset all caches to cold state.
-        _models._MODEL_CACHE = None
-        _models._ENC_INDEX = None
-        _models._MODEL_NORMS = None
-        _confusion._CONFUSION_CACHE = None
-        _registry._CANDIDATES_CACHE.clear()
+        # Clear all caches to cold state.
+        _models._load_models_data.cache_clear()
+        _models.get_enc_index.cache_clear()
+        _confusion.load_confusion_data.cache_clear()
+        _registry.lookup_encoding.cache_clear()
+        _registry.get_candidates.cache_clear()
 
         errors = _run_concurrent_detect(n_workers=6, iterations=5)
         assert not errors, "Cold-cache race violations:\n" + "\n".join(errors[:10])
     finally:
-        # Restore caches so subsequent tests aren't affected.
-        _models._MODEL_CACHE = saved[0]
-        _models._ENC_INDEX = saved[1]
-        _models._MODEL_NORMS = saved[2]
-        _confusion._CONFUSION_CACHE = saved[3]
-        _registry._CANDIDATES_CACHE.clear()
-        _registry._CANDIDATES_CACHE.update(saved[4])
+        # Clear and let caches re-populate naturally on next use.
+        _models._load_models_data.cache_clear()
+        _models.get_enc_index.cache_clear()
+        _confusion.load_confusion_data.cache_clear()
+        _registry.lookup_encoding.cache_clear()
+        _registry.get_candidates.cache_clear()
 
 
 def test_gil_status_diagnostic() -> None:

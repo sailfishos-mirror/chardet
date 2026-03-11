@@ -9,9 +9,9 @@ Build-time computation (``compute_confusion_groups``, ``compute_distinguishing_m
 
 from __future__ import annotations
 
+import functools
 import importlib.resources
 import struct
-import threading
 import warnings
 
 from chardet.models import (
@@ -65,9 +65,6 @@ _INT_TO_CATEGORY: dict[int, str] = {
     29: "Cn",
 }
 
-_CONFUSION_CACHE: DistinguishingMaps | None = None
-_CONFUSION_CACHE_LOCK = threading.Lock()
-
 
 def deserialize_confusion_data_from_bytes(data: bytes) -> DistinguishingMaps:
     """Load confusion group data from raw bytes.
@@ -109,41 +106,34 @@ def deserialize_confusion_data_from_bytes(data: bytes) -> DistinguishingMaps:
     return result
 
 
+@functools.cache
 def load_confusion_data() -> DistinguishingMaps:
     """Load confusion group data from the bundled confusion.bin file.
 
     :returns: A :data:`DistinguishingMaps` dictionary keyed by encoding pairs.
     """
-    global _CONFUSION_CACHE  # noqa: PLW0603
-    if _CONFUSION_CACHE is not None:
-        return _CONFUSION_CACHE
-    with _CONFUSION_CACHE_LOCK:
-        if _CONFUSION_CACHE is not None:  # pragma: no cover - double-checked locking
-            return _CONFUSION_CACHE
-        ref = importlib.resources.files("chardet.models").joinpath("confusion.bin")
-        raw = ref.read_bytes()
-        if not raw:
-            warnings.warn(
-                "chardet confusion.bin is empty — confusion resolution disabled; "
-                "reinstall chardet to fix",
-                RuntimeWarning,
-                stacklevel=2,
-            )
-            _CONFUSION_CACHE = {}
-            return _CONFUSION_CACHE
-        try:
-            raw_maps = deserialize_confusion_data_from_bytes(raw)
-        except (struct.error, UnicodeDecodeError) as e:
-            msg = f"corrupt confusion.bin: {e}"
-            raise ValueError(msg) from e
-        # Normalize keys to canonical codec names so pipeline output matches.
-        normalized: DistinguishingMaps = {}
-        for (a, b), value in raw_maps.items():
-            norm_a = lookup_encoding(a) or a
-            norm_b = lookup_encoding(b) or b
-            normalized[(norm_a, norm_b)] = value
-        _CONFUSION_CACHE = normalized
-        return _CONFUSION_CACHE
+    ref = importlib.resources.files("chardet.models").joinpath("confusion.bin")
+    raw = ref.read_bytes()
+    if not raw:
+        warnings.warn(
+            "chardet confusion.bin is empty — confusion resolution disabled; "
+            "reinstall chardet to fix",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return {}
+    try:
+        raw_maps = deserialize_confusion_data_from_bytes(raw)
+    except (struct.error, UnicodeDecodeError) as e:
+        msg = f"corrupt confusion.bin: {e}"
+        raise ValueError(msg) from e
+    # Normalize keys to canonical codec names so pipeline output matches.
+    normalized: DistinguishingMaps = {}
+    for (a, b), value in raw_maps.items():
+        norm_a = lookup_encoding(a) or a
+        norm_b = lookup_encoding(b) or b
+        normalized[(norm_a, norm_b)] = value
+    return normalized
 
 
 # Unicode general category preference scores for voting resolution.

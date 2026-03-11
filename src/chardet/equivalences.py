@@ -24,23 +24,10 @@ This module defines:
 
 from __future__ import annotations
 
-import codecs
 import unicodedata
 
 from chardet.pipeline import DetectionDict
-
-
-def normalize_encoding_name(name: str) -> str:
-    """Normalize encoding name for comparison.
-
-    :param name: The encoding name to normalize.
-    :returns: The canonical codec name, or a lowered/stripped fallback.
-    """
-    try:
-        return codecs.lookup(name).name
-    except LookupError:
-        return name.lower().replace("-", "").replace("_", "")
-
+from chardet.registry import lookup_encoding
 
 # Directional superset relationships: detecting any of the supersets
 # when the expected encoding is the subset counts as correct.
@@ -98,7 +85,7 @@ PREFERRED_SUPERSET: dict[str, str] = {
     "iso8859-7": "cp1253",
     "iso8859-8": "cp1255",
     "iso8859-9": "cp1254",
-    "ISO-8859-11": "cp874",
+    "iso8859-11": "cp874",
     "iso8859-13": "cp1257",
     "tis-620": "cp874",
 }
@@ -248,21 +235,23 @@ def is_language_equivalent(expected: str, detected: str) -> bool:
 
 
 # Pre-built normalized lookups for fast comparison.
-_NORMALIZED_SUPERSETS: dict[str, frozenset[str]] = {
-    normalize_encoding_name(subset): frozenset(
-        normalize_encoding_name(s) for s in supersets
-    )
-    for subset, supersets in SUPERSETS.items()
-}
+# Built iteratively because multiple SUPERSETS keys can normalize to the same
+# canonical name (e.g., Shift_JIS and Shift-JISX0213 both → shift_jis_2004).
+# Values are merged (unioned) when keys collide.
+_NORMALIZED_SUPERSETS: dict[str, frozenset[str]] = {}
+for _subset, _supersets in SUPERSETS.items():
+    _key = lookup_encoding(_subset) or _subset
+    _normed = frozenset(lookup_encoding(s) or s for s in _supersets)
+    _NORMALIZED_SUPERSETS[_key] = _NORMALIZED_SUPERSETS.get(_key, frozenset()) | _normed
 
 
 def _build_bidir_index() -> dict[str, frozenset[str]]:
     """Build the bidirectional equivalence lookup index."""
     result: dict[str, frozenset[str]] = {}
     for group in BIDIRECTIONAL_GROUPS:
-        normed = frozenset(normalize_encoding_name(n) for n in group)
+        normed = frozenset(lookup_encoding(n) or n for n in group)
         for name in group:
-            result[normalize_encoding_name(name)] = normed
+            result[lookup_encoding(name) or name] = normed
     return result
 
 
@@ -286,8 +275,8 @@ def is_correct(expected: str | None, detected: str | None) -> bool:
         return detected is None
     if detected is None:
         return False
-    norm_exp = normalize_encoding_name(expected)
-    norm_det = normalize_encoding_name(detected)
+    norm_exp = lookup_encoding(expected) or expected.lower()
+    norm_det = lookup_encoding(detected) or detected.lower()
 
     # 1. Exact match
     if norm_exp == norm_det:
@@ -364,8 +353,8 @@ def is_equivalent_detection(
     if detected is None:
         return False
 
-    norm_exp = normalize_encoding_name(expected)
-    norm_det = normalize_encoding_name(detected)
+    norm_exp = lookup_encoding(expected) or expected.lower()
+    norm_det = lookup_encoding(detected) or detected.lower()
 
     if norm_exp == norm_det:
         return True

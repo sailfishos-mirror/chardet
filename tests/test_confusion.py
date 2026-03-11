@@ -86,9 +86,8 @@ def test_load_confusion_data_empty_file():
     """Empty confusion.bin should emit RuntimeWarning and return empty dict."""
     import chardet.pipeline.confusion as mod
 
-    original = mod._CONFUSION_CACHE
+    mod.load_confusion_data.cache_clear()
     try:
-        mod._CONFUSION_CACHE = None
         mock_ref = MagicMock()
         mock_ref.read_bytes.return_value = b""
         with (
@@ -102,16 +101,15 @@ def test_load_confusion_data_empty_file():
             result = mod.load_confusion_data()
         assert result == {}
     finally:
-        mod._CONFUSION_CACHE = original
+        mod.load_confusion_data.cache_clear()
 
 
 def test_load_confusion_data_corrupt_file():
     """Corrupt confusion.bin should raise ValueError."""
     import chardet.pipeline.confusion as mod
 
-    original = mod._CONFUSION_CACHE
+    mod.load_confusion_data.cache_clear()
     try:
-        mod._CONFUSION_CACHE = None
         mock_ref = MagicMock()
         # Valid num_pairs=1 but truncated after that
         mock_ref.read_bytes.return_value = struct.pack("!H", 1)
@@ -125,7 +123,7 @@ def test_load_confusion_data_corrupt_file():
         ):
             mod.load_confusion_data()
     finally:
-        mod._CONFUSION_CACHE = original
+        mod.load_confusion_data.cache_clear()
 
 
 def test_resolve_confusion_groups_single_result():

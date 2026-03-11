@@ -21,8 +21,8 @@ from chardet.enums import EncodingEra
 from chardet.equivalences import (
     is_correct,
     is_equivalent_detection,
-    normalize_encoding_name,
 )
+from chardet.registry import lookup_encoding
 
 # ---------------------------------------------------------------------------
 # Main diagnostic
@@ -80,7 +80,7 @@ def main() -> None:
         norm_expected = (
             "None"
             if expected_encoding is None
-            else normalize_encoding_name(expected_encoding)
+            else lookup_encoding(expected_encoding) or expected_encoding
         )
 
         total += 1
@@ -138,7 +138,7 @@ def main() -> None:
     for fail_count, enc, t, c, acc in rows:
         marker = (
             " <<<"
-            if any(normalize_encoding_name(fe) == enc for fe in FOCUS_ENCODINGS)
+            if any((lookup_encoding(fe) or fe) == enc for fe in FOCUS_ENCODINGS)
             else ""
         )
         print(f"\n  {enc}: {c}/{t} correct ({acc:.1%}) — {fail_count} failures{marker}")
@@ -167,7 +167,7 @@ def main() -> None:
 
     focus_normalized = set()
     for fe in FOCUS_ENCODINGS:
-        focus_normalized.add(normalize_encoding_name(fe))
+        focus_normalized.add(lookup_encoding(fe) or fe)
 
     for enc in sorted(focus_normalized):
         t = enc_total.get(enc, 0)

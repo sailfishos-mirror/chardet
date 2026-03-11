@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import codecs
 import dataclasses
-import threading
+import functools
 from types import MappingProxyType
 from typing import Literal
 
@@ -135,27 +135,14 @@ class EncodingInfo:
     languages: tuple[str, ...]
 
 
-_CANDIDATES_CACHE: dict[int, tuple[EncodingInfo, ...]] = {}
-_CANDIDATES_CACHE_LOCK = threading.Lock()
-
-
+@functools.cache
 def get_candidates(era: EncodingEra) -> tuple[EncodingInfo, ...]:
     """Return registry entries matching the given era filter.
 
     :param era: Bit flags specifying which encoding eras to include.
     :returns: A tuple of matching :class:`EncodingInfo` entries.
     """
-    key = int(era)
-    result = _CANDIDATES_CACHE.get(key)
-    if result is not None:
-        return result
-    with _CANDIDATES_CACHE_LOCK:
-        result = _CANDIDATES_CACHE.get(key)
-        if result is not None:  # pragma: no cover - double-checked locking
-            return result
-        result = tuple(enc for enc in REGISTRY.values() if enc.era & era)
-        _CANDIDATES_CACHE[key] = result
-        return result
+    return tuple(enc for enc in REGISTRY.values() if enc.era & era)
 
 
 # Era assignments match chardet 6.0.0's chardet/metadata/charsets.py
@@ -788,29 +775,8 @@ REGISTRY: MappingProxyType[str, EncodingInfo] = MappingProxyType(
     {e.name: e for e in _REGISTRY_ENTRIES}
 )
 
-_LOOKUP_CACHE: dict[str, EncodingName] | None = None
-_LOOKUP_CACHE_LOCK = threading.Lock()
 
-
-def _build_lookup_cache() -> dict[str, EncodingName]:
-    """Build a case-insensitive lookup table from all known encoding names."""
-    cache: dict[str, EncodingName] = {}
-    for entry in REGISTRY.values():
-        cache[entry.name.lower()] = entry.name
-    for entry in REGISTRY.values():
-        for alias in entry.aliases:
-            cache.setdefault(alias.lower(), entry.name)
-    codec_to_name: dict[str, EncodingName] = {}
-    for entry in REGISTRY.values():
-        try:
-            codec_name = codecs.lookup(entry.name).name
-            codec_to_name.setdefault(codec_name, entry.name)
-        except LookupError:
-            pass
-    cache.update({k: v for k, v in codec_to_name.items() if k not in cache})
-    return cache
-
-
+@functools.cache
 def lookup_encoding(name: str) -> EncodingName | None:
     """Convert an encoding name string to the canonical EncodingName.
 
@@ -819,16 +785,18 @@ def lookup_encoding(name: str) -> EncodingName | None:
     :param name: Any encoding name string.
     :returns: The canonical :data:`EncodingName`, or ``None`` if unknown.
     """
-    global _LOOKUP_CACHE  # noqa: PLW0603
-    if _LOOKUP_CACHE is None:
-        with _LOOKUP_CACHE_LOCK:
-            if _LOOKUP_CACHE is None:
-                _LOOKUP_CACHE = _build_lookup_cache()
-    result = _LOOKUP_CACHE.get(name.lower())
-    if result is not None:
-        return result
+    lowered = name.lower()
+    for entry in REGISTRY.values():
+        if entry.name == lowered:
+            return entry.name
+        for alias in entry.aliases:
+            if alias.lower() == lowered:
+                return entry.name
+    # Fallback: resolve through Python's codec registry
     try:
         codec_name = codecs.lookup(name).name
-        return _LOOKUP_CACHE.get(codec_name)
     except LookupError:
         return None
+    if codec_name != lowered:
+        return lookup_encoding(codec_name)
+    return None

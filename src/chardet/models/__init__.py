@@ -5,10 +5,10 @@ this module is compiled with mypyc, which does not support PEP 563 string
 annotations.
 """
 
+import functools
 import importlib.resources
 import math
 import struct
-import threading
 import warnings
 
 from chardet.registry import REGISTRY, lookup_encoding
@@ -19,13 +19,6 @@ _iter_3bytes = struct.Struct(">BBB").iter_unpack
 #: Weight applied to non-ASCII bigrams during profile construction.
 #: Imported by pipeline/confusion.py for focused bigram re-scoring.
 NON_ASCII_BIGRAM_WEIGHT: int = 8
-
-_MODEL_CACHE: dict[str, bytearray] | None = None
-_MODEL_NORMS: dict[str, float] | None = None
-_MODEL_CACHE_LOCK = threading.Lock()
-# Pre-grouped index: encoding name -> [(lang, model, model_key), ...]
-_ENC_INDEX: dict[str, list[tuple[str | None, bytearray, str]]] | None = None
-_ENC_INDEX_LOCK = threading.Lock()
 # Encodings that map to exactly one language, derived from the registry.
 # Keyed by canonical name only — callers always use canonical names.
 _SINGLE_LANG_MAP: dict[str, str] = {}
@@ -91,43 +84,36 @@ def _parse_models_bin(
     return models, norms
 
 
+@functools.cache
+def _load_models_data() -> tuple[dict[str, bytearray], dict[str, float]]:
+    """Load and parse models.bin, returning (models, norms).
+
+    Cached: only reads from disk on first call.
+    """
+    ref = importlib.resources.files("chardet.models").joinpath("models.bin")
+    data = ref.read_bytes()
+
+    if not data:
+        warnings.warn(
+            "chardet models.bin is empty — statistical detection disabled; "
+            "reinstall chardet to fix",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return {}, {}
+
+    return _parse_models_bin(data)
+
+
 def load_models() -> dict[str, bytearray]:
     """Load all bigram models from the bundled models.bin file.
 
     Each model is a bytearray of length 65536 (256*256).
     Index: (b1 << 8) | b2 -> weight (0-255).
 
-    Also computes and caches L2 norms for each model as a side-product of
-    loading, since we already iterate over the sparse non-zero entries.
-
     :returns: A dict mapping model key strings to 65536-byte lookup tables.
     """
-    global _MODEL_CACHE, _MODEL_NORMS  # noqa: PLW0603
-    if _MODEL_CACHE is not None:
-        return _MODEL_CACHE
-
-    with _MODEL_CACHE_LOCK:
-        # No re-check: mypyc type-narrows _MODEL_CACHE to None after the
-        # outer check, so a re-read here would hit a TypeError under mypyc.
-        # Worst case two threads both build on first call (idempotent).
-        ref = importlib.resources.files("chardet.models").joinpath("models.bin")
-        data = ref.read_bytes()
-
-        if not data:
-            warnings.warn(
-                "chardet models.bin is empty — statistical detection disabled; "
-                "reinstall chardet to fix",
-                RuntimeWarning,
-                stacklevel=2,
-            )
-            _MODEL_NORMS = {}
-            _MODEL_CACHE = {}
-            return _MODEL_CACHE
-
-        models, norms = _parse_models_bin(data)
-        _MODEL_NORMS = norms
-        _MODEL_CACHE = models
-        return models
+    return _load_models_data()[0]
 
 
 def _build_enc_index(
@@ -153,16 +139,10 @@ def _build_enc_index(
     return index
 
 
+@functools.cache
 def get_enc_index() -> dict[str, list[tuple[str | None, bytearray, str]]]:
     """Return a pre-grouped index mapping encoding name -> [(lang, model, model_key), ...]."""
-    global _ENC_INDEX  # noqa: PLW0603
-    if _ENC_INDEX is not None:
-        return _ENC_INDEX
-    with _ENC_INDEX_LOCK:
-        # No re-check: mypyc type-narrows _ENC_INDEX to None after the
-        # outer check, so a re-read here would hit a TypeError under mypyc.
-        _ENC_INDEX = _build_enc_index(load_models())
-        return _ENC_INDEX
+    return _build_enc_index(load_models())
 
 
 def infer_language(encoding: str) -> str | None:
@@ -186,11 +166,7 @@ def has_model_variants(encoding: str) -> bool:
 
 def _get_model_norms() -> dict[str, float]:
     """Return cached L2 norms for all models, keyed by model key string."""
-    # Norms are computed as a side-product of load_models(), so just ensure
-    # models are loaded and return the cached norms.
-    load_models()
-    # _MODEL_NORMS is guaranteed non-None after load_models() returns.
-    return _MODEL_NORMS  # type: ignore[return-value]
+    return _load_models_data()[1]
 
 
 class BigramProfile:

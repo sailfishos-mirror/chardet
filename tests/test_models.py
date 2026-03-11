@@ -209,14 +209,11 @@ def mock_models_bin():
     """Clear the model cache and provide a helper to mock models.bin content.
 
     Yields a callable ``set_data(raw_bytes)`` that configures the mock to
-    return *raw_bytes* from ``models.bin``.  The original ``_MODEL_CACHE``
-    and ``_MODEL_NORMS`` are restored on teardown.
+    return *raw_bytes* from ``models.bin``.  The cache is cleared on teardown.
     """
     import chardet.models as mod
 
-    original_cache = mod._MODEL_CACHE
-    original_norms = mod._MODEL_NORMS
-    mod._MODEL_CACHE = None
+    mod._load_models_data.cache_clear()
     mock_ref = MagicMock()
 
     def set_data(data: bytes) -> None:
@@ -229,8 +226,7 @@ def mock_models_bin():
     ):
         yield set_data
 
-    mod._MODEL_CACHE = original_cache
-    mod._MODEL_NORMS = original_norms
+    mod._load_models_data.cache_clear()
 
 
 def test_load_models_empty_file(mock_models_bin: Callable[[bytes], None]) -> None:
