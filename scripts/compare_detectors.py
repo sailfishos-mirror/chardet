@@ -1222,20 +1222,46 @@ if __name__ == "__main__":
 
     # --pure: strip the mypyc build hook env var so the chardet venv is
     # guaranteed to be pure Python even if the caller has it set.
-    # --mypyc: force HATCH_BUILD_HOOK_ENABLE_MYPYC=true so mypyc extensions
-    # are compiled even if the caller hasn't set the env var.
+    # --mypyc: build a mypyc wheel locally first, then install it.
     install_env: dict[str, str] | None = None
+    mypyc_wheel_dir: Path | None = None
+    chardet_pip_args: list[str] = [project_root]
     if args.pure:
         install_env = {
             k: v for k, v in os.environ.items() if k != "HATCH_BUILD_HOOK_ENABLE_MYPYC"
         }
     elif args.mypyc:
-        install_env = {**os.environ, "HATCH_BUILD_HOOK_ENABLE_MYPYC": "true"}
+        # Build a mypyc-compiled wheel so the venv gets compiled extensions.
+        # Passing HATCH_BUILD_HOOK_ENABLE_MYPYC via env to `uv pip install`
+        # doesn't reliably trigger the build hook, so we build explicitly.
+        mypyc_wheel_dir = Path(tempfile.mkdtemp(prefix="chardet-mypyc-wheel-"))
+        print("Building mypyc wheel for local chardet ...")
+        build_cmd = [
+            "uv",
+            "build",
+            "--wheel",
+            "--out-dir",
+            str(mypyc_wheel_dir),
+            project_root,
+        ]
+        if args.python:
+            build_cmd.extend(["--python", args.python])
+        subprocess.run(
+            build_cmd,
+            check=True,
+            env={**os.environ, "HATCH_BUILD_HOOK_ENABLE_MYPYC": "true"},
+        )
+        wheels = list(mypyc_wheel_dir.glob("*.whl"))
+        if not wheels:
+            print("ERROR: mypyc wheel build produced no .whl file", file=sys.stderr)
+            sys.exit(1)
+        chardet_pip_args = [str(wheels[0])]
+        print(f"  Built: {wheels[0].name}")
 
     # Build venv specs: (label, pip_args, env, detector_type, python_version)
     VenvSpec = tuple[str, list[str], dict[str, str] | None, str, str | None]
     venv_specs: list[VenvSpec] = [
-        ("chardet", [project_root], install_env, "chardet", args.python),
+        ("chardet", chardet_pip_args, install_env, "chardet", args.python),
     ]
 
     venv_specs.extend(
@@ -1413,3 +1439,5 @@ if __name__ == "__main__":
         for label, (venv_dir, _) in venvs.items():
             print(f"  Cleaning up venv for {label} ...")
             _cleanup_venv(venv_dir)
+        if mypyc_wheel_dir is not None:
+            shutil.rmtree(mypyc_wheel_dir, ignore_errors=True)
