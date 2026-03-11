@@ -21,8 +21,8 @@ def test_load_confusion_data():
     maps = load_confusion_data()
     assert len(maps) > 0
     found_ebcdic = any(
-        ("CP1140" in key[0] and "CP500" in key[1])
-        or ("CP500" in key[0] and "CP1140" in key[1])
+        ("cp1140" in key[0] and "cp500" in key[1])
+        or ("cp500" in key[0] and "cp1140" in key[1])
         for key in maps
     )
     assert found_ebcdic
@@ -62,24 +62,24 @@ def test_bigram_rescore_returns_valid_result():
 def test_resolve_confusion_groups_no_change_when_unrelated():
     """Unrelated encodings should not be reordered by confusion resolution."""
     results = [
-        DetectionResult(encoding="UTF-8", confidence=0.95, language=None),
-        DetectionResult(encoding="KOI8-R", confidence=0.80, language="Russian"),
+        DetectionResult(encoding="utf-8", confidence=0.95, language=None),
+        DetectionResult(encoding="koi8-r", confidence=0.80, language="Russian"),
     ]
     resolved = resolve_confusion_groups(b"Hello world", results)
-    assert resolved[0].encoding == "UTF-8"
+    assert resolved[0].encoding == "utf-8"
 
 
 def test_resolve_confusion_groups_preserves_all_results():
     """Confusion resolution should preserve all results, only reorder."""
     results = [
-        DetectionResult(encoding="CP1140", confidence=0.95, language="English"),
-        DetectionResult(encoding="CP500", confidence=0.94, language="English"),
-        DetectionResult(encoding="Windows-1252", confidence=0.50, language="English"),
+        DetectionResult(encoding="cp1140", confidence=0.95, language="English"),
+        DetectionResult(encoding="cp500", confidence=0.94, language="English"),
+        DetectionResult(encoding="cp1252", confidence=0.50, language="English"),
     ]
     resolved = resolve_confusion_groups(bytes(range(256)), results)
     assert len(resolved) == len(results)
     resolved_encs = {r.encoding for r in resolved}
-    assert resolved_encs == {"CP1140", "CP500", "Windows-1252"}
+    assert resolved_encs == {"cp1140", "cp500", "cp1252"}
 
 
 def test_load_confusion_data_empty_file():
@@ -130,7 +130,7 @@ def test_load_confusion_data_corrupt_file():
 
 def test_resolve_confusion_groups_single_result():
     """A single result should pass through unchanged."""
-    results = [DetectionResult(encoding="UTF-8", confidence=0.95, language=None)]
+    results = [DetectionResult(encoding="utf-8", confidence=0.95, language=None)]
     resolved = resolve_confusion_groups(b"Hello", results)
     assert resolved is results
 
@@ -154,7 +154,7 @@ def test_resolve_confusion_groups_none_encoding():
     """When top result has encoding=None (binary), skip confusion resolution."""
     results = [
         DetectionResult(encoding=None, confidence=0.95, language=None),
-        DetectionResult(encoding="UTF-8", confidence=0.90, language=None),
+        DetectionResult(encoding="utf-8", confidence=0.90, language=None),
     ]
     resolved = resolve_confusion_groups(b"Hello", results)
     assert resolved is results
@@ -221,14 +221,12 @@ def test_resolve_confusion_groups_swaps_top_and_second():
     # We need a confusion pair where bigram/category voting picks the second result.
     # Use category voting by mocking bigram_rescore to return None and
     # category_voting to return the second encoding.
-    top = DetectionResult(encoding="ISO-8859-1", confidence=0.95, language="English")
-    second = DetectionResult(
-        encoding="Windows-1252", confidence=0.90, language="English"
-    )
-    third = DetectionResult(encoding="UTF-8", confidence=0.50, language=None)
+    top = DetectionResult(encoding="iso8859-1", confidence=0.95, language="English")
+    second = DetectionResult(encoding="cp1252", confidence=0.90, language="English")
+    third = DetectionResult(encoding="utf-8", confidence=0.50, language=None)
     results = [top, second, third]
 
-    # Mock the resolvers: bigram returns None, category returns "Windows-1252"
+    # Mock the resolvers: bigram returns None, category returns "cp1252"
     with (
         patch(
             "chardet.pipeline.confusion.resolve_by_bigram_rescore",
@@ -236,61 +234,59 @@ def test_resolve_confusion_groups_swaps_top_and_second():
         ),
         patch(
             "chardet.pipeline.confusion.resolve_by_category_voting",
-            return_value="Windows-1252",
+            return_value="cp1252",
         ),
     ):
         resolved = resolve_confusion_groups(b"\xd5\xd6\xd7", results)
 
     # Second should now be first
-    assert resolved[0].encoding == "Windows-1252"
-    assert resolved[1].encoding == "ISO-8859-1"
+    assert resolved[0].encoding == "cp1252"
+    assert resolved[1].encoding == "iso8859-1"
     # Third result preserved
-    assert resolved[2].encoding == "UTF-8"
+    assert resolved[2].encoding == "utf-8"
 
 
 def test_resolve_confusion_groups_bigram_wins_over_category():
     """When bigram and category disagree, bigram should take precedence."""
-    top = DetectionResult(encoding="ISO-8859-1", confidence=0.95, language="English")
-    second = DetectionResult(
-        encoding="Windows-1252", confidence=0.90, language="English"
-    )
+    top = DetectionResult(encoding="iso8859-1", confidence=0.95, language="English")
+    second = DetectionResult(encoding="cp1252", confidence=0.90, language="English")
     results = [top, second]
 
-    # bigram says "Windows-1252" (swap), category says "ISO-8859-1" (no swap)
+    # bigram says "cp1252" (swap), category says "iso8859-1" (no swap)
     # bigram should win → swap happens
     with (
         patch(
             "chardet.pipeline.confusion.resolve_by_bigram_rescore",
-            return_value="Windows-1252",
+            return_value="cp1252",
         ),
         patch(
             "chardet.pipeline.confusion.resolve_by_category_voting",
-            return_value="ISO-8859-1",
+            return_value="iso8859-1",
         ),
     ):
         resolved = resolve_confusion_groups(b"\xd5\xd6\xd7", results)
 
-    assert resolved[0].encoding == "Windows-1252"
-    assert resolved[1].encoding == "ISO-8859-1"
+    assert resolved[0].encoding == "cp1252"
+    assert resolved[1].encoding == "iso8859-1"
 
 
 def test_resolve_confusion_groups_no_swap_when_winner_is_top():
     """When the winner matches the top result, no swap should happen."""
-    top = DetectionResult(encoding="Windows-1252", confidence=0.95, language="English")
-    second = DetectionResult(encoding="ISO-8859-1", confidence=0.90, language="English")
+    top = DetectionResult(encoding="cp1252", confidence=0.95, language="English")
+    second = DetectionResult(encoding="iso8859-1", confidence=0.90, language="English")
     results = [top, second]
 
     with (
         patch(
             "chardet.pipeline.confusion.resolve_by_bigram_rescore",
-            return_value="Windows-1252",
+            return_value="cp1252",
         ),
         patch(
             "chardet.pipeline.confusion.resolve_by_category_voting",
-            return_value="Windows-1252",
+            return_value="cp1252",
         ),
     ):
         resolved = resolve_confusion_groups(b"\xd5\xd6\xd7", results)
 
-    assert resolved[0].encoding == "Windows-1252"
-    assert resolved[1].encoding == "ISO-8859-1"
+    assert resolved[0].encoding == "cp1252"
+    assert resolved[1].encoding == "iso8859-1"

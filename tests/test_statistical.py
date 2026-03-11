@@ -36,7 +36,7 @@ def test_score_candidates_empty_candidates():
 
 def test_score_candidates_small_set_no_pool():
     candidates = tuple(
-        e for e in get_candidates(EncodingEra.MODERN_WEB) if e.name == "UTF-8"
+        e for e in get_candidates(EncodingEra.MODERN_WEB) if e.name == "utf-8"
     )
     results = score_candidates(b"Hello", candidates)
     assert len(results) <= len(candidates)
@@ -51,4 +51,4 @@ def test_correct_encoding_scores_highest():
     assert len(results) > 0
     # windows-1251 should be among the top results
     top_names = [r.encoding for r in results[:3]]
-    assert "Windows-1251" in top_names
+    assert "cp1251" in top_names

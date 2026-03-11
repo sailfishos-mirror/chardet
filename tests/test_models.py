@@ -19,10 +19,10 @@ from chardet.models import (
 def test_enc_index_resolves_aliases() -> None:
     index = get_enc_index()
     # Models keyed by old names should be accessible under new primary names
-    assert "Big5-HKSCS" in index
-    assert "EUC-JIS-2004" in index
-    assert "Shift-JIS-2004" in index
-    assert "CP1140" in index
+    assert "big5hkscs" in index
+    assert "euc_jis_2004" in index
+    assert "shift_jis_2004" in index
+    assert "cp1140" in index
 
 
 def test_load_models_returns_dict() -> None:
@@ -354,7 +354,7 @@ def test_enc_index_alias_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
 
     # The non-canonical key "utf8" should be in the index
     assert "utf8" in index
-    # The canonical name "UTF-8" should also be present via alias resolution
-    assert "UTF-8" in index
+    # The canonical name "utf-8" should also be present via alias resolution
+    assert "utf-8" in index
     # Both should point to the same entries
-    assert index["UTF-8"] is index["utf8"]
+    assert index["utf-8"] is index["utf8"]

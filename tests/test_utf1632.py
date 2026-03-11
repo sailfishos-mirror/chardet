@@ -17,7 +17,7 @@ def test_utf16_le_ascii_text() -> None:
     data = text.encode("UTF-16-LE")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-16-LE"
+    assert result.encoding == "utf-16-le"
     assert result.confidence == DETERMINISTIC_CONFIDENCE
     assert result.language is None
 
@@ -28,7 +28,7 @@ def test_utf16_le_longer_text() -> None:
     data = text.encode("UTF-16-LE")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-16-LE"
+    assert result.encoding == "utf-16-le"
     assert result.confidence == DETERMINISTIC_CONFIDENCE
 
 
@@ -43,7 +43,7 @@ def test_utf16_be_ascii_text() -> None:
     data = text.encode("UTF-16-BE")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-16-BE"
+    assert result.encoding == "utf-16-be"
     assert result.confidence == DETERMINISTIC_CONFIDENCE
     assert result.language is None
 
@@ -54,7 +54,7 @@ def test_utf16_be_longer_text() -> None:
     data = text.encode("UTF-16-BE")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-16-BE"
+    assert result.encoding == "utf-16-be"
     assert result.confidence == DETERMINISTIC_CONFIDENCE
 
 
@@ -69,7 +69,7 @@ def test_utf32_le_ascii_text() -> None:
     data = text.encode("UTF-32-LE")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-32-LE"
+    assert result.encoding == "utf-32-le"
     assert result.confidence == DETERMINISTIC_CONFIDENCE
     assert result.language is None
 
@@ -80,7 +80,7 @@ def test_utf32_le_longer_text() -> None:
     data = text.encode("UTF-32-LE")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-32-LE"
+    assert result.encoding == "utf-32-le"
     assert result.confidence == DETERMINISTIC_CONFIDENCE
 
 
@@ -95,7 +95,7 @@ def test_utf32_be_ascii_text() -> None:
     data = text.encode("UTF-32-BE")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-32-BE"
+    assert result.encoding == "utf-32-be"
     assert result.confidence == DETERMINISTIC_CONFIDENCE
     assert result.language is None
 
@@ -106,7 +106,7 @@ def test_utf32_be_longer_text() -> None:
     data = text.encode("UTF-32-BE")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-32-BE"
+    assert result.encoding == "utf-32-be"
     assert result.confidence == DETERMINISTIC_CONFIDENCE
 
 
@@ -125,7 +125,7 @@ def test_utf32_checked_before_utf16() -> None:
     data = text.encode("UTF-32-LE")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-32-LE"
+    assert result.encoding == "utf-32-le"
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +156,7 @@ def test_too_short_for_utf32_returns_none() -> None:
     result = detect_utf1632_patterns(data)
     # Should not detect as UTF-32 (below minimum), may detect as UTF-16 or None
     if result is not None:
-        assert result.encoding != "UTF-32-LE"
+        assert result.encoding != "utf-32-le"
 
 
 def test_exactly_min_utf16_bytes() -> None:
@@ -166,7 +166,7 @@ def test_exactly_min_utf16_bytes() -> None:
     assert len(data) == 10
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-16-LE"
+    assert result.encoding == "utf-16-le"
 
 
 def test_exactly_min_utf32_bytes() -> None:
@@ -176,7 +176,7 @@ def test_exactly_min_utf32_bytes() -> None:
     assert len(data) == 16
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-32-LE"
+    assert result.encoding == "utf-32-le"
 
 
 # ---------------------------------------------------------------------------
@@ -242,7 +242,7 @@ def test_utf16_odd_byte_count_trimmed() -> None:
     assert len(data_odd) % 2 == 1
     result = detect_utf1632_patterns(data_odd)
     assert result is not None
-    assert result.encoding == "UTF-16-LE"
+    assert result.encoding == "utf-16-le"
 
 
 def test_utf32_non_aligned_byte_count() -> None:
@@ -258,7 +258,7 @@ def test_utf32_non_aligned_byte_count() -> None:
     assert len(data_unaligned) % 4 != 0
     result = detect_utf1632_patterns(data_unaligned)
     assert result is not None
-    assert result.encoding == "UTF-32-LE"
+    assert result.encoding == "utf-32-le"
 
 
 def test_utf32_trimming_below_minimum_returns_none() -> None:
@@ -274,7 +274,7 @@ def test_utf32_trimming_below_minimum_returns_none() -> None:
     result = detect_utf1632_patterns(data_padded)
     # Should not detect as UTF-32 since trimmed length < 16
     if result is not None:
-        assert result.encoding != "UTF-32-LE"
+        assert result.encoding != "utf-32-le"
 
 
 # ---------------------------------------------------------------------------
@@ -293,7 +293,7 @@ def test_utf16_le_cjk_text() -> None:
     data = text.encode("UTF-16-LE")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-16-LE"
+    assert result.encoding == "utf-16-le"
 
 
 def test_utf16_be_cjk_text() -> None:
@@ -302,7 +302,7 @@ def test_utf16_be_cjk_text() -> None:
     data = text.encode("UTF-16-BE")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-16-BE"
+    assert result.encoding == "utf-16-be"
 
 
 def test_utf16_le_japanese_text() -> None:
@@ -311,7 +311,7 @@ def test_utf16_le_japanese_text() -> None:
     data = text.encode("UTF-16-LE")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-16-LE"
+    assert result.encoding == "utf-16-le"
 
 
 def test_utf16_le_korean_text() -> None:
@@ -320,7 +320,7 @@ def test_utf16_le_korean_text() -> None:
     data = text.encode("UTF-16-LE")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-16-LE"
+    assert result.encoding == "utf-16-le"
 
 
 # ---------------------------------------------------------------------------
@@ -338,7 +338,7 @@ def test_utf16_le_mixed_scripts() -> None:
     data = text.encode("UTF-16-LE")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-16-LE"
+    assert result.encoding == "utf-16-le"
 
 
 def test_utf16_be_mixed_scripts() -> None:
@@ -351,7 +351,7 @@ def test_utf16_be_mixed_scripts() -> None:
     data = text.encode("UTF-16-BE")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-16-BE"
+    assert result.encoding == "utf-16-be"
 
 
 def test_utf16_le_mostly_ascii_with_some_non_ascii() -> None:
@@ -360,7 +360,7 @@ def test_utf16_le_mostly_ascii_with_some_non_ascii() -> None:
     data = text.encode("UTF-16-LE")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-16-LE"
+    assert result.encoding == "utf-16-le"
 
 
 # ---------------------------------------------------------------------------
@@ -375,7 +375,7 @@ def test_result_is_detection_result_instance() -> None:
     result = detect_utf1632_patterns(data)
     assert isinstance(result, DetectionResult)
     assert result == DetectionResult(
-        encoding="UTF-16-LE",
+        encoding="utf-16-le",
         confidence=DETERMINISTIC_CONFIDENCE,
         language=None,
     )
@@ -396,7 +396,7 @@ def test_utf32_le_non_ascii_text() -> None:
     data = text.encode("UTF-32-LE")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-32-LE"
+    assert result.encoding == "utf-32-le"
 
 
 def test_utf32_be_non_ascii_text() -> None:
@@ -405,7 +405,7 @@ def test_utf32_be_non_ascii_text() -> None:
     data = text.encode("UTF-32-BE")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-32-BE"
+    assert result.encoding == "utf-32-be"
 
 
 # ---------------------------------------------------------------------------
@@ -503,7 +503,7 @@ def test_utf16_both_candidates_tiebreak() -> None:
     data = text.encode("utf-16-le")
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding in ("UTF-16-LE", "UTF-16-BE")
+    assert result.encoding in ("utf-16-le", "utf-16-be")
     assert result.confidence == DETERMINISTIC_CONFIDENCE
 
 
@@ -522,7 +522,7 @@ def test_utf16_tiebreak_one_side_decode_error() -> None:
     data = base + surrogate_trap
     result = detect_utf1632_patterns(data)
     assert result is not None
-    assert result.encoding == "UTF-16-LE"
+    assert result.encoding == "utf-16-le"
 
 
 # ---------------------------------------------------------------------------

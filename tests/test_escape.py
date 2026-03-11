@@ -11,7 +11,7 @@ def test_iso_2022_jp_esc_dollar_b() -> None:
     data = b"Hello \x1b$B$3$s$K$A$O\x1b(B World"
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "ISO-2022-JP-2"
+    assert result.encoding == "iso2022_jp_2"
     assert result.confidence == 0.95
 
 
@@ -19,14 +19,14 @@ def test_iso_2022_jp_esc_dollar_at() -> None:
     data = b"Hello \x1b$@$3$s$K$A$O\x1b(B World"
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "ISO-2022-JP-2"
+    assert result.encoding == "iso2022_jp_2"
 
 
 def test_iso_2022_kr() -> None:
     data = b"\x1b$)C\x0e\x21\x21\x0f"
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "ISO-2022-KR"
+    assert result.encoding == "iso2022_kr"
     assert result.confidence == 0.95
 
 
@@ -34,7 +34,7 @@ def test_hz_gb_2312() -> None:
     data = b"Hello ~{CEDE~} World"
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "HZ-GB-2312"
+    assert result.encoding == "hz"
     assert result.confidence == 0.95
 
 
@@ -89,7 +89,7 @@ def test_utf7_basic() -> None:
     data = "Hello, 世界".encode("utf-7")
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "UTF-7"
+    assert result.encoding == "utf-7"
     assert result.confidence == 0.95
 
 
@@ -98,7 +98,7 @@ def test_utf7_shifted_sequence() -> None:
     data = b"Hello +AGkAbgB0AGUAbgBzAGU-"
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "UTF-7"
+    assert result.encoding == "utf-7"
 
 
 def test_utf7_literal_plus() -> None:
@@ -178,7 +178,7 @@ def test_utf7_multi_paragraph_document() -> None:
     data = "".join(parts).encode("utf-7")
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "UTF-7"
+    assert result.encoding == "utf-7"
 
 
 def test_utf7_mixed_ascii_and_shifted() -> None:
@@ -188,7 +188,7 @@ def test_utf7_mixed_ascii_and_shifted() -> None:
     data = text.encode("utf-7")
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "UTF-7"
+    assert result.encoding == "utf-7"
 
 
 def test_utf7_consecutive_shifted_sequences() -> None:
@@ -197,7 +197,7 @@ def test_utf7_consecutive_shifted_sequences() -> None:
     data = text.encode("utf-7")
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "UTF-7"
+    assert result.encoding == "utf-7"
 
 
 def test_iso2022_jp_base_returns_jp2() -> None:
@@ -205,7 +205,7 @@ def test_iso2022_jp_base_returns_jp2() -> None:
     data = b"Hello \x1b$B$3$s$K$A$O\x1b(B World"
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "ISO-2022-JP-2"
+    assert result.encoding == "iso2022_jp_2"
 
 
 def test_iso2022_jp_2004_codes() -> None:
@@ -214,7 +214,7 @@ def test_iso2022_jp_2004_codes() -> None:
     data = b"\x1b$B$3$s\x1b(B\x1b$(O\x21\x21\x1b(B"
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "ISO-2022-JP-2004"
+    assert result.encoding == "iso2022_jp_2004"
 
 
 def test_iso2022_jp_2004_esc_dollar_paren_q() -> None:
@@ -222,7 +222,7 @@ def test_iso2022_jp_2004_esc_dollar_paren_q() -> None:
     data = b"\x1b$B$3$s\x1b(B\x1b$(Q\x21\x21\x1b(B"
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "ISO-2022-JP-2004"
+    assert result.encoding == "iso2022_jp_2004"
 
 
 def test_iso2022_jp_ext_codes() -> None:
@@ -231,7 +231,7 @@ def test_iso2022_jp_ext_codes() -> None:
     data = b"\x1b$B$3$s\x1b(B\x0e\xb1\xb2\x0f"
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "ISO-2022-JP-EXT"
+    assert result.encoding == "iso2022_jp_ext"
 
 
 def test_iso2022_jp_ext_esc_kana() -> None:
@@ -239,7 +239,7 @@ def test_iso2022_jp_ext_esc_kana() -> None:
     data = b"\x1b$B$3$s\x1b(B\x1b(I\x31\x32\x1b(B"
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "ISO-2022-JP-EXT"
+    assert result.encoding == "iso2022_jp_ext"
 
 
 def test_iso2022_jp_ext_esc_kana_only() -> None:
@@ -247,7 +247,7 @@ def test_iso2022_jp_ext_esc_kana_only() -> None:
     data = b"\x1b(I\x31\x32\x1b(B"
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "ISO-2022-JP-EXT"
+    assert result.encoding == "iso2022_jp_ext"
 
 
 def test_iso2022_jp_jis_x_0212_entry() -> None:
@@ -255,7 +255,7 @@ def test_iso2022_jp_jis_x_0212_entry() -> None:
     data = b"\x1b$(D\x30\x21\x1b(B"
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "ISO-2022-JP-2"
+    assert result.encoding == "iso2022_jp_2"
 
 
 def test_iso2022_jp_2004_without_base() -> None:
@@ -263,7 +263,7 @@ def test_iso2022_jp_2004_without_base() -> None:
     data = b"\x1b$(O\x21\x21\x1b(B"
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "ISO-2022-JP-2004"
+    assert result.encoding == "iso2022_jp_2004"
 
 
 def test_hz_close_marker_before_open_marker() -> None:
@@ -271,7 +271,7 @@ def test_hz_close_marker_before_open_marker() -> None:
     data = b"prefix ~} text ~{CEDE~}"
     result = detect_escape_encoding(data)
     assert result is not None
-    assert result.encoding == "HZ-GB-2312"
+    assert result.encoding == "hz"
 
 
 def test_hz_only_close_before_open() -> None:

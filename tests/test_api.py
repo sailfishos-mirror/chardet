@@ -296,14 +296,14 @@ def test_detect_all_bytearray_input():
 def test_detect_utf7():
     data = "Hello, 世界!".encode("utf-7")
     result = chardet.detect(data)
-    assert result["encoding"] == "UTF-7"
+    assert result["encoding"] == "utf-7"
 
 
 def test_detect_utf7_era_all():
     """UTF-7 should be detected with EncodingEra.ALL (includes LEGACY_REGIONAL)."""
     data = "Meeting notes: 日本語テスト and Ñoño.".encode("utf-7")
     result = chardet.detect(data, encoding_era=EncodingEra.ALL)
-    assert result["encoding"] == "UTF-7"
+    assert result["encoding"] == "utf-7"
 
 
 def test_detect_utf7_era_modern_web_skipped():
@@ -327,7 +327,7 @@ def test_detect_utf7_multi_paragraph():
     )
     data = text.encode("utf-7")
     result = chardet.detect(data)
-    assert result["encoding"] == "UTF-7"
+    assert result["encoding"] == "utf-7"
 
 
 def test_detect_hz_gb_2312_era_all():
@@ -364,9 +364,8 @@ def test_detect_iso_2022_jp_era_modern_web_still_works():
     result = chardet.detect(data, encoding_era=EncodingEra.MODERN_WEB)
     assert result["encoding"] in {
         "ISO-2022-JP",
-        "ISO-2022-JP-2",
-        "ISO-2022-JP-2004",
-        "ISO-2022-JP-EXT",
+        "iso2022_jp_2004",
+        "iso2022_jp_ext",
     }
 
 
@@ -386,7 +385,7 @@ def test_detect_hp_roman8():
         "flambées accompagnées de thé à la menthe."
     ).encode("hp-roman8")
     result = chardet.detect(data, encoding_era=EncodingEra.ALL)
-    assert result["encoding"] == "HP-Roman8"
+    assert result["encoding"] == "hp-roman8"
 
 
 # --- compat_names and prefer_superset tests ---
