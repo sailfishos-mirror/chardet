@@ -159,8 +159,10 @@ def _get_detector_version(python_executable: str, detector_type: str) -> str:
 def _get_python_tag(python_executable: str) -> str:
     """Return a tag like ``cpython3.11`` or ``pypy3.10`` from the venv Python."""
     script = (
-        "import platform, sys; "
-        "print(f'{platform.python_implementation().lower()}{sys.version_info.major}.{sys.version_info.minor}')"
+        "import platform, sys, sysconfig; "
+        "abi = sysconfig.get_config_var('ABIFLAGS') or ''; "
+        "t = 't' if 't' in abi else ''; "
+        "print(f'{platform.python_implementation().lower()}{sys.version_info.major}.{sys.version_info.minor}{t}')"
     )
     fd, tmp_path = tempfile.mkstemp(suffix=".py")
     tmp = Path(tmp_path)

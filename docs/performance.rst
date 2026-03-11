@@ -167,66 +167,58 @@ Each call carries its own state with no shared mutable data between threads.
 Thread safety adds no measurable overhead (< 0.1%).
 
 On free-threaded Python (GIL disabled), detection scales with threads.
+Standard GIL Python shows no scaling — the GIL serializes threads.
 Benchmarked with 2,510 files, ``encoding_era=ALL``:
 
 .. list-table::
    :header-rows: 1
-   :widths: 10 16 12 12 12 12
+   :widths: 14 14 14 14 14
 
-   * - Threads
-     - Build
-     - CPython 3.13t
-     - Speedup
-     - CPython 3.14t
-     - Speedup
-   * - 1
-     - pure
+   * - Python
+     - 1 thread
+     - 2 threads
+     - 4 threads
+     - 8 threads
+   * - 3.13 (pure)
+     - 8,740ms
+     - 8,720ms
+     - 8,700ms
+     - 8,700ms
+   * - 3.13t (pure)
      - 10,150ms
-     - baseline
-     - 7,280ms
-     - baseline
-   * - 2
-     - pure
-     - 8,530ms
-     - 1.2x
-     - 6,330ms
-     - 1.2x
-   * - 4
-     - pure
-     - 4,360ms
-     - 2.3x
-     - 3,000ms
-     - 2.4x
-   * - 8
-     - pure
-     - 5,050ms
-     - 2.0x
-     - 1,830ms
-     - 4.0x
-   * - 1
-     - mypyc
+     - 8,530ms (1.2x)
+     - 4,360ms (2.3x)
+     - 5,050ms (2.0x)
+   * - 3.13 (mypyc)
+     - 4,650ms
+     - 4,700ms
+     - 4,760ms
+     - 4,760ms
+   * - **3.13t (mypyc)**
      - 4,630ms
-     - baseline
+     - 2,350ms (2.0x)
+     - 1,300ms (3.6x)
+     - **1,120ms (4.1x)**
+   * - 3.14 (pure)
+     - 6,460ms
+     - 6,490ms
+     - 6,510ms
+     - 6,500ms
+   * - 3.14t (pure)
+     - 7,280ms
+     - 6,330ms (1.2x)
+     - 3,000ms (2.4x)
+     - 1,830ms (4.0x)
+   * - 3.14 (mypyc)
+     - 4,700ms
+     - 4,690ms
+     - 4,670ms
+     - 4,670ms
+   * - **3.14t (mypyc)**
      - 5,390ms
-     - baseline
-   * - 2
-     - mypyc
-     - 2,350ms
-     - 2.0x
-     - 2,690ms
-     - 2.0x
-   * - 4
-     - mypyc
-     - 1,300ms
-     - 3.6x
-     - 1,450ms
-     - 3.7x
-   * - 8
-     - mypyc
-     - 1,120ms
-     - **4.1x**
-     - 1,160ms
-     - **4.6x**
+     - 2,690ms (2.0x)
+     - 1,450ms (3.7x)
+     - **1,160ms (4.6x)**
 
 Individual :class:`~chardet.UniversalDetector` instances are not thread-safe.
 Create one instance per thread when using the streaming API.
