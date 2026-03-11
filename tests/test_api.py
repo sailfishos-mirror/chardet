@@ -479,3 +479,18 @@ def test_detector_should_rename_legacy_deprecation() -> None:
         dep = [x for x in w if issubclass(x.category, DeprecationWarning)]
         assert len(dep) == 1
         assert "should_rename_legacy" in str(dep[0].message)
+
+
+def test_universaldetector_compat_import() -> None:
+    """chardet.universaldetector re-exports UniversalDetector for 6.x compat."""
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        from chardet.universaldetector import UniversalDetector as CompatUD
+
+        dep = [x for x in w if issubclass(x.category, DeprecationWarning)]
+        assert len(dep) == 1
+        assert "universaldetector" in str(dep[0].message)
+
+    from chardet.detector import UniversalDetector
+
+    assert CompatUD is UniversalDetector
