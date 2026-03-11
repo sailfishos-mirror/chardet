@@ -52,35 +52,35 @@ def normalize_encoding_name(name: str) -> str:
 # chardet test-suite expected values use these names, so the superset
 # mapping is needed for accuracy evaluation only.
 SUPERSETS: dict[str, frozenset[str]] = {
-    "ASCII": frozenset({"UTF-8", "Windows-1252"}),
-    "TIS-620": frozenset({"ISO-8859-11", "CP874"}),
-    "ISO-8859-11": frozenset({"CP874"}),
-    "GB2312": frozenset({"GB18030"}),
-    "GBK": frozenset({"GB18030"}),
-    "Big5": frozenset({"Big5-HKSCS", "CP950"}),
-    "Shift_JIS": frozenset({"CP932", "Shift-JIS-2004"}),
-    "Shift-JISX0213": frozenset({"Shift-JIS-2004"}),
-    "EUC-JP": frozenset({"EUC-JIS-2004"}),
-    "EUC-JISX0213": frozenset({"EUC-JIS-2004"}),
-    "EUC-KR": frozenset({"CP949"}),
-    "CP037": frozenset({"CP1140"}),
+    "ASCII": frozenset({"utf-8", "cp1252"}),
+    "TIS-620": frozenset({"ISO-8859-11", "cp874"}),
+    "ISO-8859-11": frozenset({"cp874"}),
+    "GB2312": frozenset({"gb18030"}),
+    "GBK": frozenset({"gb18030"}),
+    "Big5": frozenset({"big5hkscs", "CP950"}),
+    "Shift_JIS": frozenset({"cp932", "shift_jis_2004"}),
+    "Shift-JISX0213": frozenset({"shift_jis_2004"}),
+    "EUC-JP": frozenset({"euc_jis_2004"}),
+    "EUC-JISX0213": frozenset({"euc_jis_2004"}),
+    "EUC-KR": frozenset({"cp949"}),
+    "CP037": frozenset({"cp1140"}),
     # ISO-2022-JP subsets: any branch variant is acceptable.
     # ISO2022-JP-1 and ISO2022-JP-3 use Python codec names (no hyphen between
     # "ISO" and "2022") because they appear as expected values in the test suite,
     # not as canonical chardet output.  They are consumed through
     # _NORMALIZED_SUPERSETS which normalizes via codecs.lookup().
-    "ISO-2022-JP": frozenset({"ISO-2022-JP-2", "ISO-2022-JP-2004", "ISO-2022-JP-EXT"}),
-    "ISO2022-JP-1": frozenset({"ISO-2022-JP-2", "ISO-2022-JP-EXT"}),
-    "ISO2022-JP-3": frozenset({"ISO-2022-JP-2004"}),
+    "ISO-2022-JP": frozenset({"iso2022_jp_2", "iso2022_jp_2004", "iso2022_jp_ext"}),
+    "ISO2022-JP-1": frozenset({"iso2022_jp_2", "iso2022_jp_ext"}),
+    "ISO2022-JP-3": frozenset({"iso2022_jp_2004"}),
     # ISO/Windows superset pairs
-    "ISO-8859-1": frozenset({"Windows-1252"}),
-    "ISO-8859-2": frozenset({"Windows-1250"}),
-    "ISO-8859-5": frozenset({"Windows-1251"}),
-    "ISO-8859-6": frozenset({"Windows-1256"}),
-    "ISO-8859-7": frozenset({"Windows-1253"}),
-    "ISO-8859-8": frozenset({"Windows-1255"}),
-    "ISO-8859-9": frozenset({"Windows-1254"}),
-    "ISO-8859-13": frozenset({"Windows-1257"}),
+    "ISO-8859-1": frozenset({"cp1252"}),
+    "ISO-8859-2": frozenset({"cp1250"}),
+    "ISO-8859-5": frozenset({"cp1251"}),
+    "ISO-8859-6": frozenset({"cp1256"}),
+    "ISO-8859-7": frozenset({"cp1253"}),
+    "ISO-8859-8": frozenset({"cp1255"}),
+    "ISO-8859-9": frozenset({"cp1254"}),
+    "ISO-8859-13": frozenset({"cp1257"}),
 }
 
 # Preferred superset name for each encoding, used by the ``should_rename_legacy``
@@ -89,18 +89,18 @@ SUPERSETS: dict[str, frozenset[str]] = {
 # etc. treat these ISO subsets as their Windows counterparts).
 # Values use display-cased names (e.g. "Windows-1252") to match chardet 6.x output.
 PREFERRED_SUPERSET: dict[str, str] = {
-    "ASCII": "Windows-1252",
-    "EUC-KR": "CP949",
-    "ISO-8859-1": "Windows-1252",
-    "ISO-8859-2": "Windows-1250",
-    "ISO-8859-5": "Windows-1251",
-    "ISO-8859-6": "Windows-1256",
-    "ISO-8859-7": "Windows-1253",
-    "ISO-8859-8": "Windows-1255",
-    "ISO-8859-9": "Windows-1254",
-    "ISO-8859-11": "CP874",
-    "ISO-8859-13": "Windows-1257",
-    "TIS-620": "CP874",
+    "ascii": "cp1252",
+    "euc_kr": "cp949",
+    "iso8859-1": "cp1252",
+    "iso8859-2": "cp1250",
+    "iso8859-5": "cp1251",
+    "iso8859-6": "cp1256",
+    "iso8859-7": "cp1253",
+    "iso8859-8": "cp1255",
+    "iso8859-9": "cp1254",
+    "ISO-8859-11": "cp874",
+    "iso8859-13": "cp1257",
+    "tis-620": "cp874",
 }
 
 
@@ -215,9 +215,9 @@ def apply_compat_names(
 
 # Bidirectional equivalents -- groups where any member is acceptable for any other.
 BIDIRECTIONAL_GROUPS: tuple[tuple[str, ...], ...] = (
-    ("UTF-16", "UTF-16-LE", "UTF-16-BE"),
-    ("UTF-32", "UTF-32-LE", "UTF-32-BE"),
-    ("ISO-2022-JP-2", "ISO-2022-JP-2004", "ISO-2022-JP-EXT"),
+    ("utf-16", "utf-16-le", "utf-16-be"),
+    ("utf-32", "utf-32-le", "utf-32-be"),
+    ("iso2022_jp_2", "iso2022_jp_2004", "iso2022_jp_ext"),
 )
 
 # Bidirectional language equivalences — groups of ISO 639-1 codes for

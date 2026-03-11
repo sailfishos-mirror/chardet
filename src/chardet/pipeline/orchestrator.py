@@ -38,12 +38,10 @@ _BINARY_RESULT = DetectionResult(
 )
 # UTF-8 is the default encoding for empty input, matching web standards
 # (HTML5 default encoding is UTF-8).
-_EMPTY_RESULT = DetectionResult(encoding="UTF-8", confidence=0.10, language=None)
+_EMPTY_RESULT = DetectionResult(encoding="utf-8", confidence=0.10, language=None)
 # windows-1252 is the most common single-byte encoding on the web and the
 # HTTP/1.1 default charset — used when no encoding can be determined.
-_FALLBACK_RESULT = DetectionResult(
-    encoding="Windows-1252", confidence=0.10, language=None
-)
+_FALLBACK_RESULT = DetectionResult(encoding="cp1252", confidence=0.10, language=None)
 # Threshold at which a CJK structural score is confident enough to trigger
 # combined structural+statistical ranking rather than purely statistical.
 _STRUCTURAL_CONFIDENCE_THRESHOLD = 0.85
@@ -55,9 +53,9 @@ _STRUCTURAL_CONFIDENCE_THRESHOLD = 0.85
 # (e.g. windows-1254).
 _COMMON_LATIN_ENCODINGS: frozenset[str] = frozenset(
     {
-        "ISO-8859-1",
-        "ISO-8859-15",
-        "Windows-1252",
+        "iso8859-1",
+        "iso8859-15",
+        "cp1252",
     }
 )
 
@@ -171,9 +169,9 @@ _WINDOWS_1254_DISTINGUISHING: frozenset[int] = frozenset(
 # that encoding differs from iso-8859-1 (or windows-1252 in the case of
 # windows-1254).
 _DEMOTION_CANDIDATES: dict[str, frozenset[int]] = {
-    "ISO-8859-10": _ISO_8859_10_DISTINGUISHING,
-    "ISO-8859-14": _ISO_8859_14_DISTINGUISHING,
-    "Windows-1254": _WINDOWS_1254_DISTINGUISHING,
+    "iso8859-10": _ISO_8859_10_DISTINGUISHING,
+    "iso8859-14": _ISO_8859_14_DISTINGUISHING,
+    "cp1254": _WINDOWS_1254_DISTINGUISHING,
 }
 
 # Bytes where KOI8-T maps to Tajik-specific Cyrillic letters but KOI8-R
@@ -372,12 +370,12 @@ def _promote_koi8t(
     box-drawing characters.  If any of these bytes appear, KOI8-T is the
     better match.
     """
-    if not results or results[0].encoding != "KOI8-R":
+    if not results or results[0].encoding != "koi8-r":
         return results
     # Check if KOI8-T is anywhere in the results
     koi8t_idx = None
     for i, r in enumerate(results):
-        if r.encoding == "KOI8-T":
+        if r.encoding == "koi8-t":
             koi8t_idx = i
             break
     if koi8t_idx is None:
@@ -404,7 +402,7 @@ def _to_utf8(data: bytes, encoding: str) -> bytes | None:
     filtering for the detected encoding; any residual invalid bytes are
     irrelevant for language scoring.
     """
-    if encoding == "UTF-8":
+    if encoding == "utf-8":
         return data
     try:
         return data.decode(encoding, errors="ignore").encode(
@@ -436,13 +434,13 @@ def _fill_language(
                     profile = BigramProfile(data)
                 _, lang = score_best_language(data, result.encoding, profile=profile)
             # Tier 3: decode to UTF-8, score against UTF-8 language models
-            if lang is None and data and has_model_variants("UTF-8"):
+            if lang is None and data and has_model_variants("utf-8"):
                 utf8_data = _to_utf8(data, result.encoding)
                 if utf8_data:
-                    if utf8_profile is None or result.encoding != "UTF-8":
+                    if utf8_profile is None or result.encoding != "utf-8":
                         utf8_profile = BigramProfile(utf8_data)
                     _, lang = score_best_language(
-                        utf8_data, "UTF-8", profile=utf8_profile
+                        utf8_data, "utf-8", profile=utf8_profile
                     )
             if lang is not None:
                 filled.append(

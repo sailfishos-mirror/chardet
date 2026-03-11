@@ -21,6 +21,7 @@ from chardet.models import (
     score_with_profile,
 )
 from chardet.pipeline import DetectionResult
+from chardet.registry import lookup_encoding
 
 # Type alias for the distinguishing map structure:
 # Maps (enc_a, enc_b) -> (distinguishing_byte_set, {byte_val: (cat_a, cat_b)})
@@ -131,10 +132,17 @@ def load_confusion_data() -> DistinguishingMaps:
             _CONFUSION_CACHE = {}
             return _CONFUSION_CACHE
         try:
-            _CONFUSION_CACHE = deserialize_confusion_data_from_bytes(raw)
+            raw_maps = deserialize_confusion_data_from_bytes(raw)
         except (struct.error, UnicodeDecodeError) as e:
             msg = f"corrupt confusion.bin: {e}"
             raise ValueError(msg) from e
+        # Normalize keys to canonical codec names so pipeline output matches.
+        normalized: DistinguishingMaps = {}
+        for (a, b), value in raw_maps.items():
+            norm_a = lookup_encoding(a) or a
+            norm_b = lookup_encoding(b) or b
+            normalized[(norm_a, norm_b)] = value
+        _CONFUSION_CACHE = normalized
         return _CONFUSION_CACHE
 
 

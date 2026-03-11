@@ -209,7 +209,7 @@ def detect_escape_encoding(data: bytes) -> DetectionResult | None:
         # ISO-2022-JP-2004: JIS X 0213 designations are unique to this variant.
         if b"\x1b$(O" in data or b"\x1b$(P" in data or b"\x1b$(Q" in data:
             return DetectionResult(
-                encoding="ISO-2022-JP-2004",
+                encoding="iso2022_jp_2004",
                 confidence=DETERMINISTIC_CONFIDENCE,
                 language="ja",
             )
@@ -217,7 +217,7 @@ def detect_escape_encoding(data: bytes) -> DetectionResult | None:
         # ISO-2022-JP-EXT: JIS X 0201 Kana designation is unique to this variant.
         if b"\x1b(I" in data:
             return DetectionResult(
-                encoding="ISO-2022-JP-EXT",
+                encoding="iso2022_jp_ext",
                 confidence=DETERMINISTIC_CONFIDENCE,
                 language="ja",
             )
@@ -232,14 +232,14 @@ def detect_escape_encoding(data: bytes) -> DetectionResult | None:
             # SI/SO (0x0E / 0x0F) shift controls -> JP-EXT
             if b"\x0e" in data and b"\x0f" in data:
                 return DetectionResult(
-                    encoding="ISO-2022-JP-EXT",
+                    encoding="iso2022_jp_ext",
                     confidence=DETERMINISTIC_CONFIDENCE,
                     language="ja",
                 )
             # Default to JP-2: a strict superset of JP and JP-1 that
             # decodes all base sequences correctly.
             return DetectionResult(
-                encoding="ISO-2022-JP-2",
+                encoding="iso2022_jp_2",
                 confidence=DETERMINISTIC_CONFIDENCE,
                 language="ja",
             )
@@ -247,7 +247,7 @@ def detect_escape_encoding(data: bytes) -> DetectionResult | None:
         # ISO-2022-KR: ESC sequence for KS C 5601
         if b"\x1b$)C" in data:
             return DetectionResult(
-                encoding="ISO-2022-KR",
+                encoding="iso2022_kr",
                 confidence=DETERMINISTIC_CONFIDENCE,
                 language="ko",
             )
@@ -256,7 +256,7 @@ def detect_escape_encoding(data: bytes) -> DetectionResult | None:
     # Require valid GB2312 byte pairs (0x21-0x7E range) between ~{ and ~} markers.
     if has_tilde and b"~{" in data and b"~}" in data and _has_valid_hz_regions(data):
         return DetectionResult(
-            encoding="HZ-GB-2312",
+            encoding="hz",
             confidence=DETERMINISTIC_CONFIDENCE,
             language="zh",
         )
@@ -266,7 +266,7 @@ def detect_escape_encoding(data: bytes) -> DetectionResult | None:
     # Data with any byte > 0x7F cannot be UTF-7.
     if has_plus and max(data) < 0x80 and _has_valid_utf7_sequences(data):
         return DetectionResult(
-            encoding="UTF-7",
+            encoding="utf-7",
             confidence=DETERMINISTIC_CONFIDENCE,
             language=None,
         )
