@@ -25,14 +25,24 @@ Changelog
 - ~40% faster model parsing via ``struct.iter_unpack`` for bulk entry
   extraction (eliminates ~305K individual ``unpack`` calls)
 
+**New API parameters:**
+
+- Added ``compat_names`` parameter (default ``True``) to
+  :func:`~chardet.detect`, :func:`~chardet.detect_all`, and
+  :class:`~chardet.UniversalDetector` — set to ``False`` to get raw Python
+  codec names instead of chardet 5.x/6.x compatible display names
+- Added ``prefer_superset`` parameter (default ``False``) — remaps legacy
+  ISO/subset encodings to their modern Windows/CP superset equivalents
+  (e.g., ASCII → Windows-1252, ISO-8859-1 → Windows-1252)
+- Deprecated ``should_rename_legacy`` in favor of ``prefer_superset`` —
+  a deprecation warning is emitted when used
+
 **Improvements:**
 
-- Unified all internal encoding names to a single canonical display-cased
-  convention (e.g., ``"UTF-8"``, ``"Windows-1252"``, ``"ISO-8859-1"``).
-  The ``should_rename_legacy`` parameter controls output names: ``False``
-  (default) returns chardet 5.x-compatible names, ``True`` applies
-  canonical names with ISO→Windows superset remapping. See
-  :doc:`usage` for the full mapping table.
+- Switched internal canonical encoding names to Python codec names
+  (e.g., ``"utf-8"`` instead of ``"UTF-8"``), with ``compat_names``
+  controlling the public output format.  See :doc:`usage` for the full
+  mapping table.
 - Added ``lookup_encoding()`` to ``registry`` for case-insensitive
   resolution of arbitrary encoding name input to canonical names
 - Achieved 100% line coverage across all source modules (+31 tests)

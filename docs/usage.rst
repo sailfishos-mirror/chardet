@@ -108,13 +108,19 @@ Available eras (can be combined with ``|``):
 - :attr:`~chardet.EncodingEra.DOS` — DOS codepages (CP437, CP850, etc.)
 - :attr:`~chardet.EncodingEra.MAINFRAME` — EBCDIC encodings
 
-Legacy Renaming
----------------
+Encoding Name Options
+---------------------
 
 By default, chardet returns encoding names compatible with chardet 5.x/6.x
-(e.g., ``"utf-8"``, ``"ascii"``, ``"SHIFT_JIS"``).  Set
-``should_rename_legacy=True`` to get canonical display-cased names and remap
-legacy ISO encodings to their modern Windows superset equivalents:
+(e.g., ``"utf-8"``, ``"ascii"``, ``"SHIFT_JIS"``).  Two parameters control
+how encoding names are returned:
+
+- ``compat_names`` (default ``True``) — map internal Python codec names to
+  chardet 5.x/6.x compatible display names.  Set to ``False`` to get raw
+  Python codec names (e.g., ``"shift_jis_2004"`` instead of ``"SHIFT_JIS"``).
+- ``prefer_superset`` (default ``False``) — remap legacy ISO/subset encodings
+  to their modern Windows/CP superset equivalents (e.g., ASCII →
+  Windows-1252, ISO-8859-1 → Windows-1252).
 
 .. code-block:: python
 
@@ -122,102 +128,167 @@ legacy ISO encodings to their modern Windows superset equivalents:
    chardet.detect(data)
    # {'encoding': 'ascii', ...}
 
-   # Enable modern naming + superset remapping
-   chardet.detect(data, should_rename_legacy=True)
+   # Raw Python codec names
+   chardet.detect(data, compat_names=False)
+   # {'encoding': 'ascii', ...}
+
+   # Superset remapping with compat names
+   chardet.detect(data, prefer_superset=True)
    # {'encoding': 'Windows-1252', ...}
 
-This applies to :func:`~chardet.detect`, :func:`~chardet.detect_all`,
+   # Superset remapping with raw codec names
+   chardet.detect(data, prefer_superset=True, compat_names=False)
+   # {'encoding': 'cp1252', ...}
+
+These parameters apply to :func:`~chardet.detect`, :func:`~chardet.detect_all`,
 and :class:`~chardet.UniversalDetector`.
 
+The deprecated ``should_rename_legacy=True`` parameter is equivalent to
+``prefer_superset=True`` and is still accepted with a deprecation warning.
+
 The following table shows every encoding whose name changes depending on
-the ``should_rename_legacy`` setting.  Encodings not listed here return the
-same name in both modes.
+the ``compat_names`` and ``prefer_superset`` settings.  Encodings not listed
+here return the same name in all modes.
 
-.. list-table:: Encoding names by ``should_rename_legacy`` value
+.. list-table:: Encoding names by parameter combination
    :header-rows: 1
-   :widths: 30 30 30
+   :widths: 20 20 20 20 20
 
-   * - Detected encoding
-     - ``False`` (default)
-     - ``True``
-   * - ASCII
+   * - Internal name
+     - ``compat_names=True`` (default)
+     - ``compat_names=False``
+     - ``prefer_superset=True``
+     - ``prefer_superset=True, compat_names=False``
+   * - ascii
+     - ``ascii``
      - ``ascii``
      - ``Windows-1252``
-   * - Big5-HKSCS
+     - ``cp1252``
+   * - big5hkscs
      - ``Big5``
-     - ``Big5-HKSCS``
-   * - CP855
+     - ``big5hkscs``
+     - ``Big5``
+     - ``big5hkscs``
+   * - cp855
      - ``IBM855``
-     - ``CP855``
-   * - CP866
+     - ``cp855``
+     - ``IBM855``
+     - ``cp855``
+   * - cp866
      - ``IBM866``
-     - ``CP866``
-   * - EUC-JIS-2004
+     - ``cp866``
+     - ``IBM866``
+     - ``cp866``
+   * - euc_jis_2004
      - ``EUC-JP``
-     - ``EUC-JIS-2004``
-   * - EUC-KR
+     - ``euc_jis_2004``
+     - ``EUC-JP``
+     - ``euc_jis_2004``
+   * - euc_kr
      - ``EUC-KR``
+     - ``euc_kr``
      - ``CP949``
-   * - ISO-2022-JP-2
+     - ``cp949``
+   * - iso2022_jp_2
      - ``ISO-2022-JP``
-     - ``ISO-2022-JP-2``
-   * - ISO-8859-1
+     - ``iso2022_jp_2``
+     - ``ISO-2022-JP``
+     - ``iso2022_jp_2``
+   * - iso8859-1
      - ``ISO-8859-1``
+     - ``iso8859-1``
      - ``Windows-1252``
-   * - ISO-8859-2
+     - ``cp1252``
+   * - iso8859-2
      - ``ISO-8859-2``
+     - ``iso8859-2``
      - ``Windows-1250``
-   * - ISO-8859-5
+     - ``cp1250``
+   * - iso8859-5
      - ``ISO-8859-5``
+     - ``iso8859-5``
      - ``Windows-1251``
-   * - ISO-8859-6
+     - ``cp1251``
+   * - iso8859-6
      - ``ISO-8859-6``
+     - ``iso8859-6``
      - ``Windows-1256``
-   * - ISO-8859-7
+     - ``cp1256``
+   * - iso8859-7
      - ``ISO-8859-7``
+     - ``iso8859-7``
      - ``Windows-1253``
-   * - ISO-8859-8
+     - ``cp1253``
+   * - iso8859-8
      - ``ISO-8859-8``
+     - ``iso8859-8``
      - ``Windows-1255``
-   * - ISO-8859-9
+     - ``cp1255``
+   * - iso8859-9
      - ``ISO-8859-9``
+     - ``iso8859-9``
      - ``Windows-1254``
+     - ``cp1254``
    * - ISO-8859-11
      - ``ISO-8859-11``
+     - ``ISO-8859-11``
      - ``CP874``
-   * - ISO-8859-13
+     - ``cp874``
+   * - iso8859-13
      - ``ISO-8859-13``
+     - ``iso8859-13``
      - ``Windows-1257``
-   * - KZ-1048
+     - ``cp1257``
+   * - kz1048
      - ``KZ1048``
-     - ``KZ-1048``
-   * - Mac-Cyrillic
+     - ``kz1048``
+     - ``KZ1048``
+     - ``kz1048``
+   * - mac-cyrillic
      - ``MacCyrillic``
-     - ``Mac-Cyrillic``
-   * - Mac-Greek
+     - ``mac-cyrillic``
+     - ``MacCyrillic``
+     - ``mac-cyrillic``
+   * - mac-greek
      - ``MacGreek``
-     - ``Mac-Greek``
-   * - Mac-Iceland
+     - ``mac-greek``
+     - ``MacGreek``
+     - ``mac-greek``
+   * - mac-iceland
      - ``MacIceland``
-     - ``Mac-Iceland``
-   * - Mac-Latin2
+     - ``mac-iceland``
+     - ``MacIceland``
+     - ``mac-iceland``
+   * - mac-latin2
      - ``MacLatin2``
-     - ``Mac-Latin2``
-   * - Mac-Roman
+     - ``mac-latin2``
+     - ``MacLatin2``
+     - ``mac-latin2``
+   * - mac-roman
      - ``MacRoman``
-     - ``Mac-Roman``
-   * - Mac-Turkish
+     - ``mac-roman``
+     - ``MacRoman``
+     - ``mac-roman``
+   * - mac-turkish
      - ``MacTurkish``
-     - ``Mac-Turkish``
-   * - Shift-JIS-2004
+     - ``mac-turkish``
+     - ``MacTurkish``
+     - ``mac-turkish``
+   * - shift_jis_2004
      - ``SHIFT_JIS``
-     - ``Shift-JIS-2004``
-   * - TIS-620
+     - ``shift_jis_2004``
+     - ``SHIFT_JIS``
+     - ``shift_jis_2004``
+   * - tis-620
      - ``TIS-620``
+     - ``tis-620``
      - ``CP874``
-   * - UTF-8
+     - ``cp874``
+   * - utf-8
      - ``utf-8``
-     - ``UTF-8``
+     - ``utf-8``
+     - ``utf-8``
+     - ``utf-8``
 
 Limiting Bytes
 --------------

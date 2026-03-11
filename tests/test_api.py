@@ -418,6 +418,12 @@ def test_detect_prefer_superset_false_no_remap() -> None:
     assert result["encoding"] == "ascii"
 
 
+def test_detect_prefer_superset_with_raw_codec_names() -> None:
+    """prefer_superset=True with compat_names=False returns raw codec superset names."""
+    result = chardet.detect(b"Hello world", prefer_superset=True, compat_names=False)
+    assert result["encoding"] == "cp1252"
+
+
 def test_detect_should_rename_legacy_deprecation() -> None:
     """should_rename_legacy emits DeprecationWarning."""
     with warnings.catch_warnings(record=True) as w:

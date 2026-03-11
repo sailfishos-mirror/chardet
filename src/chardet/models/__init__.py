@@ -130,6 +130,29 @@ def load_models() -> dict[str, bytearray]:
         return models
 
 
+def _build_enc_index(
+    models: dict[str, bytearray],
+) -> dict[str, list[tuple[str | None, bytearray, str]]]:
+    """Build a grouped index from a models dict.
+
+    :param models: Mapping of ``"lang/encoding"`` keys to 65536-byte tables.
+    :returns: Mapping of encoding name to ``[(lang, model, model_key), ...]``.
+    """
+    index: dict[str, list[tuple[str | None, bytearray, str]]] = {}
+    for key, model in models.items():
+        lang, enc = key.split("/", 1)
+        index.setdefault(enc, []).append((lang, model, key))
+
+    # Resolve aliases: if a model key uses a non-canonical name,
+    # copy the entry under the canonical name.
+    for enc_name in list(index):
+        canonical = lookup_encoding(enc_name)
+        if canonical is not None and canonical not in index:
+            index[canonical] = index[enc_name]
+
+    return index
+
+
 def get_enc_index() -> dict[str, list[tuple[str | None, bytearray, str]]]:
     """Return a pre-grouped index mapping encoding name -> [(lang, model, model_key), ...]."""
     global _ENC_INDEX  # noqa: PLW0603
@@ -138,21 +161,8 @@ def get_enc_index() -> dict[str, list[tuple[str | None, bytearray, str]]]:
     with _ENC_INDEX_LOCK:
         # No re-check: mypyc type-narrows _ENC_INDEX to None after the
         # outer check, so a re-read here would hit a TypeError under mypyc.
-        models = load_models()
-        index: dict[str, list[tuple[str | None, bytearray, str]]] = {}
-        for key, model in models.items():
-            lang, enc = key.split("/", 1)
-            index.setdefault(enc, []).append((lang, model, key))
-
-        # Resolve aliases: if a model key uses a non-canonical name,
-        # copy the entry under the canonical name.
-        for enc_name in list(index):
-            canonical = lookup_encoding(enc_name)
-            if canonical is not None and canonical not in index:
-                index[canonical] = index[enc_name]
-
-        _ENC_INDEX = index
-        return index
+        _ENC_INDEX = _build_enc_index(load_models())
+        return _ENC_INDEX
 
 
 def infer_language(encoding: str) -> str | None:

@@ -1,4 +1,4 @@
-"""Encoding equivalences and legacy name remapping.
+"""Encoding equivalences and name remapping.
 
 This module defines:
 
@@ -12,14 +12,14 @@ This module defines:
    different byte order) and ISO-2022-JP branch variants (which are
    compatible extensions of the same base encoding).
 
-3. **Preferred superset mapping** for the ``should_rename_legacy`` API option:
+3. **Preferred superset mapping** for the ``prefer_superset`` API option:
    replaces detected ISO/subset encoding names with their Windows/CP superset
    equivalents that modern software actually uses.
 
-4. **Legacy compatibility names** for the default ``should_rename_legacy=False``
-   mode: maps canonical display-cased names back to the names chardet 5.x
-   returned, preserving backward compatibility for callers that compare
-   encoding strings directly.
+4. **Compatibility names** for the default ``compat_names=True`` mode: maps
+   internal Python codec names to the names chardet 5.x/6.x returned,
+   preserving backward compatibility for callers that compare encoding
+   strings directly.
 """
 
 from __future__ import annotations
@@ -53,11 +53,11 @@ def normalize_encoding_name(name: str) -> str:
 # mapping is needed for accuracy evaluation only.
 SUPERSETS: dict[str, frozenset[str]] = {
     "ASCII": frozenset({"utf-8", "cp1252"}),
-    "TIS-620": frozenset({"ISO-8859-11", "cp874"}),
+    "TIS-620": frozenset({"iso8859-11", "cp874"}),
     "ISO-8859-11": frozenset({"cp874"}),
     "GB2312": frozenset({"gb18030"}),
     "GBK": frozenset({"gb18030"}),
-    "Big5": frozenset({"big5hkscs", "CP950"}),
+    "Big5": frozenset({"big5hkscs", "cp950"}),
     "Shift_JIS": frozenset({"cp932", "shift_jis_2004"}),
     "Shift-JISX0213": frozenset({"shift_jis_2004"}),
     "EUC-JP": frozenset({"euc_jis_2004"}),
@@ -171,35 +171,11 @@ _COMPAT_NAMES: dict[str, str] = {
 # Backward compat alias
 _LEGACY_NAMES = _COMPAT_NAMES
 
-# Transitional mapping: display-cased names -> 5.x/6.x compat names.
-# Used as fallback in apply_compat_names() while the pipeline still returns
-# display-cased names. Will be removed once the pipeline switches to codec names.
-_DISPLAY_TO_COMPAT: dict[str, str] = {
-    "ASCII": "ascii",
-    "Big5-HKSCS": "Big5",
-    "CP855": "IBM855",
-    "CP866": "IBM866",
-    "EUC-JIS-2004": "EUC-JP",
-    "ISO-2022-JP-2": "ISO-2022-JP",
-    "Mac-Cyrillic": "MacCyrillic",
-    "Mac-Roman": "MacRoman",
-    "Shift-JIS-2004": "SHIFT_JIS",
-    "UTF-8": "utf-8",
-    "KZ-1048": "KZ1048",
-    "Mac-Greek": "MacGreek",
-    "Mac-Iceland": "MacIceland",
-    "Mac-Latin2": "MacLatin2",
-    "Mac-Turkish": "MacTurkish",
-}
-
 
 def apply_compat_names(
     result: DetectionDict,
 ) -> DetectionDict:
-    """Convert canonical encoding names to chardet 5.x/6.x compatible names.
-
-    Handles both codec-name keys (future pipeline output) and display-cased
-    keys (current pipeline output) during the transition period.
+    """Convert internal codec names to chardet 5.x/6.x compatible names.
 
     Modifies the ``"encoding"`` value in *result* in-place and returns *result*
     for fluent chaining.
@@ -209,7 +185,7 @@ def apply_compat_names(
     """
     enc = result.get("encoding")
     if isinstance(enc, str):
-        result["encoding"] = _COMPAT_NAMES.get(enc, _DISPLAY_TO_COMPAT.get(enc, enc))
+        result["encoding"] = _COMPAT_NAMES.get(enc, enc)
     return result
 
 
