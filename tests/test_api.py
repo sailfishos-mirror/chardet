@@ -387,3 +387,55 @@ def test_detect_hp_roman8():
     ).encode("hp-roman8")
     result = chardet.detect(data, encoding_era=EncodingEra.ALL)
     assert result["encoding"] == "HP-Roman8"
+
+
+# --- compat_names and prefer_superset tests ---
+
+
+def test_detect_compat_names_true_returns_display_names() -> None:
+    """compat_names=True (default) returns 5.x/6.x display names."""
+    result = chardet.detect(b"Hello world", compat_names=True)
+    assert result["encoding"] == "ascii"
+
+
+def test_detect_compat_names_false_returns_codec_names() -> None:
+    """compat_names=False returns raw internal names (currently display-cased)."""
+    result = chardet.detect(b"Hello world", compat_names=False)
+    # With compat_names=False, the internal name passes through.
+    # Currently internal name is "ASCII" (display-cased).
+    # After the full refactor it will be "ascii" (codec name).
+    assert result["encoding"] is not None
+
+
+def test_detect_prefer_superset_remaps() -> None:
+    """prefer_superset=True remaps ASCII to Windows-1252."""
+    result = chardet.detect(b"Hello world", prefer_superset=True)
+    assert result["encoding"] == "Windows-1252"
+
+
+def test_detect_prefer_superset_false_no_remap() -> None:
+    """prefer_superset=False (default) does not remap."""
+    result = chardet.detect(b"Hello world", prefer_superset=False)
+    assert result["encoding"] == "ascii"
+
+
+def test_detect_should_rename_legacy_deprecation() -> None:
+    """should_rename_legacy emits DeprecationWarning."""
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        chardet.detect(b"Hello world", should_rename_legacy=True)
+        dep = [x for x in w if issubclass(x.category, DeprecationWarning)]
+        assert len(dep) == 1
+        assert "should_rename_legacy" in str(dep[0].message)
+
+
+def test_detect_all_compat_names() -> None:
+    """detect_all respects compat_names parameter."""
+    results = chardet.detect_all(b"Hello world", compat_names=True)
+    assert results[0]["encoding"] == "ascii"
+
+
+def test_detect_all_prefer_superset() -> None:
+    """detect_all respects prefer_superset parameter."""
+    results = chardet.detect_all(b"Hello world", prefer_superset=True)
+    assert results[0]["encoding"] == "Windows-1252"

@@ -167,11 +167,35 @@ _COMPAT_NAMES: dict[str, str] = {
 # Backward compat alias
 _LEGACY_NAMES = _COMPAT_NAMES
 
+# Transitional mapping: display-cased names -> 5.x/6.x compat names.
+# Used as fallback in apply_compat_names() while the pipeline still returns
+# display-cased names. Will be removed once the pipeline switches to codec names.
+_DISPLAY_TO_COMPAT: dict[str, str] = {
+    "ASCII": "ascii",
+    "Big5-HKSCS": "Big5",
+    "CP855": "IBM855",
+    "CP866": "IBM866",
+    "EUC-JIS-2004": "EUC-JP",
+    "ISO-2022-JP-2": "ISO-2022-JP",
+    "Mac-Cyrillic": "MacCyrillic",
+    "Mac-Roman": "MacRoman",
+    "Shift-JIS-2004": "SHIFT_JIS",
+    "UTF-8": "utf-8",
+    "KZ-1048": "KZ1048",
+    "Mac-Greek": "MacGreek",
+    "Mac-Iceland": "MacIceland",
+    "Mac-Latin2": "MacLatin2",
+    "Mac-Turkish": "MacTurkish",
+}
+
 
 def apply_compat_names(
     result: DetectionDict,
 ) -> DetectionDict:
     """Convert canonical encoding names to chardet 5.x/6.x compatible names.
+
+    Handles both codec-name keys (future pipeline output) and display-cased
+    keys (current pipeline output) during the transition period.
 
     Modifies the ``"encoding"`` value in *result* in-place and returns *result*
     for fluent chaining.
@@ -181,7 +205,7 @@ def apply_compat_names(
     """
     enc = result.get("encoding")
     if isinstance(enc, str):
-        result["encoding"] = _LEGACY_NAMES.get(enc, enc)
+        result["encoding"] = _COMPAT_NAMES.get(enc, _DISPLAY_TO_COMPAT.get(enc, enc))
     return result
 
 

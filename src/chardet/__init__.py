@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import warnings
+
 from chardet._utils import (
     _DEFAULT_CHUNK_SIZE,
     DEFAULT_MAX_BYTES,
@@ -30,38 +32,47 @@ __all__ = [
 ]
 
 
-def detect(
+def detect(  # noqa: PLR0913
     byte_str: bytes | bytearray,
     should_rename_legacy: bool = False,
     encoding_era: EncodingEra = EncodingEra.ALL,
     chunk_size: int = _DEFAULT_CHUNK_SIZE,
     max_bytes: int = DEFAULT_MAX_BYTES,
+    *,
+    prefer_superset: bool = False,
+    compat_names: bool = True,
 ) -> DetectionDict:
     """Detect the encoding of the given byte string.
 
-    Parameters match chardet 5.x/6.x for backward compatibility.
-    *chunk_size* is accepted but has no effect.
-
     :param byte_str: The byte sequence to detect encoding for.
-    :param should_rename_legacy: If ``True``, use canonical display-cased
-        encoding names and remap legacy ISO encodings to their modern Windows
-        superset equivalents.  If ``False`` (the default), return names
-        compatible with chardet 5.x/6.x.
+    :param should_rename_legacy: Deprecated alias for *prefer_superset*.
     :param encoding_era: Restrict candidate encodings to the given era.
     :param chunk_size: Deprecated -- accepted for backward compatibility but
         has no effect.
     :param max_bytes: Maximum number of bytes to examine from *byte_str*.
+    :param prefer_superset: If ``True``, remap ISO subset encodings to their
+        Windows/CP superset equivalents (e.g., ISO-8859-1 -> Windows-1252).
+    :param compat_names: If ``True`` (default), return encoding names
+        compatible with chardet 5.x/6.x.  If ``False``, return raw Python
+        codec names.
     :returns: A dictionary with keys ``"encoding"``, ``"confidence"``, and
         ``"language"``.
     """
     _warn_deprecated_chunk_size(chunk_size)
     _validate_max_bytes(max_bytes)
+    if should_rename_legacy:
+        warnings.warn(
+            "should_rename_legacy is deprecated, use prefer_superset instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        prefer_superset = True
     data = byte_str if isinstance(byte_str, bytes) else bytes(byte_str)
     results = run_pipeline(data, encoding_era, max_bytes=max_bytes)
     result = results[0].to_dict()
-    if should_rename_legacy:
+    if prefer_superset:
         apply_legacy_rename(result)
-    else:
+    if compat_names:
         apply_compat_names(result)
     return result
 
@@ -73,11 +84,11 @@ def detect_all(  # noqa: PLR0913
     encoding_era: EncodingEra = EncodingEra.ALL,
     chunk_size: int = _DEFAULT_CHUNK_SIZE,
     max_bytes: int = DEFAULT_MAX_BYTES,
+    *,
+    prefer_superset: bool = False,
+    compat_names: bool = True,
 ) -> list[DetectionDict]:
     """Detect all possible encodings of the given byte string.
-
-    Parameters match chardet 5.x/6.x for backward compatibility.
-    *chunk_size* is accepted but has no effect.
 
     When *ignore_threshold* is False (the default), results with confidence
     <= MINIMUM_THRESHOLD (0.20) are filtered out.  If all results are below
@@ -87,19 +98,27 @@ def detect_all(  # noqa: PLR0913
     :param byte_str: The byte sequence to detect encoding for.
     :param ignore_threshold: If ``True``, return all candidate encodings
         regardless of confidence score.
-    :param should_rename_legacy: If ``True``, use canonical display-cased
-        encoding names and remap legacy ISO encodings to their modern Windows
-        superset equivalents.  If ``False`` (the default), return names
-        compatible with chardet 5.x/6.x.
+    :param should_rename_legacy: Deprecated alias for *prefer_superset*.
     :param encoding_era: Restrict candidate encodings to the given era.
     :param chunk_size: Deprecated -- accepted for backward compatibility but
         has no effect.
     :param max_bytes: Maximum number of bytes to examine from *byte_str*.
-    :returns: A list of dictionaries, each with keys ``"encoding"``,
-        ``"confidence"``, and ``"language"``, sorted by descending confidence.
+    :param prefer_superset: If ``True``, remap ISO subset encodings to their
+        Windows/CP superset equivalents.
+    :param compat_names: If ``True`` (default), return encoding names
+        compatible with chardet 5.x/6.x.  If ``False``, return raw Python
+        codec names.
+    :returns: A list of dictionaries, sorted by descending confidence.
     """
     _warn_deprecated_chunk_size(chunk_size)
     _validate_max_bytes(max_bytes)
+    if should_rename_legacy:
+        warnings.warn(
+            "should_rename_legacy is deprecated, use prefer_superset instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        prefer_superset = True
     data = byte_str if isinstance(byte_str, bytes) else bytes(byte_str)
     results = run_pipeline(data, encoding_era, max_bytes=max_bytes)
     dicts = [r.to_dict() for r in results]
@@ -107,7 +126,9 @@ def detect_all(  # noqa: PLR0913
         filtered = [d for d in dicts if d["confidence"] > MINIMUM_THRESHOLD]
         if filtered:
             dicts = filtered
-    _rename = apply_legacy_rename if should_rename_legacy else apply_compat_names
     for d in dicts:
-        _rename(d)
+        if prefer_superset:
+            apply_legacy_rename(d)
+        if compat_names:
+            apply_compat_names(d)
     return sorted(dicts, key=lambda d: d["confidence"], reverse=True)
