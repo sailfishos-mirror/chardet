@@ -251,7 +251,7 @@ pytestmark_benchmark = pytest.mark.benchmark
 def test_threshold_statistical():
     median_s = _median_time(lambda: chardet.detect(CYRILLIC_WIN1251), _ITERS_THRESHOLD)
     median_ms = median_s * 1000
-    assert median_ms < 10, f"Statistical detection too slow: {median_ms:.2f}ms"
+    assert median_ms < 5, f"Statistical detection too slow: {median_ms:.2f}ms"
 
 
 @pytestmark_benchmark
@@ -293,4 +293,4 @@ def test_threshold_detect_all():
         lambda: chardet.detect_all(CYRILLIC_WIN1251), _ITERS_THRESHOLD
     )
     median_ms = median_s * 1000
-    assert median_ms < 20, f"detect_all too slow: {median_ms:.2f}ms"
+    assert median_ms < 5, f"detect_all too slow: {median_ms:.2f}ms"
