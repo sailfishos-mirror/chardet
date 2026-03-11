@@ -93,14 +93,20 @@ def _cache_filename(  # noqa: PLR0913
     python_tag: str,
     build_tag: str,
     kind: str,
+    *,
+    threads: int = 1,
 ) -> str:
     """Build a cache filename like ``chardet_7.0.1_a1b2c3_cpython3.11_mypyc_time.json``.
+
+    When *threads* > 1, a ``{N}threads`` segment is inserted before *kind*:
+    ``chardet_7.0.1_a1b2c3_cpython3.11_mypyc_4threads_time.json``.
 
     *detector_name* should be the package name (e.g. ``"chardet"``,
     ``"charset-normalizer"``), **not** the display label.
     """
     safe_name = detector_name.replace(" ", "-").replace("/", "-")
-    return f"{safe_name}_{detector_version}_{benchmark_hash}_{python_tag}_{build_tag}_{kind}.json"
+    threads_seg = f"_{threads}threads" if threads > 1 else ""
+    return f"{safe_name}_{detector_version}_{benchmark_hash}_{python_tag}_{build_tag}{threads_seg}_{kind}.json"
 
 
 def _load_cached(cache_dir: Path, filename: str) -> dict | None:
@@ -329,12 +335,19 @@ def _has_full_cache(  # noqa: PLR0913
     build_tag: str,
     *,
     skip_memory: bool = False,
+    threads: int = 1,
 ) -> bool:
     """Return ``True`` if all required cache files exist."""
     kinds = ("time",) if skip_memory else ("time", "memory")
     for kind in kinds:
         fname = _cache_filename(
-            detector_type, version, benchmark_hash, python_tag, build_tag, kind
+            detector_type,
+            version,
+            benchmark_hash,
+            python_tag,
+            build_tag,
+            kind,
+            threads=threads,
         )
         if not (cache_dir / fname).is_file():
             return False
@@ -406,13 +419,14 @@ def _cleanup_venv(venv_dir: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _run_timing_subprocess(
+def _run_timing_subprocess(  # noqa: PLR0913
     python_executable: str,
     data_dir: str,
     *,
     detector_type: str = "chardet",
     encoding_era: str = "all",
     pure: bool = False,
+    threads: int = 1,
 ) -> _TimingResult:
     """Run detection timing in an isolated subprocess via ``benchmark_time.py``.
 
@@ -449,6 +463,8 @@ def _run_timing_subprocess(
     cmd.extend(["--encoding-era", encoding_era])
     if pure:
         cmd.append("--pure")
+    if threads > 1:
+        cmd.extend(["--threads", str(threads)])
 
     result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if result.returncode != 0:
@@ -498,6 +514,7 @@ def _run_timing_with_median(  # noqa: PLR0913
     encoding_era: str = "all",
     pure: bool = False,
     num_runs: int = 3,
+    threads: int = 1,
 ) -> _TimingResult:
     """Run timing ``num_runs`` times and return median-aggregated results.
 
@@ -518,6 +535,7 @@ def _run_timing_with_median(  # noqa: PLR0913
             detector_type=detector_type,
             encoding_era=encoding_era,
             pure=pure,
+            threads=threads,
         )
         if i == 0:
             first_results = run.results
@@ -654,6 +672,7 @@ def run_comparison(  # noqa: PLR0913
     use_cache: bool = True,
     benchmark_hash: str = "",
     no_memory: bool = False,
+    threads: int = 1,
 ) -> None:
     """Run accuracy and performance comparison across detectors.
 
@@ -695,6 +714,8 @@ def run_comparison(  # noqa: PLR0913
 
     print(f"Found {len(test_files)} test files")
     print(f"Detectors: {', '.join(detector_labels)}")
+    if threads > 1:
+        print(f"Threads: {threads}")
     print()
     print("Equivalences used:")
     print("  Superset relationships (detected superset of expected is correct):")
@@ -746,7 +767,13 @@ def run_comparison(  # noqa: PLR0913
         # Check cache
         if cache_dir is not None:
             fname = _cache_filename(
-                detector_type, version, benchmark_hash, py_tag, b_tag, "time"
+                detector_type,
+                version,
+                benchmark_hash,
+                py_tag,
+                b_tag,
+                "time",
+                threads=threads,
             )
             cached = _load_cached(cache_dir, fname)
             if cached is not None:
@@ -777,12 +804,19 @@ def run_comparison(  # noqa: PLR0913
             encoding_era=era,
             pure=is_pure,
             num_runs=num_runs,
+            threads=threads,
         )
 
         # Save to cache
         if cache_dir is not None:
             fname = _cache_filename(
-                detector_type, version, benchmark_hash, py_tag, b_tag, "time"
+                detector_type,
+                version,
+                benchmark_hash,
+                py_tag,
+                b_tag,
+                "time",
+                threads=threads,
             )
             _save_cache(
                 cache_dir,
@@ -1203,6 +1237,13 @@ if __name__ == "__main__":
             " (sets HATCH_BUILD_HOOK_ENABLE_MYPYC=true)"
         ),
     )
+    parser.add_argument(
+        "--threads",
+        type=int,
+        default=1,
+        metavar="N",
+        help="Number of detection threads for benchmark_time.py (default: 1)",
+    )
     args = parser.parse_args()
 
     if args.pure and args.mypyc:
@@ -1331,6 +1372,7 @@ if __name__ == "__main__":
             python_tags[label],
             build_tags[label],
             skip_memory=args.no_memory,
+            threads=args.threads,
         ):
             print(f"  {label}: full cache hit, skipping venv creation")
         else:
@@ -1434,6 +1476,7 @@ if __name__ == "__main__":
             use_cache=use_cache,
             benchmark_hash=benchmark_hash,
             no_memory=args.no_memory,
+            threads=args.threads,
         )
     finally:
         for label, (venv_dir, _) in venvs.items():
