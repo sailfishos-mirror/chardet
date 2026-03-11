@@ -33,6 +33,9 @@ def _detect_pep263(data: bytes) -> DetectionResult | None:
     :param data: The raw byte data to scan.
     :returns: A :class:`DetectionResult` with confidence 0.95, or ``None``.
     """
+    # PEP 263 requires a '#' comment marker on line 1 or 2.
+    if b"#" not in data[:200]:
+        return None
     # Extract first two lines only.
     first_two_lines = b"\n".join(data.split(b"\n", 2)[:2])
     match = _PEP263_RE.search(first_two_lines)
