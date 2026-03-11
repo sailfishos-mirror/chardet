@@ -43,25 +43,31 @@ class UniversalDetector:
         PREFERRED_SUPERSET
     )
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         lang_filter: LanguageFilter = LanguageFilter.ALL,
         should_rename_legacy: bool = False,
         encoding_era: EncodingEra = EncodingEra.ALL,
         max_bytes: int = DEFAULT_MAX_BYTES,
+        *,
+        prefer_superset: bool = False,
+        compat_names: bool = True,
     ) -> None:
         """Initialize the detector.
 
         :param lang_filter: Deprecated -- accepted for backward compatibility
             but has no effect.  A warning is emitted when set to anything
             other than :attr:`LanguageFilter.ALL`.
-        :param should_rename_legacy: If ``True``, use canonical display-cased
-            encoding names and remap legacy ISO encodings to their modern
-            Windows superset equivalents.  If ``False`` (the default), return
-            names compatible with chardet 5.x/6.x.
+        :param should_rename_legacy: Deprecated alias for *prefer_superset*.
         :param encoding_era: Restrict candidate encodings to the given era.
         :param max_bytes: Maximum number of bytes to buffer from
             :meth:`feed` calls before stopping accumulation.
+        :param prefer_superset: If ``True``, remap ISO subset encodings to
+            their Windows/CP superset equivalents (e.g., ISO-8859-1 ->
+            Windows-1252).
+        :param compat_names: If ``True`` (default), return encoding names
+            compatible with chardet 5.x/6.x.  If ``False``, return raw Python
+            codec names.
         """
         if lang_filter != LanguageFilter.ALL:
             warnings.warn(
@@ -70,7 +76,15 @@ class UniversalDetector:
                 DeprecationWarning,
                 stacklevel=2,
             )
-        self._rename_legacy = should_rename_legacy
+        if should_rename_legacy:
+            warnings.warn(
+                "should_rename_legacy is deprecated, use prefer_superset instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            prefer_superset = True
+        self._prefer_superset = prefer_superset
+        self._compat_names = compat_names
         _validate_max_bytes(max_bytes)
         self._encoding_era = encoding_era
         self._max_bytes = max_bytes
@@ -134,9 +148,9 @@ class UniversalDetector:
         """The current best detection result."""
         if self._result is not None:
             d = self._result.to_dict()
-            if self._rename_legacy:
+            if self._prefer_superset:
                 apply_legacy_rename(d)
-            else:
+            if self._compat_names:
                 apply_compat_names(d)
             return d
         return _NONE_RESULT.to_dict()

@@ -439,3 +439,38 @@ def test_detect_all_prefer_superset() -> None:
     """detect_all respects prefer_superset parameter."""
     results = chardet.detect_all(b"Hello world", prefer_superset=True)
     assert results[0]["encoding"] == "Windows-1252"
+
+
+# --- UniversalDetector compat_names / prefer_superset tests ---
+
+
+def test_detector_compat_names() -> None:
+    """UniversalDetector respects compat_names parameter."""
+    from chardet.detector import UniversalDetector
+
+    det = UniversalDetector(compat_names=True)
+    det.feed(b"Hello world, this is enough ASCII data for detection. " * 2)
+    det.close()
+    assert det.result["encoding"] == "ascii"
+
+
+def test_detector_prefer_superset() -> None:
+    """UniversalDetector respects prefer_superset parameter."""
+    from chardet.detector import UniversalDetector
+
+    det = UniversalDetector(prefer_superset=True)
+    det.feed(b"Hello world, this is enough ASCII data for detection. " * 2)
+    det.close()
+    assert det.result["encoding"] == "Windows-1252"
+
+
+def test_detector_should_rename_legacy_deprecation() -> None:
+    """UniversalDetector's should_rename_legacy emits DeprecationWarning."""
+    from chardet.detector import UniversalDetector
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        UniversalDetector(should_rename_legacy=True)
+        dep = [x for x in w if issubclass(x.category, DeprecationWarning)]
+        assert len(dep) == 1
+        assert "should_rename_legacy" in str(dep[0].message)
