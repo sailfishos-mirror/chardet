@@ -14,7 +14,7 @@ from chardet._utils import (
 from chardet._version import __version__
 from chardet.detector import UniversalDetector
 from chardet.enums import EncodingEra, LanguageFilter
-from chardet.equivalences import apply_compat_names, apply_legacy_rename
+from chardet.equivalences import apply_compat_names, apply_preferred_superset
 from chardet.pipeline import DetectionDict, DetectionResult
 from chardet.pipeline.orchestrator import run_pipeline
 
@@ -71,7 +71,7 @@ def detect(  # noqa: PLR0913
     results = run_pipeline(data, encoding_era, max_bytes=max_bytes)
     result = results[0].to_dict()
     if prefer_superset:
-        apply_legacy_rename(result)
+        apply_preferred_superset(result)
     if compat_names:
         apply_compat_names(result)
     return result
@@ -128,7 +128,7 @@ def detect_all(  # noqa: PLR0913
             dicts = filtered
     for d in dicts:
         if prefer_superset:
-            apply_legacy_rename(d)
+            apply_preferred_superset(d)
         if compat_names:
             apply_compat_names(d)
     return sorted(dicts, key=lambda d: d["confidence"], reverse=True)

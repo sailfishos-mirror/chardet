@@ -12,7 +12,7 @@ from chardet.enums import EncodingEra, LanguageFilter
 from chardet.equivalences import (
     PREFERRED_SUPERSET,
     apply_compat_names,
-    apply_legacy_rename,
+    apply_preferred_superset,
 )
 from chardet.pipeline import DetectionDict, DetectionResult
 from chardet.pipeline.orchestrator import run_pipeline
@@ -149,7 +149,7 @@ class UniversalDetector:
         if self._result is not None:
             d = self._result.to_dict()
             if self._prefer_superset:
-                apply_legacy_rename(d)
+                apply_preferred_superset(d)
             if self._compat_names:
                 apply_compat_names(d)
             return d

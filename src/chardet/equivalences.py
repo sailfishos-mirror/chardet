@@ -104,7 +104,7 @@ PREFERRED_SUPERSET: dict[str, str] = {
 }
 
 
-def apply_legacy_rename(
+def apply_preferred_superset(
     result: DetectionDict,
 ) -> DetectionDict:
     """Replace the encoding name with its preferred Windows/CP superset.
@@ -119,6 +119,10 @@ def apply_legacy_rename(
     if isinstance(enc, str):
         result["encoding"] = PREFERRED_SUPERSET.get(enc, enc)
     return result
+
+
+# Deprecated alias — kept for external consumers.
+apply_legacy_rename = apply_preferred_superset
 
 
 # Mapping from Python codec names to chardet 5.x/6.x compatible display names.
