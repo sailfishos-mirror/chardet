@@ -200,3 +200,23 @@ def test_language_equivalent_unknown_language():
     """Unknown language code returns False."""
     assert is_language_equivalent("xx", "yy") is False
     assert is_language_equivalent("en", "fr") is False
+
+
+def test_compat_names_maps_codec_to_display() -> None:
+    """_COMPAT_NAMES maps codec names to 5.x/6.x display names."""
+    from chardet.equivalences import _COMPAT_NAMES
+
+    # 5.x compat entries
+    assert _COMPAT_NAMES["big5hkscs"] == "Big5"
+    assert _COMPAT_NAMES["cp855"] == "IBM855"
+    assert _COMPAT_NAMES["euc_jis_2004"] == "EUC-JP"
+    assert _COMPAT_NAMES["iso2022_jp_2"] == "ISO-2022-JP"
+    assert _COMPAT_NAMES["shift_jis_2004"] == "SHIFT_JIS"
+    # Windows codepage entries
+    assert _COMPAT_NAMES["cp1252"] == "Windows-1252"
+    assert _COMPAT_NAMES["cp1251"] == "Windows-1251"
+    # ISO entries
+    assert _COMPAT_NAMES["iso8859-1"] == "ISO-8859-1"
+    # Codec names that match 5.x output have no entry
+    assert "ascii" not in _COMPAT_NAMES
+    assert "utf-8" not in _COMPAT_NAMES

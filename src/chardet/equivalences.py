@@ -121,29 +121,51 @@ def apply_legacy_rename(
     return result
 
 
-# Mapping from canonical display-cased names to the names chardet 5.x/6.x
-# returned.  Only entries that differ are listed; unlisted names pass through
-# unchanged (they are either new encodings with no legacy equivalent, or
-# already match the old name exactly).
-_LEGACY_NAMES: dict[str, str] = {
+# Mapping from Python codec names to chardet 5.x/6.x compatible display names.
+# Only entries where codec name differs from the compat output are listed.
+# Encodings where codec name == compat name (e.g., "ascii", "utf-8") and
+# encodings new to v7 have no entry — the codec name passes through unchanged.
+_COMPAT_NAMES: dict[str, str] = {
     # 5.x compat — these encodings existed in chardet 5.x with different names
-    "ASCII": "ascii",
-    "Big5-HKSCS": "Big5",
-    "CP855": "IBM855",
-    "CP866": "IBM866",
-    "EUC-JIS-2004": "EUC-JP",
-    "ISO-2022-JP-2": "ISO-2022-JP",
-    "Mac-Cyrillic": "MacCyrillic",
-    "Mac-Roman": "MacRoman",
-    "Shift-JIS-2004": "SHIFT_JIS",
-    "UTF-8": "utf-8",
-    # 6.x compat — these encodings were new in 6.x with different names
-    "KZ-1048": "KZ1048",
-    "Mac-Greek": "MacGreek",
-    "Mac-Iceland": "MacIceland",
-    "Mac-Latin2": "MacLatin2",
-    "Mac-Turkish": "MacTurkish",
+    "big5hkscs": "Big5",
+    "cp855": "IBM855",
+    "cp866": "IBM866",
+    "cp949": "CP949",
+    "euc_jis_2004": "EUC-JP",
+    "euc_kr": "EUC-KR",
+    "gb18030": "GB18030",
+    "hz": "HZ-GB-2312",
+    "iso2022_jp_2": "ISO-2022-JP",
+    "iso2022_kr": "ISO-2022-KR",
+    "iso8859-1": "ISO-8859-1",
+    "iso8859-5": "ISO-8859-5",
+    "iso8859-7": "ISO-8859-7",
+    "iso8859-8": "ISO-8859-8",
+    "iso8859-9": "ISO-8859-9",
+    "johab": "Johab",
+    "koi8-r": "KOI8-R",
+    "mac-cyrillic": "MacCyrillic",
+    "mac-roman": "MacRoman",
+    "shift_jis_2004": "SHIFT_JIS",
+    "tis-620": "TIS-620",
+    "utf-16": "UTF-16",
+    "utf-32": "UTF-32",
+    "utf-8-sig": "UTF-8-SIG",
+    "cp1251": "Windows-1251",
+    "cp1252": "Windows-1252",
+    "cp1253": "Windows-1253",
+    "cp1254": "Windows-1254",
+    "cp1255": "Windows-1255",
+    # 6.x compat — new in chardet 6.x with different names
+    "kz1048": "KZ1048",
+    "mac-greek": "MacGreek",
+    "mac-iceland": "MacIceland",
+    "mac-latin2": "MacLatin2",
+    "mac-turkish": "MacTurkish",
 }
+
+# Backward compat alias
+_LEGACY_NAMES = _COMPAT_NAMES
 
 
 def apply_compat_names(
