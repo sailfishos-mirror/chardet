@@ -11,6 +11,7 @@ from __future__ import annotations
 import statistics
 import time
 from collections.abc import Callable
+from pathlib import Path
 
 import pytest
 
@@ -114,7 +115,12 @@ def _make_scaled_input(base: bytes, target_bytes: int) -> bytes:
 # Layer 1: Ratio tests (default tier — hardware-independent)
 # ---------------------------------------------------------------------------
 
-_MIN_SPEEDUP = 3  # fast path must be at least 3x faster than statistical
+# mypyc widens the gap between fast-path and statistical detection;
+# pure Python still needs headroom so use a lower threshold.
+_HAS_MYPYC = any(Path(chardet.__file__).parent.rglob("*.so")) or any(
+    Path(chardet.__file__).parent.rglob("*.pyd")
+)
+_MIN_SPEEDUP = 3 if _HAS_MYPYC else 1.5
 
 
 @pytest.mark.parametrize(
