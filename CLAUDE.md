@@ -15,23 +15,26 @@ When releasing `X.Y.Z`, also tag the `chardet/test-data` repo with `X.Y.Z` at it
 ## Commands
 
 ### Development Setup
+
 ```bash
 uv sync                    # install dependencies
 prek install               # set up pre-commit hooks (ruff lint+format, trailing whitespace, etc.)
 ```
 
 ### Testing
+
 ```bash
-uv run python -m pytest                              # run all tests (excludes benchmarks)
-uv run python -m pytest tests/test_api.py            # run a specific test file
+uv run python -m pytest -n auto                      # run all tests (excludes benchmarks)
+uv run python -m pytest -n auto tests/test_api.py    # run a specific test file
 uv run python -m pytest tests/test_api.py::test_detect_empty  # run a single test
-uv run python -m pytest -m benchmark                 # run benchmark tests only
-uv run python -m pytest -x                           # stop on first failure
+uv run python -m pytest -m benchmark -n auto         # run benchmark tests only
+uv run python -m pytest -x -n auto                   # stop on first failure
 ```
 
 Test data is auto-cloned from `chardet/test-data` GitHub repo on first run (cached in `tests/data/`, gitignored). Accuracy tests are dynamically parametrized from this data via `conftest.py`.
 
 ### Linting & Formatting
+
 ```bash
 uv run ruff check .        # lint
 uv run ruff check --fix .  # lint with auto-fix
@@ -39,6 +42,7 @@ uv run ruff format .       # format
 ```
 
 ### Training Models
+
 ```bash
 uv run python scripts/train.py   # retrain bigram models from CulturaX/HTML data
 ```
@@ -46,6 +50,7 @@ uv run python scripts/train.py   # retrain bigram models from CulturaX/HTML data
 Training data is cached in `data/` (gitignored). Models are saved to `src/chardet/models/models.bin`.
 
 ### Benchmarks & Diagnostics
+
 ```bash
 uv run python scripts/benchmark_time.py     # latency benchmarks
 uv run python scripts/benchmark_memory.py   # memory usage benchmarks
@@ -54,6 +59,7 @@ uv run python scripts/compare_detectors.py  # compare against original chardet
 ```
 
 ### Documentation
+
 ```bash
 uv sync --group docs                          # install Sphinx, Furo, etc.
 uv run sphinx-build docs docs/_build          # build HTML docs
@@ -64,6 +70,7 @@ uv run python scripts/generate_encoding_table.py > docs/supported-encodings.rst 
 Docs use Sphinx with Furo theme. API reference is auto-generated from source docstrings via autodoc. Published to ReadTheDocs on tag push (`.readthedocs.yaml`). Source files are in `docs/`; `docs/plans/` is excluded from the build.
 
 ### Building with mypyc (optional)
+
 ```bash
 HATCH_BUILD_HOOK_ENABLE_MYPYC=true uv build  # compile hot-path modules
 ```
