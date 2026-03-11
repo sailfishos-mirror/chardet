@@ -340,6 +340,9 @@ def _has_full_cache(  # noqa: PLR0913
     """Return ``True`` if all required cache files exist."""
     kinds = ("time",) if skip_memory else ("time", "memory")
     for kind in kinds:
+        # Memory benchmarks are always single-threaded; only timing caches
+        # include the thread count.
+        t = threads if kind == "time" else 1
         fname = _cache_filename(
             detector_type,
             version,
@@ -347,7 +350,7 @@ def _has_full_cache(  # noqa: PLR0913
             python_tag,
             build_tag,
             kind,
-            threads=threads,
+            threads=t,
         )
         if not (cache_dir / fname).is_file():
             return False
