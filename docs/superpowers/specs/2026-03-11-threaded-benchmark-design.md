@@ -21,12 +21,15 @@ Add a `--threads N` option to `benchmark_time.py` (default 1). When N=1, the cur
 
 **Single-threaded path (threads=1):** Exactly the current code. No executor, no overhead.
 
+**Input validation:** `--threads` must be >= 1. Use `type=int` with argparse.
+
 **Multi-threaded path (threads>1):**
 
 - Create `ThreadPoolExecutor(max_workers=threads)`.
 - Submit all `detect(data)` calls as futures.
-- Collect per-file results preserving file order (associate results with their index).
+- Buffer all results and print JSON lines after all futures complete, preserving original file order.
 - Each file still gets an individual `elapsed` measurement (wall-clock start/end of that file's detect call).
+- Total elapsed (`__timing__`) is wall-clock time from first submit to last result collected — same as current behavior, just the loop is concurrent.
 
 **Warm-up call:** Stays single-threaded regardless of `--threads`. Measures lazy initialization cost, not threading overhead.
 
@@ -43,9 +46,9 @@ Add a `--threads N` option to `benchmark_time.py` (default 1). When N=1, the cur
 
 **New argument:** `--threads N` (default 1).
 
-**Passthrough:** The thread count is passed through `_run_timing_subprocess()` → `_run_timing_with_median()` → subprocess command line as `--threads N`.
+**Passthrough:** The thread count is passed through `_run_timing_subprocess()` → `_run_timing_with_median()` → subprocess command line as `--threads N`. Both functions gain a `threads: int = 1` parameter. `_run_timing_subprocess` appends `["--threads", str(threads)]` to the subprocess command.
 
-**Cache filename:** Thread count is always included in the cache key, after build tag and before kind: `chardet_7.0.1_a1b2c3_cpython3.11_pure_4threads_time.json`. When threads=1, the key is `1threads`.
+**Cache filename:** Thread count is included in the cache key only when threads > 1, to preserve backward compatibility with existing caches. Format: `chardet_7.0.1_a1b2c3_cpython3.11_pure_4threads_time.json`. When threads=1, no threads segment — filename is identical to today. The `_cache_filename()` function gains an optional `threads: int = 1` parameter.
 
 **Report header:** Display thread count when > 1.
 
