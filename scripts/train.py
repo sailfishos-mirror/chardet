@@ -309,34 +309,31 @@ def encode_text(text: str, codec_name: str) -> bytes | None:
 # ---------------------------------------------------------------------------
 
 
-def _article_cache_dir(cache_dir: str, lang: str) -> str:
+def _article_cache_dir(cache_dir: Path, lang: str) -> Path:
     """Return the per-article cache directory for a language."""
-    return os.path.join(cache_dir, "culturax", lang)
+    return cache_dir / "culturax" / lang
 
 
-def _load_cached_articles(cache_dir: str, lang: str, max_samples: int) -> list[str]:
+def _load_cached_articles(cache_dir: Path, lang: str, max_samples: int) -> list[str]:
     """Load cached articles from per-file storage."""
     d = _article_cache_dir(cache_dir, lang)
-    if not os.path.isdir(d):
+    if not d.is_dir():
         return []
     texts: list[str] = []
-    for name in sorted(os.listdir(d)):
-        if not name.endswith(".txt"):
+    for p in sorted(d.iterdir()):
+        if p.suffix != ".txt":
             continue
         if len(texts) >= max_samples:
             break
-        with open(os.path.join(d, name), encoding="utf-8") as f:
-            texts.append(f.read())
+        texts.append(p.read_text(encoding="utf-8"))
     return texts
 
 
-def _save_article(cache_dir: str, lang: str, index: int, text: str) -> None:
+def _save_article(cache_dir: Path, lang: str, index: int, text: str) -> None:
     """Save a single article to the per-file cache."""
     d = _article_cache_dir(cache_dir, lang)
-    os.makedirs(d, exist_ok=True)
-    path = os.path.join(d, f"{index:06d}.txt")
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / f"{index:06d}.txt").write_text(text, encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -350,7 +347,7 @@ _lang_text_cache: dict[str, list[str]] = {}
 def get_texts(
     lang: str,
     max_samples: int,
-    cache_dir: str,
+    cache_dir: Path,
 ) -> list[str]:
     """Download and cache CulturaX texts for a language.
 
@@ -469,14 +466,13 @@ def normalize_and_prune(
 
 
 def deserialize_models(
-    input_path: str,
+    input_path: Path,
 ) -> dict[str, dict[tuple[int, int], int]]:
     """Load existing models from binary format."""
-    if not os.path.isfile(input_path):
+    if not input_path.is_file():
         return {}
 
-    with open(input_path, "rb") as f:
-        data = f.read()
+    data = input_path.read_bytes()
 
     if not data:
         return {}
@@ -518,12 +514,12 @@ def deserialize_models(
 
 def serialize_models(
     models: dict[str, dict[tuple[int, int], int]],
-    output_path: str,
+    output_path: Path,
 ) -> int:
     """Serialize all models to binary format. Returns file size."""
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(output_path, "wb") as f:
+    with output_path.open("wb") as f:
         # Number of encodings
         f.write(struct.pack("!I", len(models)))
 
@@ -535,7 +531,7 @@ def serialize_models(
             for (b1, b2), weight in sorted(bigrams.items()):
                 f.write(struct.pack("!BBB", b1, b2, weight))
 
-    return os.path.getsize(output_path)
+    return output_path.stat().st_size
 
 
 def verify_codec(codec_name: str) -> bool:
@@ -552,9 +548,9 @@ def verify_codec(codec_name: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def _count_cached_texts(cache_dir: str, lang: str) -> int:
+def _count_cached_texts(cache_dir: Path, lang: str) -> int:
     """Count the number of cached text files for a language."""
-    d = Path(_article_cache_dir(cache_dir, lang))
+    d = _article_cache_dir(cache_dir, lang)
     if not d.is_dir():
         return 0
     return sum(1 for f in d.iterdir() if f.suffix == ".txt")
@@ -564,7 +560,7 @@ def _write_training_metadata(
     path: Path,
     models: dict[str, dict[tuple[int, int], int]],
     max_samples: int,
-    cache_dir: str,
+    cache_dir: Path,
 ) -> None:
     """Write training metadata YAML alongside models.bin.
 
@@ -618,7 +614,7 @@ def _build_one_model(  # noqa: PLR0913
     lang: str,
     enc_name: str,
     codec: str,
-    cache_dir: str,
+    cache_dir: Path,
     max_samples: int,
     min_weight: int,
 ) -> tuple[str, dict[tuple[int, int], int] | None, int, int]:
@@ -719,6 +715,8 @@ def main() -> None:
         "When specified, existing models for other encodings are preserved.",
     )
     args = parser.parse_args()
+    cache_dir = Path(args.cache_dir)
+    output_path = Path(args.output)
 
     start_time = time.time()
 
@@ -747,7 +745,7 @@ def main() -> None:
     if args.download_workers == 1:
         print("=== Downloading CulturaX texts (single-threaded) ===")
         for lang in sorted_langs:
-            texts = get_texts(lang, args.max_samples, args.cache_dir)
+            texts = get_texts(lang, args.max_samples, cache_dir)
             print(f"  {lang}: {len(texts)} texts")
         print()
     else:
@@ -758,7 +756,7 @@ def main() -> None:
         print(f"=== Downloading CulturaX texts ({args.download_workers} threads) ===")
 
         def _fetch(lang: str) -> tuple[str, int]:
-            texts = get_texts(lang, args.max_samples, args.cache_dir)
+            texts = get_texts(lang, args.max_samples, cache_dir)
             return lang, len(texts)
 
         pool = concurrent.futures.ThreadPoolExecutor(
@@ -777,7 +775,7 @@ def main() -> None:
     skipped = []
 
     # Pre-verify codecs and collect work items
-    work_items: list[tuple[str, str, str, str, int, int]] = []
+    work_items: list[tuple[str, str, str, Path, int, int]] = []
     for enc_name, langs in sorted(encoding_map.items()):
         codec = None
         codec_candidates = [enc_name]
@@ -795,7 +793,7 @@ def main() -> None:
             continue
 
         work_items.extend(
-            (lang, enc_name, codec, args.cache_dir, args.max_samples, args.min_weight)
+            (lang, enc_name, codec, cache_dir, args.max_samples, args.min_weight)
             for lang in langs
         )
 
@@ -841,7 +839,7 @@ def main() -> None:
     # Merge with existing models when retraining a subset
     if args.encodings:
         print("=== Merging with existing models ===")
-        existing = deserialize_models(args.output)
+        existing = deserialize_models(output_path)
         # Remove old models for retrained encodings (both formats)
         for enc in args.encodings:
             existing.pop(enc, None)  # old flat format
@@ -854,19 +852,20 @@ def main() -> None:
 
     # Serialize
     print("=== Serializing models ===")
-    file_size = serialize_models(models, args.output)
+    file_size = serialize_models(models, output_path)
 
     print("=== Computing confusion groups ===")
     confusion_maps = compute_distinguishing_maps(threshold=0.80)
-    confusion_path = os.path.join(os.path.dirname(args.output), "confusion.bin")
-    confusion_size = serialize_confusion_data(confusion_maps, confusion_path)
+    confusion_size = serialize_confusion_data(
+        confusion_maps, output_path.parent / "confusion.bin"
+    )
     print(f"Confusion groups: {len(confusion_maps)} pairs")
     print(
         f"Confusion data:   {confusion_size:,} bytes ({confusion_size / 1024:.1f} KB)"
     )
 
-    metadata_path = Path(args.output).with_name("training_metadata.yaml")
-    _write_training_metadata(metadata_path, models, args.max_samples, args.cache_dir)
+    metadata_path = output_path.with_name("training_metadata.yaml")
+    _write_training_metadata(metadata_path, models, args.max_samples, cache_dir)
     print(f"Metadata written: {metadata_path}")
 
     elapsed = time.time() - start_time
@@ -878,7 +877,7 @@ def main() -> None:
     print(f"Models skipped: {len(skipped)}")
     if skipped:
         print(f"  Skipped: {', '.join(skipped)}")
-    print(f"Output file:    {args.output}")
+    print(f"Output file:    {output_path}")
     print(f"File size:      {file_size:,} bytes ({file_size / 1024:.1f} KB)")
     print(f"Elapsed time:   {elapsed:.1f}s")
     print()

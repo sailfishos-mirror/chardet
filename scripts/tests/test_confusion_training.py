@@ -74,8 +74,8 @@ def test_serialize_deserialize_roundtrip():
     with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as f:
         path = Path(f.name)
     try:
-        serialize_confusion_data(maps, str(path))
-        loaded = deserialize_confusion_data(str(path))
+        serialize_confusion_data(maps, path)
+        loaded = deserialize_confusion_data(path)
         assert len(loaded) == len(maps)
         for key in maps:
             assert key in loaded or (key[1], key[0]) in loaded
@@ -89,7 +89,7 @@ def test_serialized_file_is_small():
     with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as f:
         path = Path(f.name)
     try:
-        serialize_confusion_data(maps, str(path))
+        serialize_confusion_data(maps, path)
         assert path.stat().st_size < 10_000
     finally:
         path.unlink(missing_ok=True)

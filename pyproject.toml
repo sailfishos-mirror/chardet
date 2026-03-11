@@ -146,7 +146,6 @@ ignore = [
     "BLE001",  # blind except (training resilience)
     "PLW2901", # redefined loop variable
     "ARG005",  # unused lambda args (signal handlers)
-    "PTH",     # os.path usage fine in scripts
     "RUF003",  # ambiguous unicode (intentional in encoding training)
     "S603",    # subprocess security not relevant
     "S607",    # subprocess security not relevant

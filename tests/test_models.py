@@ -123,11 +123,11 @@ def test_bigram_profile_high_byte_weight() -> None:
 
 
 @pytest.fixture
-def tmp_models_path(tmp_path: Path) -> str:
-    return str(tmp_path / "test_models.bin")
+def tmp_models_path(tmp_path: Path) -> Path:
+    return tmp_path / "test_models.bin"
 
 
-def test_roundtrip_single_encoding(tmp_models_path: str) -> None:
+def test_roundtrip_single_encoding(tmp_models_path: Path) -> None:
     """Serialize and deserialize a single encoding model."""
     original = {"utf-8": {(65, 66): 200, (0xC3, 0xA4): 150}}
     serialize_models(original, tmp_models_path)
@@ -135,7 +135,7 @@ def test_roundtrip_single_encoding(tmp_models_path: str) -> None:
     assert loaded == original
 
 
-def test_roundtrip_multiple_encodings(tmp_models_path: str) -> None:
+def test_roundtrip_multiple_encodings(tmp_models_path: Path) -> None:
     """Serialize and deserialize multiple encoding models."""
     original = {
         "utf-8": {(65, 66): 200, (67, 68): 100},
@@ -147,7 +147,7 @@ def test_roundtrip_multiple_encodings(tmp_models_path: str) -> None:
     assert loaded == original
 
 
-def test_roundtrip_empty_bigrams(tmp_models_path: str) -> None:
+def test_roundtrip_empty_bigrams(tmp_models_path: Path) -> None:
     """An encoding with zero bigrams should roundtrip correctly."""
     original = {"empty-enc": {}}
     serialize_models(original, tmp_models_path)
@@ -155,7 +155,7 @@ def test_roundtrip_empty_bigrams(tmp_models_path: str) -> None:
     assert loaded == original
 
 
-def test_roundtrip_zero_encodings(tmp_models_path: str) -> None:
+def test_roundtrip_zero_encodings(tmp_models_path: Path) -> None:
     """Zero encodings should roundtrip correctly."""
     original: dict[str, dict[tuple[int, int], int]] = {}
     serialize_models(original, tmp_models_path)
@@ -165,24 +165,23 @@ def test_roundtrip_zero_encodings(tmp_models_path: str) -> None:
 
 def test_deserialize_missing_file() -> None:
     """Missing file should return empty dict."""
-    result = deserialize_models("/nonexistent/path/models.bin")
+    result = deserialize_models(Path("/nonexistent/path/models.bin"))
     assert result == {}
 
 
-def test_deserialize_empty_file(tmp_models_path: str) -> None:
+def test_deserialize_empty_file(tmp_models_path: Path) -> None:
     """Empty file should return empty dict."""
-    Path(tmp_models_path).write_bytes(b"")
+    tmp_models_path.write_bytes(b"")
     result = deserialize_models(tmp_models_path)
     assert result == {}
 
 
-def test_deserialize_trailing_bytes_raises(tmp_models_path: str) -> None:
+def test_deserialize_trailing_bytes_raises(tmp_models_path: Path) -> None:
     """File with trailing bytes after valid data should raise ValueError."""
     original = {"utf-8": {(65, 66): 200}}
     serialize_models(original, tmp_models_path)
     # Append garbage bytes
-    p = Path(tmp_models_path)
-    p.write_bytes(p.read_bytes() + b"\xff\xff")
+    tmp_models_path.write_bytes(tmp_models_path.read_bytes() + b"\xff\xff")
     with pytest.raises(ValueError, match="trailing bytes"):
         deserialize_models(tmp_models_path)
 
@@ -198,7 +197,7 @@ def test_roundtrip_matches_load_models(tmp_path: Path) -> None:
             if table[idx] > 0:
                 bigrams[(idx >> 8, idx & 0xFF)] = table[idx]
         production_dicts[name] = bigrams
-    tmp_models = str(tmp_path / "roundtrip_models.bin")
+    tmp_models = tmp_path / "roundtrip_models.bin"
     serialize_models(production_dicts, tmp_models)
     loaded = deserialize_models(tmp_models)
     assert loaded == production_dicts

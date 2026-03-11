@@ -14,7 +14,7 @@ def test_build_one_model_returns_tuple(tmp_path: Path) -> None:
         lang="xx",  # non-existent language
         enc_name="utf-8",
         codec="utf-8",
-        cache_dir=str(tmp_path / "nonexistent_cache"),
+        cache_dir=tmp_path / "nonexistent_cache",
         max_samples=10,
         min_weight=1,
     )
@@ -44,7 +44,7 @@ def test_build_one_model_with_real_texts(tmp_path: Path) -> None:
         lang="fr",
         enc_name="iso-8859-1",
         codec="iso-8859-1",
-        cache_dir=str(tmp_path),
+        cache_dir=tmp_path,
         max_samples=100,
         min_weight=1,
     )

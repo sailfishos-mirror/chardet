@@ -157,7 +157,7 @@ def compute_distinguishing_maps(
     return result
 
 
-def serialize_confusion_data(maps: DistinguishingMaps, output_path: str) -> int:
+def serialize_confusion_data(maps: DistinguishingMaps, output_path: Path) -> int:
     """Serialize confusion group data to binary format.
 
     Format:
@@ -175,9 +175,8 @@ def serialize_confusion_data(maps: DistinguishingMaps, output_path: str) -> int:
 
     Returns file size in bytes.
     """
-    out = Path(output_path)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    with out.open("wb") as f:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("wb") as f:
         f.write(struct.pack("!H", len(maps)))
         for (name_a, name_b), (diff_bytes, categories) in sorted(maps.items()):
             a_bytes = name_a.encode("utf-8")
@@ -198,13 +197,12 @@ def serialize_confusion_data(maps: DistinguishingMaps, output_path: str) -> int:
                         _CATEGORY_TO_INT.get(cat_b, 29),
                     )
                 )
-    return out.stat().st_size
+    return output_path.stat().st_size
 
 
-def deserialize_confusion_data(input_path: str) -> DistinguishingMaps:
+def deserialize_confusion_data(input_path: Path) -> DistinguishingMaps:
     """Load confusion group data from binary format."""
     from chardet.pipeline.confusion import deserialize_confusion_data_from_bytes
 
-    with Path(input_path).open("rb") as f:
-        data = f.read()
+    data = input_path.read_bytes()
     return deserialize_confusion_data_from_bytes(data)
