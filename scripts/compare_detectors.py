@@ -445,6 +445,8 @@ def _run_timing_subprocess(  # noqa: PLR0913
         For ``"chardet"`` only -- ``"all"``, ``"modern_web"``, or ``"none"``.
     pure : bool
         Abort if mypyc .so/.pyd files are found (chardet only).
+    threads : int
+        Number of detection threads to pass to ``benchmark_time.py``.
 
     Returns
     -------
@@ -699,6 +701,8 @@ def run_comparison(  # noqa: PLR0913
         Hash of benchmark source files for cache invalidation.
     no_memory : bool
         Skip memory benchmarks when ``True``.
+    threads : int
+        Number of detection threads to pass to ``benchmark_time.py``.
 
     """
     if detector_versions is None:
@@ -1251,6 +1255,8 @@ if __name__ == "__main__":
 
     if args.pure and args.mypyc:
         parser.error("--pure and --mypyc are mutually exclusive")
+    if args.threads < 1:
+        parser.error("--threads must be >= 1")
 
     # Force line-buffered stdout so progress is visible when piped (e.g. tee).
     sys.stdout.reconfigure(line_buffering=True)
