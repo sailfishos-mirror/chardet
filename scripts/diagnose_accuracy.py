@@ -71,7 +71,9 @@ def main() -> None:
 
     for expected_encoding, language, filepath in test_files:
         data = filepath.read_bytes()
-        result = chardet.detect(data, encoding_era=EncodingEra.ALL)
+        result = chardet.detect(
+            data, encoding_era=EncodingEra.ALL, prefer_superset=True
+        )
         detected = result["encoding"]
         confidence = result["confidence"]
         size = len(data)

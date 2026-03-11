@@ -12,14 +12,14 @@ Python 3.10+, zero runtime dependencies, works on PyPy.
 
 ## Why chardet 7.0?
 
-**98.0% accuracy** on 2,510 test files. **42x faster** than chardet 6.0.0
+**98.2% accuracy** on 2,510 test files. **42x faster** than chardet 6.0.0
 and **4.2x faster** than
 charset-normalizer. **Language
 detection** for every result. **MIT licensed.**
 
 |                        | chardet 7.0.2 (mypyc) | chardet 7.0.2 (pure) | chardet 6.0.0 | [charset-normalizer] |
 | ---------------------- | :--------------------: | :------------------: | :-----------: | :------------------: |
-| Accuracy (2,510 files) |       **98.0%**        |      **98.0%**       |     88.2%     |        84.2%         |
+| Accuracy (2,510 files) |       **98.2%**        |      **98.2%**       |     88.2%     |        84.2%         |
 | Speed                  |    **476 files/s**     |   **384 files/s**    |  11 files/s   |     113 files/s      |
 | Language detection     |       **95.2%**        |      **95.2%**       |     40.0%     |        59.0%         |
 | Peak memory            |     **26.2 MiB**       |    **26.3 MiB**      |   29.5 MiB    |      101.2 MiB       |
@@ -41,10 +41,8 @@ pip install chardet
 ```python
 import chardet
 
-# Plain ASCII is reported as its superset Windows-1252 by default,
-# keeping with WHATWG guidelines for encoding detection.
 chardet.detect(b"Hello, world!")
-# {'encoding': 'Windows-1252', 'confidence': 1.0, 'language': 'en'}
+# {'encoding': 'ascii', 'confidence': 1.0, 'language': 'en'}
 
 # UTF-8 with typographic punctuation
 chardet.detect("It\u2019s a lovely day \u2014 let\u2019s grab coffee.".encode("utf-8"))
@@ -52,17 +50,17 @@ chardet.detect("It\u2019s a lovely day \u2014 let\u2019s grab coffee.".encode("u
 
 # Japanese EUC-JP
 chardet.detect("これは日本語のテストです。文字コードの検出を行います。".encode("euc-jp"))
-# {'encoding': 'euc-jis-2004', 'confidence': 1.0, 'language': 'ja'}
+# {'encoding': 'EUC-JP', 'confidence': 1.0, 'language': 'ja'}
 
 # Get all candidate encodings ranked by confidence
 text = "Le café est une boisson très populaire en France et dans le monde entier."
 results = chardet.detect_all(text.encode("windows-1252"))
-for r in results:
-    print(r["encoding"], r["confidence"])
-# windows-1252 0.44
-# iso-8859-15 0.44
-# mac-roman 0.42
-# cp858 0.42
+for r in results[:4]:
+    print(r["encoding"], round(r["confidence"], 2))
+# Windows-1252 0.44
+# iso8859-15 0.44
+# ISO-8859-1 0.44
+# MacRoman 0.42
 ```
 
 ### Streaming Detection
@@ -95,15 +93,15 @@ data = "Москва является столицей Российской Фе
 # All encoding eras are considered by default — 4 candidates across eras
 for r in detect_all(data):
     print(r["encoding"], round(r["confidence"], 2))
-# windows-1251 0.5
-# mac-cyrillic 0.47
-# kz-1048 0.22
+# Windows-1251 0.5
+# MacCyrillic 0.47
+# KZ1048 0.22
 # ptcp154 0.22
 
 # Restrict to modern web encodings — 1 confident result
 for r in detect_all(data, encoding_era=EncodingEra.MODERN_WEB):
     print(r["encoding"], round(r["confidence"], 2))
-# windows-1251 0.5
+# Windows-1251 0.5
 ```
 
 ## CLI
@@ -124,7 +122,7 @@ cat somefile.txt | chardetect
 - **MIT license** (previous versions were LGPL)
 - **Ground-up rewrite** — 12-stage detection pipeline using BOM detection, structural probing, byte validity filtering, and bigram statistical models
 - **42x faster** than chardet 6.0.0 with mypyc (**34x** pure Python), **4.2x faster** than charset-normalizer
-- **98.0% accuracy** — +9.8pp vs chardet 6.0.0, +13.8pp vs charset-normalizer
+- **98.2% accuracy** — +10.0pp vs chardet 6.0.0, +14.0pp vs charset-normalizer
 - **Language detection** — 95.2% accuracy across 49 languages, returned with every result
 - **99 encodings** — full coverage including EBCDIC, Mac, DOS, and Baltic/Central European families
 - **`EncodingEra` filtering** — scope detection to modern web encodings, legacy ISO/Mac/DOS, mainframe, or all

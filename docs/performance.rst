@@ -18,12 +18,12 @@ Accuracy
      - Accuracy
      - Speed
    * - **chardet 7.0.2 (mypyc)**
-     - **2459/2510**
-     - **98.0%**
+     - **2464/2510**
+     - **98.2%**
      - **476 files/s**
    * - chardet 7.0.2 (pure)
-     - 2459/2510
-     - 98.0%
+     - 2464/2510
+     - 98.2%
      - 384 files/s
    * - chardet 6.0.0
      - 2213/2510
@@ -38,8 +38,8 @@ Accuracy
      - 56.0%
      - 1,803 files/s
 
-chardet leads all detectors on accuracy: **+9.8pp** vs chardet 6.0.0,
-**+13.8pp** vs charset-normalizer, and **+42.0pp** vs cchardet.
+chardet leads all detectors on accuracy: **+10.0pp** vs chardet 6.0.0,
+**+14.0pp** vs charset-normalizer, and **+42.2pp** vs cchardet.
 
 Speed
 -----

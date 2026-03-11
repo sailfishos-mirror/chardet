@@ -90,8 +90,10 @@ def main() -> None:
         import_time = time.perf_counter() - t0
         era = EncodingEra.ALL if args.encoding_era == "all" else EncodingEra.MODERN_WEB
 
+        # Use should_rename_legacy for backward compat with older chardet
+        # versions in compare_detectors (prefer_superset doesn't exist in 7.0.1).
         def detect(data: bytes) -> tuple[str | None, str | None]:
-            r = chardet.detect(data, encoding_era=era)
+            r = chardet.detect(data, encoding_era=era, should_rename_legacy=True)
             return r["encoding"], r["language"]
 
     elif args.detector == "chardet":
@@ -101,7 +103,7 @@ def main() -> None:
         import_time = time.perf_counter() - t0
 
         def detect(data: bytes) -> tuple[str | None, str | None]:
-            r = chardet.detect(data)
+            r = chardet.detect(data, should_rename_legacy=True)
             return r["encoding"], r["language"]
 
     elif args.detector == "cchardet":

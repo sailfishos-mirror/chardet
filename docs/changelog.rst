@@ -33,7 +33,8 @@ Changelog
   codec names instead of chardet 5.x/6.x compatible display names
 - Added ``prefer_superset`` parameter (default ``False``) — remaps legacy
   ISO/subset encodings to their modern Windows/CP superset equivalents
-  (e.g., ASCII → Windows-1252, ISO-8859-1 → Windows-1252)
+  (e.g., ASCII → Windows-1252, ISO-8859-1 → Windows-1252).
+  **This will default to ``True`` in the next major version (8.0).**
 - Deprecated ``should_rename_legacy`` in favor of ``prefer_superset`` —
   a deprecation warning is emitted when used
 
@@ -46,7 +47,7 @@ Changelog
 - Added ``lookup_encoding()`` to ``registry`` for case-insensitive
   resolution of arbitrary encoding name input to canonical names
 - Achieved 100% line coverage across all source modules (+31 tests)
-- Updated benchmark numbers: 98.0% encoding accuracy, 95.2% language
+- Updated benchmark numbers: 98.2% encoding accuracy, 95.2% language
   accuracy on 2,510 test files
 - Pinned test-data cloning to chardet release version tags for
   reproducible builds
