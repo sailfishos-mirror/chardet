@@ -9,7 +9,13 @@ import sys
 import tempfile
 from pathlib import Path
 
-from chardet._utils import ISO_TO_LANGUAGE
+try:
+    from chardet._utils import ISO_TO_LANGUAGE
+except ImportError:
+    # Older chardet versions don't have ISO_TO_LANGUAGE in _utils.
+    # Provide an empty dict so scripts still work (language normalization
+    # will fall back to passthrough for old versions).
+    ISO_TO_LANGUAGE: dict[str, str] = {}  # type: ignore[no-redef]
 
 _TEST_DATA_REPO = "https://github.com/chardet/test-data.git"
 _REF_FILE = ".test-data-ref"
