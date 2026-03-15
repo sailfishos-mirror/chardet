@@ -806,3 +806,93 @@ def test_detect_all_custom_no_match_encoding():
         compat_names=False,
     )
     assert results[0]["encoding"] == "ascii"
+
+
+# --- include_encodings accuracy preservation tests ---
+
+
+@pytest.mark.parametrize(
+    ("data", "include_set", "expected"),
+    [
+        # UTF-8 stage: multibyte UTF-8 with Latin single-byte confusables
+        pytest.param(
+            "Héllo wörld café résumé naïve über straße".encode(),
+            ["utf-8", "cp1252", "iso8859-1"],
+            "utf-8",
+            id="utf8-with-latin-confusables",
+        ),
+        # BOM stage: UTF-8 BOM with alternatives present
+        pytest.param(
+            "\ufeffHello world, this is a BOM test document.".encode("utf-8-sig"),
+            ["utf-8-sig", "utf-8", "cp1252"],
+            "utf-8-sig",
+            id="utf8-bom-with-alternatives",
+        ),
+        # Escape stage: ISO-2022-JP with other Japanese encodings
+        pytest.param(
+            "こんにちは世界、これはテストです。".encode("iso2022_jp"),
+            ["iso2022_jp_2", "utf-8", "euc_jis_2004"],
+            "iso2022_jp_2",
+            id="iso2022-jp-with-alternatives",
+        ),
+        # UTF-16 stage: BOM-less UTF-16-LE with endian confusable
+        pytest.param(
+            "Hello world, this is a longer UTF-16 test with café.".encode("utf-16-le"),
+            ["utf-16-le", "utf-16-be", "utf-8"],
+            "utf-16-le",
+            id="utf16-le-with-endian-confusable",
+        ),
+        # Statistical stage: Cyrillic (windows-1251) with Cyrillic confusables
+        pytest.param(
+            (
+                "Привет мир, как дела? Это тестовый текст на русском языке. "
+                "Москва — столица России, крупнейший город страны."
+            ).encode("windows-1251"),
+            ["cp1251", "cp1252", "iso8859-5", "koi8-r"],
+            "cp1251",
+            id="windows-1251-with-cyrillic-confusables",
+        ),
+        # Statistical stage: Greek with Latin confusables
+        pytest.param(
+            (
+                "Η Αθήνα είναι η πρωτεύουσα και μεγαλύτερη πόλη της Ελλάδας. "
+                "Η πόλη έχει μακρά ιστορία που εκτείνεται πάνω από τρεις χιλιετίες."
+            ).encode("iso-8859-7"),
+            ["iso8859-7", "cp1252", "iso8859-1"],
+            "iso8859-7",
+            id="greek-with-latin-confusables",
+        ),
+        # Structural + Statistical: Japanese Shift-JIS with CJK confusables
+        pytest.param(
+            (
+                "これはテストです。日本語のテキスト。東京は日本の首都です。"
+                "人口は約1400万人で、世界最大の都市圏を形成しています。"
+            ).encode("shift_jis"),
+            ["shift_jis_2004", "euc_jis_2004", "gb18030", "big5hkscs"],
+            "shift_jis_2004",
+            id="shift-jis-with-cjk-confusables",
+        ),
+        # Structural + Statistical: Chinese GB18030 with CJK confusables
+        pytest.param(
+            (
+                "这是中文测试文本，用于检测编码。北京是中国的首都，上海是最大的城市。"
+            ).encode("gb18030"),
+            ["gb18030", "big5hkscs", "euc_kr"],
+            "gb18030",
+            id="gb18030-with-cjk-confusables",
+        ),
+    ],
+)
+def test_include_encodings_preserves_accuracy(
+    data: bytes, include_set: list[str], expected: str
+) -> None:
+    """include_encodings must not degrade accuracy when the correct encoding is present.
+
+    Each test case targets a different pipeline stage to ensure filtering
+    does not interfere with any detection path.
+    """
+    result = chardet.detect(data, include_encodings=include_set, compat_names=False)
+    assert result["encoding"] == expected, (
+        f"expected={expected}, got={result['encoding']} "
+        f"(confidence={result['confidence']:.2f})"
+    )
