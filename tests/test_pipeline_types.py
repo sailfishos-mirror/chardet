@@ -39,14 +39,12 @@ def test_pipeline_context_defaults():
     assert ctx.mb_scores == {}
 
 
-def test_pipeline_context_is_mutable():
+def test_pipeline_context_is_not_frozen():
+    """PipelineContext must not be frozen — pipeline stages mutate it."""
+    assert not PipelineContext.__dataclass_params__.frozen
     ctx = PipelineContext()
-    ctx.analysis_cache["utf-8"] = (0.9, 10, 5)
     ctx.non_ascii_count = 42
-    ctx.mb_scores["shift_jis"] = 0.85
-    assert ctx.analysis_cache["utf-8"] == (0.9, 10, 5)
     assert ctx.non_ascii_count == 42
-    assert ctx.mb_scores["shift_jis"] == 0.85
 
 
 def test_pipeline_context_mb_coverage():

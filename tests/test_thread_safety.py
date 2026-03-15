@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 import threading
 
 import pytest
@@ -109,18 +108,3 @@ def test_cold_cache_concurrent_init():
         _confusion.load_confusion_data.cache_clear()
         _registry.lookup_encoding.cache_clear()
         _registry.get_candidates.cache_clear()
-
-
-def test_gil_status_diagnostic() -> None:
-    """Report GIL status for visibility in CI logs.
-
-    Not a correctness test — prints a diagnostic line so developers can
-    see whether the test run exercised free-threaded or GIL-protected
-    execution.
-    """
-    if hasattr(sys, "_is_gil_enabled"):
-        enabled = sys._is_gil_enabled()
-        status = "DISABLED (free-threaded)" if not enabled else "enabled"
-        print(f"\nPython {sys.version.split()[0]} — GIL {status}")
-    else:
-        print(f"\nPython {sys.version.split()[0]} — GIL always enabled (< 3.13)")

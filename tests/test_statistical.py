@@ -42,6 +42,17 @@ def test_score_candidates_small_set_no_pool():
     assert len(results) <= len(candidates)
 
 
+def test_score_candidates_no_matching_model():
+    """Candidates with no statistical model should return an empty list."""
+    # cp273 is an EBCDIC encoding with no bigram model in models.bin,
+    # so score_best_language returns 0.0 for it and it gets filtered out.
+    candidates = tuple(e for e in get_candidates(EncodingEra.ALL) if e.name == "cp273")
+    assert len(candidates) == 1
+    data = b"\xc1\xc2\xc3\xc4\xc5" * 10  # arbitrary EBCDIC-ish bytes
+    results = score_candidates(data, candidates)
+    assert results == []
+
+
 def test_correct_encoding_scores_highest():
     text = "Привет мир, как дела? Это тестовый текст на русском языке.".encode(
         "windows-1251"

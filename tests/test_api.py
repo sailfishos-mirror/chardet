@@ -428,19 +428,16 @@ def test_detect_pep263_invalid_encoding_ignored():
 # --- compat_names and prefer_superset tests ---
 
 
-def test_detect_compat_names_true_returns_display_names() -> None:
-    """compat_names=True (default) returns 5.x/6.x display names."""
-    result = chardet.detect(b"Hello world", compat_names=True)
-    assert result["encoding"] == "ascii"
-
-
 def test_detect_compat_names_false_returns_codec_names() -> None:
-    """compat_names=False returns raw internal names (currently display-cased)."""
-    result = chardet.detect(b"Hello world", compat_names=False)
-    # With compat_names=False, the internal name passes through.
-    # Currently internal name is "ASCII" (display-cased).
-    # After the full refactor it will be "ascii" (codec name).
-    assert result["encoding"] is not None
+    """compat_names=False returns raw internal (codec) names."""
+    text = (
+        "東京は日本の首都です。人口は約1400万人で、世界最大の都市圏を形成しています。"
+    )
+    data = text.encode("euc_jp")
+    result = chardet.detect(data, compat_names=False)
+    # compat_names=True would return "EUC-JP" (5.x display name);
+    # compat_names=False returns the raw codec name "euc_jis_2004".
+    assert result["encoding"] == "euc_jis_2004"
 
 
 def test_detect_prefer_superset_remaps() -> None:
