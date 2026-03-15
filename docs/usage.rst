@@ -365,9 +365,12 @@ chardet includes a ``chardetect`` command:
 
    # Detect encoding of files
    chardetect somefile.txt anotherfile.csv
+   # somefile.txt: utf-8 with confidence 0.99
+   # anotherfile.csv: ascii with confidence 1.0
 
    # Output only the encoding name
    chardetect --minimal somefile.txt
+   # utf-8
 
    # Include detected language
    chardetect -l somefile.txt
@@ -379,12 +382,16 @@ chardet includes a ``chardetect`` command:
 
    # Specific encoding era
    chardetect -e dos somefile.txt
+   # somefile.txt: cp850 with confidence 0.10
 
    # Only consider specific encodings
    chardetect -i utf-8,windows-1252 somefile.txt
+   # somefile.txt: utf-8 with confidence 0.99
 
    # Exclude specific encodings
    chardetect -x cp037,cp500 somefile.txt
+   # somefile.txt: utf-8 with confidence 0.99
 
    # Read from stdin
    cat somefile.txt | chardetect
+   # stdin: utf-8 with confidence 0.99

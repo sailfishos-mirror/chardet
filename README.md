@@ -131,9 +131,11 @@ chardetect -l somefile.txt
 
 # Only consider specific encodings
 chardetect -i utf-8,windows-1252 somefile.txt
+# somefile.txt: utf-8 with confidence 0.99
 
 # Pipe from stdin
 cat somefile.txt | chardetect
+# stdin: utf-8 with confidence 0.99
 ```
 
 ## What's New in 7.0
