@@ -298,3 +298,57 @@ def test_cli_without_language_flag_unchanged(
     assert "with confidence" in captured.out
     # No parenthesized language name
     assert "(" not in captured.out
+
+
+def test_cli_include_encodings(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
+    f = tmp_path / "test.txt"
+    f.write_bytes(b"Hello world")
+    main(["-i", "utf-8,ascii", "--minimal", str(f)])
+    captured = capsys.readouterr()
+    assert captured.out.strip().lower() == "ascii"
+
+
+def test_cli_exclude_encodings(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
+    f = tmp_path / "test.txt"
+    f.write_bytes(b"Hello world")
+    main(["-x", "ascii", "--minimal", str(f)])
+    captured = capsys.readouterr()
+    assert captured.out.strip().lower() != "ascii"
+
+
+def test_cli_no_match_encoding(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
+    """--no-match-encoding is returned when no candidates survive."""
+    f = tmp_path / "test.txt"
+    f.write_bytes(b"\x80\x81\x82\x83\x84\x85")
+    main(["--no-match-encoding", "ascii", "-i", "ascii", "--minimal", str(f)])
+    captured = capsys.readouterr()
+    assert captured.out.strip().lower() == "ascii"
+
+
+def test_cli_empty_input_encoding(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
+    f = tmp_path / "test.txt"
+    f.write_bytes(b"")
+    main(["--empty-input-encoding", "ascii", str(f)])
+    captured = capsys.readouterr()
+    assert "ascii" in captured.out.lower()
+
+
+def test_cli_include_with_spaces(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
+    """Comma-separated values with spaces should be stripped."""
+    f = tmp_path / "test.txt"
+    f.write_bytes(b"Hello world")
+    main(["-i", "utf-8, ascii", "--minimal", str(f)])
+    captured = capsys.readouterr()
+    assert captured.out.strip().lower() == "ascii"
+
+
+def test_cli_invalid_include_encoding(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
+    """Invalid encoding name in -i should report detection failure."""
+    f = tmp_path / "test.txt"
+    f.write_bytes(b"Hello")
+    with pytest.raises(SystemExit, match="1"):
+        main(["-i", "not-a-real-encoding", str(f)])
+    captured = capsys.readouterr()
+    assert "detection failed" in captured.err

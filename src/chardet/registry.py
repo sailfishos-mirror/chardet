@@ -5,6 +5,7 @@ from __future__ import annotations
 import codecs
 import dataclasses
 import functools
+from collections.abc import Iterable
 from types import MappingProxyType
 from typing import Literal
 
@@ -135,14 +136,27 @@ class EncodingInfo:
     languages: tuple[str, ...]
 
 
-@functools.cache
-def get_candidates(era: EncodingEra) -> tuple[EncodingInfo, ...]:
-    """Return registry entries matching the given era filter.
+@functools.lru_cache(maxsize=256)
+def get_candidates(
+    era: EncodingEra,
+    include_encodings: frozenset[str] | None = None,
+    exclude_encodings: frozenset[str] | None = None,
+) -> tuple[EncodingInfo, ...]:
+    """Return registry entries matching the given filters.
+
+    Filters are applied in order: era, include, exclude.
 
     :param era: Bit flags specifying which encoding eras to include.
+    :param include_encodings: If not ``None``, only return encodings in this set.
+    :param exclude_encodings: If not ``None``, exclude encodings in this set.
     :returns: A tuple of matching :class:`EncodingInfo` entries.
     """
-    return tuple(enc for enc in REGISTRY.values() if enc.era & era)
+    candidates = (enc for enc in REGISTRY.values() if enc.era & era)
+    if include_encodings is not None:
+        candidates = (enc for enc in candidates if enc.name in include_encodings)
+    if exclude_encodings is not None:
+        candidates = (enc for enc in candidates if enc.name not in exclude_encodings)
+    return tuple(candidates)
 
 
 # Era assignments match chardet 6.0.0's chardet/metadata/charsets.py
@@ -800,3 +814,38 @@ def lookup_encoding(name: str) -> EncodingName | None:
     if codec_name != lowered:
         return lookup_encoding(codec_name)
     return None
+
+
+def _validate_encoding(name: str, param_name: str) -> str:
+    """Validate and normalize a single encoding name.
+
+    :param name: The encoding name to validate.
+    :param param_name: Parameter name for error messages.
+    :returns: The canonical encoding name.
+    :raises ValueError: If the encoding name is unknown.
+    """
+    canonical = lookup_encoding(name)
+    if canonical is None:
+        msg = f"Unknown encoding {name!r} in {param_name}"
+        raise ValueError(msg)
+    return canonical
+
+
+def normalize_encodings(
+    encodings: Iterable[str] | None,
+    param_name: str,
+) -> frozenset[str] | None:
+    """Normalize an iterable of encoding names to canonical forms.
+
+    :param encodings: Encoding names to normalize, or ``None``.
+    :param param_name: Parameter name for error messages.
+    :returns: A frozenset of canonical encoding names, or ``None``.
+    :raises ValueError: If any encoding name is unknown.
+    """
+    if encodings is None:
+        return None
+    result = frozenset(_validate_encoding(name, param_name) for name in encodings)
+    if not result:
+        msg = f"{param_name} must not be empty; omit the argument or pass None to disable filtering"
+        raise ValueError(msg)
+    return result

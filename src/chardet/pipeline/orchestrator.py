@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import warnings
+
 from chardet._utils import DEFAULT_MAX_BYTES
 from chardet.enums import EncodingEra
 from chardet.models import (
@@ -31,17 +33,12 @@ from chardet.pipeline.structural import (
 from chardet.pipeline.utf8 import detect_utf8
 from chardet.pipeline.utf1632 import detect_utf1632_patterns
 from chardet.pipeline.validity import filter_by_validity
-from chardet.registry import REGISTRY, EncodingInfo, get_candidates
+from chardet.registry import EncodingInfo, get_candidates
 
 _BINARY_RESULT = DetectionResult(
     encoding=None, confidence=DETERMINISTIC_CONFIDENCE, language=None
 )
-# UTF-8 is the default encoding for empty input, matching web standards
-# (HTML5 default encoding is UTF-8).
-_EMPTY_RESULT = DetectionResult(encoding="utf-8", confidence=0.10, language=None)
-# windows-1252 is the most common single-byte encoding on the web and the
-# HTTP/1.1 default charset — used when no encoding can be determined.
-_FALLBACK_RESULT = DetectionResult(encoding="cp1252", confidence=0.10, language=None)
+_NONE_RESULT = DetectionResult(encoding=None, confidence=0.0, language=None)
 # Threshold at which a CJK structural score is confident enough to trigger
 # combined structural+statistical ranking rather than purely statistical.
 _STRUCTURAL_CONFIDENCE_THRESHOLD = 0.85
@@ -180,6 +177,27 @@ _DEMOTION_CANDIDATES: dict[str, frozenset[int]] = {
 _KOI8_T_DISTINGUISHING: frozenset[int] = frozenset(
     {0x80, 0x81, 0x83, 0x8A, 0x8C, 0x8D, 0x8E, 0x90, 0xA1, 0xA2, 0xA5, 0xB5}
 )
+
+
+def _make_fallback_or_none(
+    encoding: str,
+    allowed: frozenset[str],
+    param_name: str,
+) -> list[DetectionResult]:
+    """Return a low-confidence result for *encoding*, or ``encoding=None`` if filtered out.
+
+    ``stacklevel=5`` targets the public caller:
+    detect() -> run_pipeline() -> _run_pipeline_core() -> _make_fallback_or_none().
+    """
+    if encoding not in allowed:
+        warnings.warn(
+            f"{param_name} {encoding!r} is excluded by "
+            f"include_encodings/exclude_encodings; returning encoding=None",
+            UserWarning,
+            stacklevel=5,
+        )
+        return [_NONE_RESULT]
+    return [DetectionResult(encoding=encoding, confidence=0.10, language=None)]
 
 
 def _should_demote(encoding: str, data: bytes) -> bool:
@@ -461,42 +479,54 @@ def _postprocess_results(
     return _promote_koi8t(data, results)
 
 
-def _run_pipeline_core(
+def _run_pipeline_core(  # noqa: PLR0913
     data: bytes,
     encoding_era: EncodingEra,
     max_bytes: int = DEFAULT_MAX_BYTES,
+    *,
+    include_encodings: frozenset[str] | None = None,
+    exclude_encodings: frozenset[str] | None = None,
+    no_match_encoding: str = "cp1252",
+    empty_input_encoding: str = "utf-8",
 ) -> list[DetectionResult]:
     """Core pipeline logic. Returns list of results sorted by confidence."""
     ctx = PipelineContext()
     data = data[:max_bytes]
 
+    # Build candidate set once — used for both early-exit gating and
+    # statistical scoring.  The set incorporates encoding_era, include, and
+    # exclude filters so all pipeline stages are gated consistently.
+    candidates = get_candidates(encoding_era, include_encodings, exclude_encodings)
+    allowed: frozenset[str] = frozenset(enc.name for enc in candidates)
+
     if not data:
-        return [_EMPTY_RESULT]
+        return _make_fallback_or_none(
+            empty_input_encoding, allowed, "empty_input_encoding"
+        )
 
     # Stage 1a: BOM detection (runs first — BOMs are definitive and
     # UTF-16/32 data looks binary due to null bytes)
     bom_result = detect_bom(data)
-    if bom_result is not None:
+    if bom_result is not None and bom_result.encoding in allowed:
         return [bom_result]
 
     # Stage 1a+: UTF-16/32 null-byte pattern detection (for files without
     # BOMs — must run before binary detection since these encodings contain
     # many null bytes that would trigger the binary check)
     utf1632_result = detect_utf1632_patterns(data)
-    if utf1632_result is not None:
+    if utf1632_result is not None and utf1632_result.encoding in allowed:
         return [utf1632_result]
 
     # Escape-sequence encodings (ISO-2022, HZ-GB-2312, UTF-7): must run
     # before binary detection (ESC is a control byte) and before ASCII
     # detection (HZ-GB-2312 uses only printable ASCII plus tildes).
-    # Gate the result on encoding_era so that deprecated encodings like
-    # UTF-7 (disabled by browsers since ~2020 as an XSS vector) are only
-    # returned when the caller's era filter includes them.
     escape_result = detect_escape_encoding(data)
-    if escape_result is not None and escape_result.encoding is not None:
-        enc_info = REGISTRY.get(escape_result.encoding)
-        if enc_info is None or encoding_era & enc_info.era:
-            return [escape_result]
+    if (
+        escape_result is not None
+        and escape_result.encoding is not None
+        and escape_result.encoding in allowed
+    ):
+        return [escape_result]
 
     # Pre-check UTF-8 to prevent false binary classification.  Valid UTF-8
     # with multi-byte sequences can contain control bytes (e.g. ESC for ANSI
@@ -506,6 +536,7 @@ def _run_pipeline_core(
     utf8_precheck = detect_utf8(data)
 
     # Stage 0: Binary detection (skip when data is valid multi-byte UTF-8)
+    # Binary detection (encoding=None) is NOT gated by filters.
     if utf8_precheck is None and is_binary(data, max_bytes=max_bytes):
         return [_BINARY_RESULT]
 
@@ -513,31 +544,30 @@ def _run_pipeline_core(
     # declarations like <?xml encoding="iso-8859-1"?> are honoured even
     # when the bytes happen to be pure ASCII or valid UTF-8).
     markup_result = detect_markup_charset(data)
-    if markup_result is not None:
+    if markup_result is not None and markup_result.encoding in allowed:
         return [markup_result]
 
     # Stage 1c: ASCII
     ascii_result = detect_ascii(data)
-    if ascii_result is not None:
+    if ascii_result is not None and ascii_result.encoding in allowed:
         return [ascii_result]
 
     # Stage 1d: UTF-8 structural validation (use pre-computed result)
-    if utf8_precheck is not None:
+    if utf8_precheck is not None and utf8_precheck.encoding in allowed:
         return [utf8_precheck]
 
     # Stage 2a: Byte validity filtering
-    candidates = get_candidates(encoding_era)
     valid_candidates = filter_by_validity(data, candidates)
 
     if not valid_candidates:
-        return [_FALLBACK_RESULT]
+        return _make_fallback_or_none(no_match_encoding, allowed, "no_match_encoding")
 
     # Gate: eliminate CJK multi-byte candidates that lack genuine
     # multi-byte structure.  Cache structural scores for Stage 2b.
     valid_candidates = _gate_cjk_candidates(data, valid_candidates, ctx)
 
     if not valid_candidates:
-        return [_FALLBACK_RESULT]
+        return _make_fallback_or_none(no_match_encoding, allowed, "no_match_encoding")
 
     # Stage 2b: Structural probing for multi-byte encodings
     # Reuse scores already computed during the CJK gate above.
@@ -564,24 +594,41 @@ def _run_pipeline_core(
     # Stage 3: Statistical scoring for all remaining candidates
     results = list(score_candidates(data, tuple(valid_candidates)))
     if not results:
-        return [_FALLBACK_RESULT]
+        return _make_fallback_or_none(no_match_encoding, allowed, "no_match_encoding")
 
     return _postprocess_results(data, results)
 
 
-def run_pipeline(
+def run_pipeline(  # noqa: PLR0913
     data: bytes,
     encoding_era: EncodingEra,
     max_bytes: int = DEFAULT_MAX_BYTES,
+    *,
+    include_encodings: frozenset[str] | None = None,
+    exclude_encodings: frozenset[str] | None = None,
+    no_match_encoding: str = "cp1252",
+    empty_input_encoding: str = "utf-8",
 ) -> list[DetectionResult]:
     """Run the full detection pipeline.
 
     :param data: The raw byte data to analyze.
     :param encoding_era: Filter candidates to a specific era of encodings.
     :param max_bytes: Maximum number of bytes to process.
+    :param include_encodings: If not ``None``, only return these encodings.
+    :param exclude_encodings: If not ``None``, never return these encodings.
+    :param no_match_encoding: Encoding returned when no candidate survives.
+    :param empty_input_encoding: Encoding returned for empty input.
     :returns: A list of :class:`DetectionResult` sorted by confidence descending.
     """
-    results = _run_pipeline_core(data, encoding_era, max_bytes)
+    results = _run_pipeline_core(
+        data,
+        encoding_era,
+        max_bytes,
+        include_encodings=include_encodings,
+        exclude_encodings=exclude_encodings,
+        no_match_encoding=no_match_encoding,
+        empty_input_encoding=empty_input_encoding,
+    )
     # Language scoring uses only the first 2 KB — bigrams converge quickly
     # and this keeps Tier 3 (language-model scoring) fast even on large inputs.
     results = _fill_language(data[:_LANG_SCORE_MAX_BYTES], results)
