@@ -104,6 +104,18 @@ for r in detect_all(data, encoding_era=EncodingEra.MODERN_WEB):
 # Windows-1251 0.5
 ```
 
+### Encoding Filters
+
+Restrict detection to specific encodings, or exclude encodings you don't want:
+
+```python
+# Only consider UTF-8 and Windows-1252
+chardet.detect(data, include_encodings=["utf-8", "windows-1252"])
+
+# Consider everything except EBCDIC
+chardet.detect(data, exclude_encodings=["cp037", "cp500"])
+```
+
 ## CLI
 
 ```bash
@@ -112,6 +124,13 @@ chardetect somefile.txt
 
 chardetect --minimal somefile.txt
 # utf-8
+
+# Include detected language
+chardetect -l somefile.txt
+# somefile.txt: utf-8 en (English) with confidence 0.99
+
+# Only consider specific encodings
+chardetect -i utf-8,windows-1252 somefile.txt
 
 # Pipe from stdin
 cat somefile.txt | chardetect

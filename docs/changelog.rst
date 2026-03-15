@@ -1,6 +1,30 @@
 Changelog
 =========
 
+7.2.0 (unreleased)
+-------------------
+
+**Features:**
+
+- Added ``include_encodings`` and ``exclude_encodings`` parameters to
+  :func:`~chardet.detect`, :func:`~chardet.detect_all`, and
+  :class:`~chardet.UniversalDetector` — restrict or exclude specific
+  encodings from the candidate set, with corresponding
+  ``-i``/``--include-encodings`` and ``-x``/``--exclude-encodings``
+  CLI flags
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_,
+  `#343 <https://github.com/chardet/chardet/pull/343>`_)
+- Added ``no_match_encoding`` (default ``"cp1252"``) and
+  ``empty_input_encoding`` (default ``"utf-8"``) parameters — control
+  which encoding is returned when no candidate survives the pipeline or
+  the input is empty, with corresponding CLI flags
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_,
+  `#343 <https://github.com/chardet/chardet/pull/343>`_)
+- Added ``-l``/``--language`` flag to ``chardetect`` CLI — shows the
+  detected language (ISO 639-1 code and English name) alongside the encoding
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_,
+  `#342 <https://github.com/chardet/chardet/pull/342>`_)
+
 7.1.0 (2026-03-11)
 -------------------
 

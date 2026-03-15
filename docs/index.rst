@@ -21,6 +21,7 @@ runtime dependencies, works on PyPy.
 - **4.1x faster** than charset-normalizer with mypyc, **5.6x faster** pure Python
 - **Language detection** for every result (95.2% accuracy)
 - **99 encodings** across six encoding eras
+- **Encoding filters** — include/exclude specific encodings
 - **Thread-safe** ``detect()`` and ``detect_all()``
 
 .. toctree::

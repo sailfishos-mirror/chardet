@@ -26,6 +26,9 @@ How do I increase accuracy?
 - **Use detect_all().** If the top result is wrong, the correct encoding
   may be the second candidate. :func:`chardet.detect_all` returns all
   candidates ranked by confidence.
+- **Use encoding filters.** If you know exactly which encodings are
+  possible, pass ``include_encodings`` to restrict the candidate set.
+  Alternatively, use ``exclude_encodings`` to remove known false positives.
 
 How is chardet different from charset-normalizer?
 --------------------------------------------------

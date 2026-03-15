@@ -290,6 +290,43 @@ here return the same name in all modes.
      - ``utf-8``
      - ``utf-8``
 
+Encoding Filters
+----------------
+
+Use ``include_encodings`` and ``exclude_encodings`` to control exactly which
+encodings chardet considers:
+
+.. code-block:: python
+
+   # Only consider UTF-8 and Windows-1252
+   result = chardet.detect(data, include_encodings=["utf-8", "windows-1252"])
+
+   # Consider everything except EBCDIC
+   result = chardet.detect(data, exclude_encodings=["cp037", "cp500"])
+
+Encoding names are resolved through Python's codec system, so aliases work
+(e.g., ``"latin-1"`` for ``"iso8859-1"``).  An empty iterable raises
+:class:`ValueError` — pass ``None`` (the default) to disable filtering.
+
+When filtering removes all candidates, chardet returns the
+``no_match_encoding`` (default ``"cp1252"``) with low confidence.  If even
+that encoding is excluded by the filters, chardet returns
+``encoding=None`` with a warning.  Similarly, ``empty_input_encoding``
+(default ``"utf-8"``) controls the result for empty input:
+
+.. code-block:: python
+
+   # Custom fallbacks
+   result = chardet.detect(
+       data,
+       include_encodings=["utf-8", "shift_jis"],
+       no_match_encoding="utf-8",
+       empty_input_encoding="shift_jis",
+   )
+
+These parameters apply to :func:`~chardet.detect`,
+:func:`~chardet.detect_all`, and :class:`~chardet.UniversalDetector`.
+
 Limiting Bytes
 --------------
 
@@ -332,8 +369,22 @@ chardet includes a ``chardetect`` command:
    # Output only the encoding name
    chardetect --minimal somefile.txt
 
+   # Include detected language
+   chardetect -l somefile.txt
+   # somefile.txt: utf-8 en (English) with confidence 0.99
+
+   # Minimal output with language
+   chardetect --minimal -l somefile.txt
+   # utf-8 en
+
    # Specific encoding era
    chardetect -e dos somefile.txt
+
+   # Only consider specific encodings
+   chardetect -i utf-8,windows-1252 somefile.txt
+
+   # Exclude specific encodings
+   chardetect -x cp037,cp500 somefile.txt
 
    # Read from stdin
    cat somefile.txt | chardetect
