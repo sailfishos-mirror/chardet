@@ -1316,10 +1316,13 @@ if __name__ == "__main__":
         ("chardet", chardet_pip_args, install_env, "chardet", args.python),
     ]
 
-    venv_specs.extend(
-        (f"chardet {version}", [f"chardet=={version}"], None, "chardet", args.python)
-        for version in args.chardet_version
-    )
+    for version in args.chardet_version:
+        cv_pip_args = [f"chardet=={version}"]
+        if args.pure:
+            cv_pip_args.extend(["--no-binary", "chardet"])
+        venv_specs.append(
+            (f"chardet {version}", cv_pip_args, None, "chardet", args.python)
+        )
 
     if args.charset_normalizer:
         # --pure: force pure-Python build via --no-binary
