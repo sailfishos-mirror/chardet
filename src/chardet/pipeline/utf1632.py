@@ -11,7 +11,7 @@ annotations.
 
 import unicodedata
 
-from chardet.pipeline import DETERMINISTIC_CONFIDENCE, DetectionResult
+from chardet.pipeline import ASCII_TEXT_BYTES, DETERMINISTIC_CONFIDENCE, DetectionResult
 
 # How many bytes to sample for pattern analysis
 _SAMPLE_SIZE = 4096
@@ -37,6 +37,38 @@ _MIN_TEXT_QUALITY = 0.5
 # Minimum fraction of printable characters for a decoded sample to be
 # considered text rather than binary data.
 _MIN_PRINTABLE_FRACTION = 0.7
+
+# Maximum null fraction (in the candidate null-byte position) below which
+# the data is checked for a null-separator pattern.  If the null fraction
+# is below this AND all non-null bytes are printable ASCII, the candidate
+# is rejected as a null-separator false positive rather than real UTF-16.
+# Real Latin UTF-16 has ~50% nulls; CJK UTF-16 has fewer but non-ASCII
+# non-null bytes.  15% is generous — separator data is typically 1-5%.
+_NULL_SEPARATOR_MAX_FRACTION = 0.15
+
+# ASCII_TEXT_BYTES plus the null byte — used by the null-separator guard
+# to check whether non-null bytes are all printable ASCII.
+_NULL_SEPARATOR_ALLOWED: bytes = b"\x00" + ASCII_TEXT_BYTES
+
+
+def _is_null_separator_pattern(data: bytes, null_frac: float) -> bool:
+    """Return True if the data looks like ASCII with null byte separators.
+
+    :param data: The raw byte sample to examine.
+    :param null_frac: The positional null fraction for this UTF-16 candidate
+        (i.e. fraction of null bytes in even positions for BE, or odd positions
+        for LE) — not the total null fraction across all bytes.
+
+    Checks two conditions:
+    1. The positional null fraction is below ``_NULL_SEPARATOR_MAX_FRACTION``
+    2. Every non-null byte is printable ASCII or common whitespace
+
+    When both conditions are met, the nulls are likely field separators
+    (e.g. ``find -print0``), not UTF-16 encoding artifacts.
+    """
+    if null_frac >= _NULL_SEPARATOR_MAX_FRACTION:
+        return False
+    return not data.translate(None, _NULL_SEPARATOR_ALLOWED)
 
 
 def detect_utf1632_patterns(data: bytes) -> DetectionResult | None:
@@ -149,9 +181,13 @@ def _check_utf16(data: bytes) -> DetectionResult | None:
     le_frac = le_null_count / num_units
 
     candidates: list[tuple[str, float]] = []
-    if le_frac >= _UTF16_MIN_NULL_FRACTION:
+    if le_frac >= _UTF16_MIN_NULL_FRACTION and not _is_null_separator_pattern(
+        data[:sample_len], le_frac
+    ):
         candidates.append(("utf-16-le", le_frac))
-    if be_frac >= _UTF16_MIN_NULL_FRACTION:
+    if be_frac >= _UTF16_MIN_NULL_FRACTION and not _is_null_separator_pattern(
+        data[:sample_len], be_frac
+    ):
         candidates.append(("utf-16-be", be_frac))
 
     if not candidates:
