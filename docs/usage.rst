@@ -392,6 +392,14 @@ chardet includes a ``chardetect`` command:
    chardetect -x cp037,cp500 somefile.txt
    # somefile.txt: utf-8 with confidence 0.99
 
+   # Custom fallback when detection is inconclusive
+   chardetect --no-match-encoding utf-8 somefile.bin
+   # somefile.bin: utf-8 with confidence 0.10
+
+   # Custom encoding for empty input
+   chardetect --empty-input-encoding shift_jis empty.txt
+   # empty.txt: SHIFT_JIS with confidence 0.10
+
    # Read from stdin
    cat somefile.txt | chardetect
    # stdin: utf-8 with confidence 0.99
