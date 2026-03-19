@@ -40,8 +40,7 @@ from chardet.registry import lookup_encoding
 # chardet test-suite expected values use these names, so the superset
 # mapping is needed for accuracy evaluation only.
 SUPERSETS: dict[str, frozenset[str]] = {
-    "ASCII": frozenset({"utf-8", "utf-8-sig", "cp1252"}),
-    "UTF-8": frozenset({"utf-8-sig"}),
+    "ASCII": frozenset({"utf-8", "cp1252"}),
     "TIS-620": frozenset({"iso8859-11", "cp874"}),
     "ISO-8859-11": frozenset({"cp874"}),
     "GB2312": frozenset({"gb18030"}),
