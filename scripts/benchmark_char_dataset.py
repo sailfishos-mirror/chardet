@@ -86,8 +86,12 @@ def collect_char_dataset_files(dataset_dir: Path) -> list[tuple[str | None, Path
             try:
                 expected = _normalize_codec(subdir.name)
             except LookupError:
-                # Unknown encoding — skip the whole directory
-                continue
+                print(
+                    f"ERROR: Unknown encoding directory '{subdir.name}' — "
+                    f"char-dataset structure may have changed",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
         files.extend(
             (expected, filepath)
             for filepath in sorted(subdir.iterdir())
@@ -345,47 +349,30 @@ def score_results(
             scores.per_encoding[enc_k]["tier2"] += 1
 
         # Tier 3: expected in any candidate (exact normalized match)
-        t3 = t2
-        if not t3 and norm_expected is not None:
-            for cand in result.all_encodings:
-                if cand == norm_expected:
-                    t3 = True
-                    break
+        if norm_expected is None:
+            t3 = detected is None
+        else:
+            t3 = norm_expected in result.all_encodings
         if t3:
             scores.tier3 += 1
             scores.per_encoding[enc_k]["tier3"] += 1
 
         # Tier 4: any candidate passes equivalences
-        t4 = t3
-        if not t4:
-            for cand in result.all_encodings:
-                if is_correct(expected, cand) or is_equivalent_detection(
-                    data_bytes, expected, cand
-                ):
-                    t4 = True
-                    break
+        if norm_expected is None:
+            t4 = detected is None
+        else:
+            t4 = any(
+                is_correct(expected, cand)
+                or is_equivalent_detection(data_bytes, expected, cand)
+                for cand in result.all_encodings
+            )
         if t4:
             scores.tier4 += 1
             scores.per_encoding[enc_k]["tier4"] += 1
 
-        # Track failures with categories
+        # Track failures
         if not t2:
-            category: str
-            if detected is None:
-                category = "none_result"
-            elif norm_expected is not None and detected is not None:
-                # Check if same broad family (first component before '-' or '_')
-                def _family(e: str) -> str:
-                    return e.split("-", maxsplit=1)[0].split("_", maxsplit=1)[0].lower()
-
-                if _family(norm_expected) != _family(detected):
-                    category = "wrong_family"
-                else:
-                    category = "wrong_variant"
-            else:
-                category = "other"
-
-            superset_rescued = t1 is False and t2
+            category = "none_result" if detected is None else "wrong_family"
             scores.failures.append(
                 {
                     "path": str(filepath),
@@ -393,7 +380,20 @@ def score_results(
                     "detected": detected,
                     "confidence": result.best_confidence,
                     "category": category,
-                    "superset_rescued": superset_rescued,
+                    "tier3": t3,
+                    "tier4": t4,
+                }
+            )
+
+        # Track Tier 1 failures rescued by Tier 2 (superset/equiv detections)
+        if not t1 and t2:
+            scores.failures.append(
+                {
+                    "path": str(filepath),
+                    "expected": enc_k,
+                    "detected": detected,
+                    "confidence": result.best_confidence,
+                    "category": "superset_rescued",
                     "tier3": t3,
                     "tier4": t4,
                 }
@@ -408,11 +408,8 @@ def score_results(
 
 
 def _file_content_hash(filepath: Path) -> str:
-    """SHA-256 of the first 64 KB, first 12 hex chars."""
-    h = hashlib.sha256()
-    with filepath.open("rb") as f:
-        h.update(f.read(65536))
-    return h.hexdigest()[:12]
+    """SHA-256 of the full file contents, first 12 hex chars."""
+    return hashlib.sha256(filepath.read_bytes()).hexdigest()[:12]
 
 
 def _cache_key(cn_version: str, files: list[tuple[str | None, Path]]) -> str:
@@ -473,7 +470,7 @@ def _resolve_cn_version() -> str:
     """Resolve latest charset-normalizer version via uv pip compile."""
     try:
         result = subprocess.run(
-            ["uv", "pip", "compile", "--no-deps", "-"],
+            ["uv", "pip", "compile", "--no-deps", "--python", sys.executable, "-"],
             input="charset-normalizer",
             capture_output=True,
             text=True,
@@ -509,10 +506,10 @@ def print_summary(
         tiers = [tier_filter]
 
     tier_labels = {
-        1: "Tier 1 (strict)",
-        2: "Tier 2 (equiv)",
-        3: "Tier 3 (any-cand)",
-        4: "Tier 4 (any-equiv)",
+        1: "Tier 1 (strict best)",
+        2: "Tier 2 (best + equiv)",
+        3: "Tier 3 (all candidates)",
+        4: "Tier 4 (all + equiv)",
     }
 
     col_w = max(20, *(len(n) + 2 for n in lib_names))
@@ -696,7 +693,7 @@ def main() -> None:
             enc_filter = codecs.lookup(args.encoding).name
         except LookupError:
             enc_filter = args.encoding.lower()
-        files = [(e, p) for e, p in files if (e or "None") in {enc_filter, e}]
+        files = [(e, p) for e, p in files if e == enc_filter]
         print(f"Filtered to {len(files)} files for encoding '{enc_filter}'")
 
     if not files:
