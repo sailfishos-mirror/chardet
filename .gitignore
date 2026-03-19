@@ -27,3 +27,5 @@ docs/_build/
 docs/_static/
 docs/_templates/
 docs/api/generated/
+.char-dataset/
+.char-dataset-results/
