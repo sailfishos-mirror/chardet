@@ -53,6 +53,11 @@ SUPERSETS: dict[str, frozenset[str]] = {
     "EUC-KR": frozenset({"cp949"}),
     "CP037": frozenset({"cp1140"}),
     # ISO-2022-JP subsets: any branch variant is acceptable.
+    # In our registry, base ISO-2022-JP is an alias of iso2022_jp_2, so all
+    # three extended variants are supersets of the same base.  While the
+    # extended variants use different escape sequences for non-basic characters,
+    # real-world files rarely use those extensions — the base JIS X 0208
+    # character set is shared by all variants and cross-decodes identically.
     # ISO2022-JP-1 and ISO2022-JP-3 use Python codec names (no hyphen between
     # "ISO" and "2022") because they appear as expected values in the test suite,
     # not as canonical chardet output.  They are consumed through
@@ -69,6 +74,14 @@ SUPERSETS: dict[str, frozenset[str]] = {
     "ISO-8859-8": frozenset({"cp1255"}),
     "ISO-8859-9": frozenset({"cp1254"}),
     "ISO-8859-13": frozenset({"cp1257"}),
+    # UTF-16/32: bare form (BOM-aware) is interchangeable with either endianness,
+    # but LE and BE are NOT interchangeable with each other.
+    "UTF-16": frozenset({"utf-16-le", "utf-16-be"}),
+    "UTF-16-LE": frozenset({"utf-16"}),
+    "UTF-16-BE": frozenset({"utf-16"}),
+    "UTF-32": frozenset({"utf-32-le", "utf-32-be"}),
+    "UTF-32-LE": frozenset({"utf-32"}),
+    "UTF-32-BE": frozenset({"utf-32"}),
 }
 
 # Preferred superset name for each encoding, used by the ``should_rename_legacy``
@@ -180,9 +193,14 @@ def apply_compat_names(
 
 
 # Bidirectional equivalents -- groups where any member is acceptable for any other.
+# Bidirectional equivalents -- groups where any member is acceptable for any other.
+#
+# NOTE: UTF-16/32 endianness is handled via directional SUPERSETS instead,
+# because wrong endianness garbles text.  ISO-2022-JP variants remain here
+# because base ISO-2022-JP is an alias of iso2022_jp_2 in our registry, so
+# the SUPERSETS entries already make all variants interchangeable via the
+# shared base.
 BIDIRECTIONAL_GROUPS: tuple[tuple[str, ...], ...] = (
-    ("utf-16", "utf-16-le", "utf-16-be"),
-    ("utf-32", "utf-32-le", "utf-32-be"),
     ("iso2022_jp_2", "iso2022_jp_2004", "iso2022_jp_ext"),
 )
 

@@ -128,7 +128,9 @@ def test_superset_equivalences_for_renamed_encodings() -> None:
 
 
 def test_iso2022_jp_branches_bidirectional() -> None:
-    # All three branches should be interchangeable
+    # All three branches should be interchangeable — base ISO-2022-JP is an
+    # alias of iso2022_jp_2 in our registry, so the SUPERSETS entries make
+    # all variants interchangeable via the shared base.
     assert is_correct("iso2022-jp-2", "iso2022-jp-2004")
     assert is_correct("iso2022-jp-2004", "iso2022-jp-ext")
     assert is_correct("iso2022-jp-ext", "iso2022-jp-2")
