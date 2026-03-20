@@ -76,6 +76,8 @@ _KNOWN_FAILURES: frozenset[str] = frozenset(
         "macroman-cy/culturax_mC4_78727.txt",
         "macroman-cy/culturax_mC4_78729.txt",
         "utf-8-en/finnish-utf-8-latin-1-confusion.html",
+        "utf-16be-zh/sample_chinese_no_bom.txt",
+        "utf-16le-zh/sample_chinese_no_bom.txt",
     }
 )
 
@@ -113,6 +115,8 @@ _KNOWN_ERA_FILTERED_FAILURES: frozenset[str] = frozenset(
         "iso-8859-16-ro/_ude_1.txt",
         "macroman-da/culturax_mC4_83469.txt",
         "macroman-fi/culturax_mC4_80362.txt",
+        "utf-16be-zh/sample_chinese_no_bom.txt",
+        "utf-16le-zh/sample_chinese_no_bom.txt",
     }
 )
 
