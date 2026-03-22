@@ -1,7 +1,7 @@
 Changelog
 =========
 
-7.3.0
+7.3.0 (unreleased)
 -------------------
 
 - **0BSD license** — the project license has been changed from MIT to
