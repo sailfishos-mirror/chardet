@@ -50,6 +50,14 @@ _BINARY_RESULT = DetectionResult(
 # combined structural+statistical ranking rather than purely statistical.
 _STRUCTURAL_CONFIDENCE_THRESHOLD = 0.85
 
+# Maximum bytes used for statistical bigram scoring when all remaining
+# candidates are single-byte encodings.  Bigram models converge quickly
+# for single-byte data — 16 KB is sufficient for discrimination across
+# all language models while avoiding unnecessary work on large files.
+# Multi-byte (CJK) files use the full data because their bigrams need
+# more context to distinguish similar encodings (e.g. Big5 vs GB18030).
+_STAT_SCORE_MAX_BYTES_SINGLE_BYTE = 16384
+
 # Common Western Latin encodings that share the iso-8859-1 character
 # repertoire for the byte values where iso-8859-10 is indistinguishable.
 # Used as swap targets when demoting iso-8859-10 — we prefer these over
@@ -623,8 +631,13 @@ def _run_pipeline_core(  # noqa: PLR0913
             )
             return _postprocess_results(data, results)
 
-    # Stage 3: Statistical scoring for all remaining candidates
-    results = list(score_candidates(data, tuple(valid_candidates)))
+    # Stage 3: Statistical scoring for all remaining candidates.
+    # Cap data for single-byte-only candidate sets — bigram models converge
+    # quickly and don't benefit from scanning beyond 16 KB.
+    stat_data = data
+    if not any(enc.is_multibyte for enc in valid_candidates):
+        stat_data = data[:_STAT_SCORE_MAX_BYTES_SINGLE_BYTE]
+    results = list(score_candidates(stat_data, tuple(valid_candidates)))
     if not results:
         return _make_fallback_or_none(no_match_encoding, allowed, "no_match_encoding")
 
