@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Profile chardet detection on the full test suite.
 
-Two modes:
+Three modes:
 
 1. **Aggregate** (default): cProfile over all files, showing top functions
    by cumulative and self time.
@@ -9,14 +9,22 @@ Two modes:
 2. **Per-file** (``--slow N``): time each ``detect()`` call individually,
    then show the N slowest files with per-stage breakdowns so you can see
    *which* files are expensive and *where* the time goes.
+
+3. **mypyc** (``--mypyc``): build a mypyc-compiled wheel, install it in
+   a temporary venv, and re-run the profiling there.  Combines with
+   ``--slow N`` for per-file timing of compiled code.
 """
 
 from __future__ import annotations
 
 import argparse
 import cProfile
+import os
 import pstats
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -41,6 +49,14 @@ from chardet.pipeline.utf8 import detect_utf8
 from chardet.pipeline.utf1632 import detect_utf1632_patterns
 from chardet.pipeline.validity import filter_by_validity
 from chardet.registry import get_candidates
+
+
+def _print_build_info() -> None:
+    """Print which chardet build is loaded."""
+    chardet_path = Path(chardet.__file__).resolve().parent
+    has_so = any(chardet_path.rglob("*.so")) or any(chardet_path.rglob("*.pyd"))
+    build = "mypyc" if has_so else "pure"
+    print(f"  chardet {chardet.__version__} ({build}) from {chardet_path}\n")
 
 
 def run_all_detections(data_dir: Path) -> None:
@@ -259,7 +275,8 @@ def run_per_file_timing(data_dir: Path, slow_count: int) -> None:
     ):
         print(f"\n  #{i + 1}: {label}")
         print(
-            f"       Total: {t_total * 1000:.2f}ms  |  Size: {size:,} bytes  |  Expected: {expected}  |  Exit: {stages.get('exit_stage', '?')}"
+            f"       Total: {t_total * 1000:.2f}ms  |  Size: {size:,} bytes"
+            f"  |  Expected: {expected}  |  Exit: {stages.get('exit_stage', '?')}"
         )
         # Show per-stage times, skipping near-zero
         stage_parts = []
@@ -284,8 +301,86 @@ def run_per_file_timing(data_dir: Path, slow_count: int) -> None:
         print(f"       Stages: {', '.join(stage_parts)}")
 
 
+def _reexec_in_mypyc_venv() -> int:
+    """Build a mypyc wheel, create a temp venv, and re-run this script there.
+
+    The script and ``utils.py`` are copied to a temp directory outside the
+    project tree so the venv Python imports the mypyc-compiled chardet
+    from site-packages rather than the editable source install.
+    """
+    project_root = Path(__file__).resolve().parent.parent
+    scripts_dir = project_root / "scripts"
+    wheel_dir = Path(tempfile.mkdtemp(prefix="chardet-profile-mypyc-"))
+    venv_dir = Path(tempfile.mkdtemp(prefix="chardet-profile-venv-"))
+    run_dir = Path(tempfile.mkdtemp(prefix="chardet-profile-run-"))
+
+    try:
+        # Build mypyc wheel
+        print("Building mypyc wheel ...")
+        subprocess.run(
+            [
+                "uv",
+                "build",
+                "--wheel",
+                "--out-dir",
+                str(wheel_dir),
+                str(project_root),
+            ],
+            check=True,
+            env={**os.environ, "HATCH_BUILD_HOOK_ENABLE_MYPYC": "true"},
+        )
+        wheels = list(wheel_dir.glob("*.whl"))
+        if not wheels:
+            print("ERROR: no .whl file produced", file=sys.stderr)
+            return 1
+        print(f"  Built: {wheels[0].name}")
+
+        # Create venv and install
+        print("Creating venv ...")
+        subprocess.run(["uv", "venv", str(venv_dir)], check=True)
+        venv_python = str(venv_dir / "bin" / "python")
+        subprocess.run(
+            ["uv", "pip", "install", "--python", venv_python, str(wheels[0])],
+            check=True,
+        )
+
+        # Copy this script and utils.py to a temp dir outside the project
+        # tree so the child process doesn't pick up the source chardet.
+        shutil.copy2(Path(__file__).resolve(), run_dir / "profile_detection.py")
+        shutil.copy2(scripts_dir / "utils.py", run_dir / "utils.py")
+
+        # Re-exec in the venv, forwarding all args except --mypyc
+        forwarded = [a for a in sys.argv[1:] if a != "--mypyc"]
+        # Pass data dir explicitly since the script is no longer in scripts/
+        child_script = str(run_dir / "profile_detection.py")
+        print(f"\nRe-running with mypyc-compiled chardet (python={venv_python})\n")
+        sys.stdout.flush()
+        result = subprocess.run(
+            [
+                venv_python,
+                child_script,
+                "--data-dir",
+                str(project_root / "tests" / "data"),
+                *forwarded,
+            ],
+            check=False,
+            env={
+                **os.environ,
+                "VIRTUAL_ENV": str(venv_dir),
+                "PATH": f"{venv_dir / 'bin'}:{os.environ.get('PATH', '')}",
+            },
+        )
+        return result.returncode
+    finally:
+        shutil.rmtree(wheel_dir, ignore_errors=True)
+        shutil.rmtree(venv_dir, ignore_errors=True)
+        shutil.rmtree(run_dir, ignore_errors=True)
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument(
         "--slow",
         type=int,
@@ -293,9 +388,28 @@ def main() -> None:
         metavar="N",
         help="Show the N slowest files with per-stage timing (skips cProfile)",
     )
+    parser.add_argument(
+        "--mypyc",
+        action="store_true",
+        help="Build a mypyc-compiled wheel and profile inside a temp venv",
+    )
+    parser.add_argument(
+        "--data-dir",
+        type=Path,
+        default=None,
+        metavar="DIR",
+        help="Path to test data directory (default: tests/data/ relative to project root)",
+    )
     args = parser.parse_args()
 
-    data_dir = Path(__file__).resolve().parent.parent / "tests" / "data"
+    if args.mypyc:
+        sys.exit(_reexec_in_mypyc_venv())
+
+    data_dir = (
+        args.data_dir or Path(__file__).resolve().parent.parent / "tests" / "data"
+    )
+
+    _print_build_info()
 
     if args.slow > 0:
         run_per_file_timing(data_dir, args.slow)
