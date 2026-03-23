@@ -1,10 +1,10 @@
 Performance
 ===========
 
-Benchmarked against 2,510 test files from the
+Benchmarked against 2,521 test files from the
 `chardet test suite <https://github.com/chardet/test-data>`_. All
 detectors evaluated with the same equivalence rules. Numbers below are
-CPython 3.12 unless noted.
+CPython 3.14 unless noted.
 
 Accuracy
 --------
@@ -17,29 +17,25 @@ Accuracy
      - Correct
      - Accuracy
      - Speed
-   * - **chardet 7.1.0 (mypyc)**
-     - **2464/2510**
-     - **98.2%**
-     - **533 files/s**
-   * - chardet 7.1.0 (pure)
-     - 2464/2510
-     - 98.2%
-     - 372 files/s
+   * - **chardet 7.3.0 (mypyc)**
+     - **2473/2521**
+     - **98.1%**
+     - **582 files/s**
    * - chardet 6.0.0
-     - 2216/2510
-     - 88.3%
+     - 2223/2521
+     - 88.2%
      - 12 files/s
-   * - charset-normalizer
-     - 2114/2510
-     - 84.2%
-     - 129 files/s
-   * - cchardet
-     - 1406/2510
-     - 56.0%
-     - 1,662 files/s
+   * - charset-normalizer 3.4.6 (mypyc)
+     - 2152/2521
+     - 85.4%
+     - 373 files/s
+   * - cchardet 2.1.19
+     - 1410/2521
+     - 55.9%
+     - 1,992 files/s
 
 chardet leads all detectors on accuracy: **+9.9pp** vs chardet 6.0.0,
-**+14.0pp** vs charset-normalizer, and **+42.2pp** vs cchardet.
+**+12.7pp** vs charset-normalizer, and **+42.2pp** vs cchardet.
 
 Speed
 -----
@@ -54,47 +50,34 @@ Speed
      - Median
      - p90
      - p95
-   * - cchardet
-     - 1,662
-     - 0.60ms
-     - 0.05ms
-     - 0.70ms
-     - 1.18ms
-   * - **chardet 7.1.0 (mypyc)**
-     - **533**
-     - **1.88ms**
+   * - cchardet 2.1.19
+     - 1,992
+     - 0.50ms
+     - 0.04ms
+     - 0.65ms
+     - 1.00ms
+   * - **chardet 7.3.0 (mypyc)**
+     - **582**
+     - **1.72ms**
      - **0.57ms**
-     - **4.44ms**
-     - **5.86ms**
-   * - chardet 7.1.0 (pure)
-     - 372
-     - 2.69ms
-     - 0.99ms
-     - 5.89ms
-     - 7.71ms
-   * - charset-normalizer (mypyc)
-     - 129
-     - 7.75ms
+     - **4.29ms**
+     - **5.38ms**
+   * - charset-normalizer 3.4.6 (mypyc)
+     - 373
      - 2.68ms
-     - 22.47ms
-     - 39.36ms
-   * - charset-normalizer (pure)
-     - 67
-     - 15.00ms
-     - 5.11ms
-     - 43.44ms
-     - 77.37ms
+     - 1.47ms
+     - 6.90ms
+     - 10.67ms
    * - chardet 6.0.0
      - 12
-     - 82.70ms
-     - 2.31ms
-     - 180.02ms
-     - 372.50ms
+     - 85.68ms
+     - 1.71ms
+     - 190.06ms
+     - 395.24ms
 
-With mypyc compilation, chardet 7.1.0 is **44x faster** than chardet 6.0.0 and
-**4.1x faster** than charset-normalizer (mypyc). Even the pure-Python build is
-**31x faster** than chardet 6.0.0 and **5.6x faster** than charset-normalizer
-(pure). Median time per file is 0.57ms (mypyc) / 0.99ms (pure).
+With mypyc compilation, chardet 7.3.0 is **50x faster** than chardet 6.0.0 and
+**1.6x faster** than charset-normalizer 3.4.6 (mypyc). Median time per file is
+0.57ms.
 
 Memory
 ------
@@ -108,7 +91,7 @@ Memory
      - Import Memory
      - Peak Memory
      - RSS
-   * - **chardet 7.1.0**
+   * - **chardet 7.3.0**
      - **0.015s**
      - **1.9 MiB**
      - **25.9 MiB**
@@ -142,20 +125,20 @@ Language Detection
    * - Detector
      - Correct
      - Accuracy
-   * - **chardet 7.1.0**
-     - **2383/2502**
+   * - **chardet 7.3.0**
+     - **2393/2513**
      - **95.2%**
-   * - charset-normalizer
-     - 1476/2502
-     - 59.0%
+   * - charset-normalizer 3.4.6
+     - 1489/2513
+     - 59.3%
    * - chardet 6.0.0
-     - 1002/2502
+     - 1004/2513
      - 40.0%
-   * - cchardet
-     - 0/2502
+   * - cchardet 2.1.19
+     - 0/2513
      - 0.0%
 
-chardet detects language with **95.2% accuracy** — +36.2pp vs
+chardet detects language with **95.2% accuracy** — +35.9pp vs
 charset-normalizer and +55.2pp vs chardet 6.0.0. cchardet does not report
 language.
 
@@ -168,7 +151,7 @@ Thread safety adds no measurable overhead (< 0.1%).
 
 On free-threaded Python (GIL disabled), detection scales with threads.
 Standard GIL Python shows no scaling — the GIL serializes threads.
-Benchmarked with 2,510 files, ``encoding_era=ALL``:
+Benchmarked with 2,521 files, ``encoding_era=ALL``:
 
 .. list-table::
    :header-rows: 1
@@ -251,8 +234,8 @@ prebuilt binaries.
 Performance Across Python Versions
 -----------------------------------
 
-Benchmarked chardet 7.1.0 across all supported Python versions
-(macOS aarch64, 2,510 files, ``encoding_era=ALL``). CPython versions
+Benchmarked chardet 7.3.0 across all supported Python versions
+(macOS aarch64, 2,521 files, ``encoding_era=ALL``). CPython versions
 install mypyc-compiled wheels automatically; PyPy receives the
 pure-Python wheel.
 
