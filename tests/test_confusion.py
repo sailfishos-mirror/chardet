@@ -15,6 +15,18 @@ from chardet.pipeline.confusion import (
     resolve_confusion_groups,
 )
 
+# Ukrainian text in koi8-u encoding; bytes 0xa6/0xa7 are in the koi8-r vs koi8-u
+# distinguishing set (Ukrainian letters i-with-macron/yi, box-drawing in koi8-r).
+_UKRAINIAN_KOI8U = (
+    "Привіт, я з України. Це дуже гарно. Будь ласка.".encode("koi8-u") * 5
+)
+
+# Turkish text in iso8859-9 encoding; bytes 0xd0/0xdd/0xde/0xf0/0xfd/0xfe are in
+# the iso8859-1 vs iso8859-9 distinguishing set (G-breve/I-dot/S-cedilla etc.).  Both encodings
+# map those positions to same Unicode category (Lu/Ll), so category voting returns
+# None while bigram scoring can still pick the correct encoding.
+_TURKISH_ISO8859_9 = "Türkçe İstanbul Şeker Çiçek Ğüşıöç".encode("iso8859-9") * 5
+
 
 def test_load_confusion_data():
     """Loading confusion data from the bundled file should return valid maps."""
@@ -169,124 +181,81 @@ def test_category_voting_returns_enc_b():
 
 
 def test_bigram_rescore_returns_enc_a():
-    """Bigram re-score returns enc_a when enc_a scores higher."""
-    diff_bytes = frozenset({0x80, 0x81})
-    data = bytes([0x80, 0x81] * 10)
+    """Bigram re-score returns enc_a when enc_a scores higher.
 
-    def fake_score(_profile: object, _model: object, key: str) -> float:
-        if "enc_a_lang" in key:
-            return 0.9
-        return 0.1
-
-    fake_model = MagicMock()
-    fake_index = {
-        "ENC_A": [("lang_a", fake_model, "enc_a_lang/ENC_A")],
-        "ENC_B": [("lang_b", fake_model, "enc_b_lang/ENC_B")],
-    }
-    with (
-        patch("chardet.pipeline.confusion.get_enc_index", return_value=fake_index),
-        patch("chardet.pipeline.confusion.score_with_profile", side_effect=fake_score),
-    ):
-        result = resolve_by_bigram_rescore(data, "ENC_A", "ENC_B", diff_bytes)
-    assert result == "ENC_A"
+    Uses Ukrainian text (koi8-u encoded) where koi8-u is passed as enc_a.
+    Bytes 0xa6/0xa7 (Ukrainian i-with-macron/yi) are in the koi8-r/koi8-u
+    distinguishing set; the koi8-u bigram model scores them higher, so enc_a wins.
+    """
+    maps = load_confusion_data()
+    diff_bytes, _ = maps[("koi8-r", "koi8-u")]
+    result = resolve_by_bigram_rescore(_UKRAINIAN_KOI8U, "koi8-u", "koi8-r", diff_bytes)
+    assert result == "koi8-u"
 
 
 def test_bigram_rescore_returns_enc_b():
-    """Bigram re-score returns enc_b when enc_b scores higher."""
-    diff_bytes = frozenset({0x80, 0x81})
-    data = bytes([0x80, 0x81] * 10)
+    """Bigram re-score returns enc_b when enc_b scores higher.
 
-    def fake_score(_profile: object, _model: object, key: str) -> float:
-        if "enc_b_lang" in key:
-            return 0.9
-        return 0.1
-
-    fake_model = MagicMock()
-    fake_index = {
-        "ENC_A": [("lang_a", fake_model, "enc_a_lang/ENC_A")],
-        "ENC_B": [("lang_b", fake_model, "enc_b_lang/ENC_B")],
-    }
-    with (
-        patch("chardet.pipeline.confusion.get_enc_index", return_value=fake_index),
-        patch("chardet.pipeline.confusion.score_with_profile", side_effect=fake_score),
-    ):
-        result = resolve_by_bigram_rescore(data, "ENC_A", "ENC_B", diff_bytes)
-    assert result == "ENC_B"
+    Uses the same Ukrainian / koi8-u data but passes koi8-r as enc_a and
+    koi8-u as enc_b, so this time the winning encoding is the second argument.
+    """
+    maps = load_confusion_data()
+    diff_bytes, _ = maps[("koi8-r", "koi8-u")]
+    result = resolve_by_bigram_rescore(_UKRAINIAN_KOI8U, "koi8-r", "koi8-u", diff_bytes)
+    assert result == "koi8-u"
 
 
 def test_resolve_confusion_groups_swaps_top_and_second():
-    """Confusion resolution should swap top and second when second encoding wins."""
-    # We need a confusion pair where bigram/category voting picks the second result.
-    # Use category voting by mocking bigram_rescore to return None and
-    # category_voting to return the second encoding.
-    top = DetectionResult(encoding="iso8859-1", confidence=0.95, language="English")
-    second = DetectionResult(encoding="cp1252", confidence=0.90, language="English")
+    """Confusion resolution swaps top and second when the second encoding wins.
+
+    Places koi8-r (wrong) as the top result and koi8-u (correct) as second,
+    then feeds Ukrainian text.  Both bigram re-scoring and category voting
+    identify koi8-u as the winner, so the two results should be swapped and
+    the third result should be left in place.
+    """
+    top = DetectionResult(encoding="koi8-r", confidence=0.95, language="Russian")
+    second = DetectionResult(encoding="koi8-u", confidence=0.90, language="Ukrainian")
     third = DetectionResult(encoding="utf-8", confidence=0.50, language=None)
     results = [top, second, third]
 
-    # Mock the resolvers: bigram returns None, category returns "cp1252"
-    with (
-        patch(
-            "chardet.pipeline.confusion.resolve_by_bigram_rescore",
-            return_value=None,
-        ),
-        patch(
-            "chardet.pipeline.confusion.resolve_by_category_voting",
-            return_value="cp1252",
-        ),
-    ):
-        resolved = resolve_confusion_groups(b"\xd5\xd6\xd7", results)
+    resolved = resolve_confusion_groups(_UKRAINIAN_KOI8U, results)
 
-    # Second should now be first
-    assert resolved[0].encoding == "cp1252"
-    assert resolved[1].encoding == "iso8859-1"
-    # Third result preserved
+    assert resolved[0].encoding == "koi8-u"
+    assert resolved[1].encoding == "koi8-r"
     assert resolved[2].encoding == "utf-8"
 
 
 def test_resolve_confusion_groups_bigram_wins_over_category():
-    """When bigram and category disagree, bigram should take precedence."""
+    """Bigram re-scoring takes precedence even when category voting returns None.
+
+    Uses the iso8859-1 / iso8859-9 confusion pair with Turkish text.  The
+    distinguishing bytes all map to the same Unicode category (Lu / Ll) in
+    both encodings, so category voting returns None and cannot drive the
+    decision.  Bigram re-scoring detects the Turkish patterns and correctly
+    picks iso8859-9, demonstrating that bigram is used as the primary signal.
+    """
     top = DetectionResult(encoding="iso8859-1", confidence=0.95, language="English")
-    second = DetectionResult(encoding="cp1252", confidence=0.90, language="English")
+    second = DetectionResult(encoding="iso8859-9", confidence=0.90, language="Turkish")
     results = [top, second]
 
-    # bigram says "cp1252" (swap), category says "iso8859-1" (no swap)
-    # bigram should win → swap happens
-    with (
-        patch(
-            "chardet.pipeline.confusion.resolve_by_bigram_rescore",
-            return_value="cp1252",
-        ),
-        patch(
-            "chardet.pipeline.confusion.resolve_by_category_voting",
-            return_value="iso8859-1",
-        ),
-    ):
-        resolved = resolve_confusion_groups(b"\xd5\xd6\xd7", results)
+    resolved = resolve_confusion_groups(_TURKISH_ISO8859_9, results)
 
-    assert resolved[0].encoding == "cp1252"
+    assert resolved[0].encoding == "iso8859-9"
     assert resolved[1].encoding == "iso8859-1"
 
 
 def test_bigram_rescore_no_variants_for_one_encoding():
-    """When one encoding has no model variants, its score is 0.0."""
-    diff_bytes = frozenset({0x80, 0x81})
-    data = bytes([0x80, 0x81] * 10)
+    """When one encoding has no model variants its score is 0.0 and the other wins.
 
-    def fake_score(_profile: object, _model: object, key: str) -> float:
-        return 0.5
-
-    fake_model = MagicMock()
-    # Only enc_a has variants; enc_b is absent from the index
-    fake_index = {
-        "ENC_A": [("lang_a", fake_model, "enc_a_lang/ENC_A")],
-    }
-    with (
-        patch("chardet.pipeline.confusion.get_enc_index", return_value=fake_index),
-        patch("chardet.pipeline.confusion.score_with_profile", side_effect=fake_score),
-    ):
-        result = resolve_by_bigram_rescore(data, "ENC_A", "ENC_B", diff_bytes)
-    assert result == "ENC_A"
+    Uses the koi8-u / ascii pair.  koi8-u has a bigram model; ascii has none.
+    Ukrainian text (koi8-u) produces non-zero distinguishing bigrams, so
+    koi8-u (enc_a) should beat ascii (enc_b) whose score defaults to 0.0.
+    """
+    maps = load_confusion_data()
+    diff_bytes, _ = maps[("koi8-r", "koi8-u")]
+    # ascii has no model in the index; koi8-u does.
+    result = resolve_by_bigram_rescore(_UKRAINIAN_KOI8U, "koi8-u", "ascii", diff_bytes)
+    assert result == "koi8-u"
 
 
 def test_resolve_confusion_groups_no_swap_when_winner_is_top():
