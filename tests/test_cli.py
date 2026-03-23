@@ -115,7 +115,7 @@ def test_cli_partial_failure(tmp_path: Path, capsys: pytest.CaptureFixture[str])
 
 def test_main_module_importable():
     """chardet.__main__ should be importable (covers module-level import)."""
-    import chardet.__main__  # noqa: F401
+    import chardet.__main__  # noqa: F401, PLC0415
 
 
 def test_cli_python_m_chardet(tmp_path: Path):

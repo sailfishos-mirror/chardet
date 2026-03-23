@@ -210,7 +210,7 @@ def mock_models_bin():
     Yields a callable ``set_data(raw_bytes)`` that configures the mock to
     return *raw_bytes* from ``models.bin``.  The cache is cleared on teardown.
     """
-    import chardet.models as mod
+    import chardet.models as mod  # noqa: PLC0415
 
     mod._load_models_data.cache_clear()
     mock_ref = MagicMock()
@@ -304,7 +304,7 @@ def test_load_models_invalid_utf8_name(
 
 def test_score_with_profile_fallback_norm():
     """score_with_profile with empty model_key should compute norm on the fly."""
-    from chardet.models import BigramProfile, score_with_profile
+    from chardet.models import BigramProfile, score_with_profile  # noqa: PLC0415
 
     profile = BigramProfile(b"\xc3\xa9\xc3\xa4")  # some high-byte bigrams
     # Build a model with a few non-zero entries
@@ -318,7 +318,7 @@ def test_score_with_profile_fallback_norm():
 
 def test_score_with_profile_all_zeros_model():
     """All-zeros model should return 0.0 (model_norm == 0)."""
-    from chardet.models import BigramProfile, score_with_profile
+    from chardet.models import BigramProfile, score_with_profile  # noqa: PLC0415
 
     profile = BigramProfile(b"\xc3\xa9\xc3\xa4")
     model = bytearray(65536)  # all zeros
@@ -332,7 +332,7 @@ def test_enc_index_alias_resolution() -> None:
     The index should contain both the original key and the canonical name
     pointing to the same entries.
     """
-    from chardet.models import _build_enc_index
+    from chardet.models import _build_enc_index  # noqa: PLC0415
 
     # Create a fake model dict with a non-canonical encoding name.
     # "utf8" is a non-canonical alias for "utf-8".

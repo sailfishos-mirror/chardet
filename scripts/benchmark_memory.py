@@ -31,7 +31,7 @@ tracemalloc.start()
 
 
 def main() -> None:
-    from utils import build_benchmark_parser, load_benchmark_data
+    from utils import build_benchmark_parser, load_benchmark_data  # noqa: PLC0415
 
     parser = build_benchmark_parser(
         "Benchmark a single encoding detector (memory only)."
@@ -48,8 +48,8 @@ def main() -> None:
 
     # Import detector and build detect function
     if args.detector == "chardet" and args.encoding_era != "none":
-        import chardet
-        from chardet.enums import EncodingEra
+        import chardet  # noqa: PLC0415
+        from chardet.enums import EncodingEra  # noqa: PLC0415
 
         after_import, _ = tracemalloc.get_traced_memory()
         era = EncodingEra.ALL if args.encoding_era == "all" else EncodingEra.MODERN_WEB
@@ -58,7 +58,7 @@ def main() -> None:
             return chardet.detect(data, encoding_era=era)["encoding"]
 
     elif args.detector == "chardet":
-        import chardet
+        import chardet  # noqa: PLC0415
 
         after_import, _ = tracemalloc.get_traced_memory()
 
@@ -66,7 +66,7 @@ def main() -> None:
             return chardet.detect(data)["encoding"]
 
     elif args.detector == "cchardet":
-        import cchardet
+        import cchardet  # noqa: PLC0415
 
         after_import, _ = tracemalloc.get_traced_memory()
 
@@ -74,7 +74,7 @@ def main() -> None:
             return cchardet.detect(data)["encoding"]
 
     else:
-        from charset_normalizer import from_bytes
+        from charset_normalizer import from_bytes  # noqa: PLC0415
 
         after_import, _ = tracemalloc.get_traced_memory()
 

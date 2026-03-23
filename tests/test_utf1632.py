@@ -4,7 +4,11 @@
 from __future__ import annotations
 
 from chardet.pipeline import DETERMINISTIC_CONFIDENCE, DetectionResult
-from chardet.pipeline.utf1632 import detect_utf1632_patterns
+from chardet.pipeline.utf1632 import (
+    _looks_like_text,
+    _text_quality,
+    detect_utf1632_patterns,
+)
 
 # ---------------------------------------------------------------------------
 # UTF-16-LE detection
@@ -468,15 +472,11 @@ def test_utf16_both_candidates_low_quality() -> None:
 
 def test_looks_like_text_empty_string() -> None:
     """_looks_like_text with empty string should return False."""
-    from chardet.pipeline.utf1632 import _looks_like_text
-
     assert _looks_like_text("") is False
 
 
 def test_text_quality_rejects_many_combining_marks() -> None:
     """Text with >20% combining marks should get quality -1.0."""
-    from chardet.pipeline.utf1632 import _text_quality
-
     # U+0300 (combining grave accent) is category Mn (Mark, nonspacing)
     text = "a\u0300" * 20  # 50% marks
     quality = _text_quality(text)
@@ -532,8 +532,6 @@ def test_utf16_tiebreak_one_side_decode_error() -> None:
 
 def test_text_quality_with_spaces() -> None:
     """_text_quality should give a bonus for whitespace in text > 20 chars."""
-    from chardet.pipeline.utf1632 import _text_quality
-
     # Text with spaces and letters, long enough (> 20 chars) to trigger space bonus
     text = "Hello World this is a test of text quality scoring"
     quality = _text_quality(text)
@@ -543,8 +541,6 @@ def test_text_quality_with_spaces() -> None:
 
 def test_text_quality_ascii_letters() -> None:
     """_text_quality with all ASCII letters gives high score."""
-    from chardet.pipeline.utf1632 import _text_quality
-
     text = "abcdefghijklmnopqrstuvwxyz"
     quality = _text_quality(text)
     # letters/n = 1.0, ascii_letters/n * 0.5 = 0.5, no space bonus (n > 20 but no spaces)
@@ -553,8 +549,6 @@ def test_text_quality_ascii_letters() -> None:
 
 def test_text_quality_rejects_many_controls() -> None:
     """_text_quality should return -1.0 for text with >10% control chars."""
-    from chardet.pipeline.utf1632 import _text_quality
-
     # More than 10% control characters
     text = "ab\x01\x02\x03\x04\x05\x06\x07\x08"
     quality = _text_quality(text)
@@ -563,8 +557,6 @@ def test_text_quality_rejects_many_controls() -> None:
 
 def test_text_quality_no_letters() -> None:
     """_text_quality with digits and punctuation but no letters gives low score."""
-    from chardet.pipeline.utf1632 import _text_quality
-
     text = "12345!@#$%67890^&*()"
     quality = _text_quality(text)
     # No letters, so letter ratio is 0, ascii bonus is 0

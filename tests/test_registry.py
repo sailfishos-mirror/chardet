@@ -1,12 +1,20 @@
 # tests/test_registry.py
 from __future__ import annotations
 
+import codecs
 from types import MappingProxyType
+from typing import get_args
 
 import pytest
 
 from chardet.enums import EncodingEra
-from chardet.registry import REGISTRY, EncodingInfo, get_candidates, lookup_encoding
+from chardet.registry import (
+    REGISTRY,
+    EncodingInfo,
+    EncodingName,
+    get_candidates,
+    lookup_encoding,
+)
 
 
 def test_encoding_info_is_frozen():
@@ -88,8 +96,6 @@ def test_registry_hp_roman8_is_legacy_regional():
 
 
 def test_name_is_valid_codec():
-    import codecs
-
     for enc in REGISTRY.values():
         codec_info = codecs.lookup(enc.name)
         assert codec_info is not None, f"Invalid codec: {enc.name}"
@@ -253,10 +259,6 @@ def test_tis620_has_iso8859_11_alias():
 
 def test_encoding_name_literal_matches_registry():
     """Every registry key must be a valid EncodingName literal value."""
-    from typing import get_args
-
-    from chardet.registry import EncodingName
-
     literal_values = set(get_args(EncodingName))
     registry_keys = set(REGISTRY.keys())
     assert literal_values == registry_keys, (

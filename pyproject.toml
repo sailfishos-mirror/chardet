@@ -120,7 +120,6 @@ ignore = [
     "PLW1510", # subprocess.run check not needed in tests
     "T201",    # print is fine in tests
     "PT011",   # pytest.raises broad match acceptable
-    "PLC0415", # conditional imports sometimes needed
     "PERF401", # manual list comprehension (readability)
     "SLF001",  # private member access (whitebox testing of internals)
     "ARG001",  # unused function arguments (pytest fixtures)
@@ -148,7 +147,6 @@ ignore = [
     "RUF003",  # ambiguous unicode (intentional in encoding training)
     "S603",    # subprocess security not relevant
     "S607",    # subprocess security not relevant
-    "PLC0415", # conditional imports
     "RUF046",  # unnecessary int cast
     "TRY300",  # try-consider-else style
     "PLR0915", # too many statements

@@ -27,7 +27,7 @@ def _get_test_data_ref() -> str | None:
     Returns a tag like ``"7.0.1"`` for release versions, or ``None`` for
     dev builds (which will clone the default branch instead).
     """
-    import chardet
+    import chardet  # noqa: PLC0415
 
     version = chardet.__version__
     if ".dev" in version:
@@ -111,7 +111,7 @@ def find_chardet_so_files() -> list[Path]:
     triggering a full ``import chardet``, which would make subsequent import
     timing measurements inaccurate.
     """
-    import importlib.util
+    import importlib.util  # noqa: PLC0415
 
     spec = importlib.util.find_spec("chardet")
     if spec is None or spec.origin is None:

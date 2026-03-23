@@ -206,7 +206,7 @@ def test_language_equivalent_unknown_language():
 
 def test_compat_names_maps_codec_to_display() -> None:
     """_COMPAT_NAMES maps codec names to 5.x/6.x display names."""
-    from chardet.equivalences import _COMPAT_NAMES
+    from chardet.equivalences import _COMPAT_NAMES  # noqa: PLC0415
 
     # 5.x compat entries
     assert _COMPAT_NAMES["big5hkscs"] == "Big5"

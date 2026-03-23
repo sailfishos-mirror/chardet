@@ -202,7 +202,9 @@ def serialize_confusion_data(maps: DistinguishingMaps, output_path: Path) -> int
 
 def deserialize_confusion_data(input_path: Path) -> DistinguishingMaps:
     """Load confusion group data from binary format."""
-    from chardet.pipeline.confusion import deserialize_confusion_data_from_bytes
+    from chardet.pipeline.confusion import (  # noqa: PLC0415
+        deserialize_confusion_data_from_bytes,
+    )
 
     data = input_path.read_bytes()
     return deserialize_confusion_data_from_bytes(data)

@@ -1,6 +1,8 @@
 # tests/test_pipeline_types.py
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 
 from chardet.pipeline import DetectionResult, PipelineContext
@@ -35,8 +37,6 @@ def test_detection_result_none():
 
 
 def test_detection_result_is_frozen():
-    import dataclasses
-
     r = DetectionResult(encoding="UTF-8", confidence=0.99, language=None)
     with pytest.raises(dataclasses.FrozenInstanceError):
         r.encoding = "ASCII"

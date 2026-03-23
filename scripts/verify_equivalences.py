@@ -208,7 +208,7 @@ def compare_single_byte_pair(enc_a: str, enc_b: str) -> None:
 
 def _char_name(c: str) -> str:
     """Get the Unicode name for a character, or UNKNOWN."""
-    import unicodedata
+    import unicodedata  # noqa: PLC0415
 
     try:
         return unicodedata.name(c)

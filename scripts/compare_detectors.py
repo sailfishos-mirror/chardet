@@ -313,7 +313,7 @@ def _resolve_python_tag_without_venv(python_version: str | None) -> str:
     ``"pypy3.10"``).
     """
     if python_version is None:
-        import platform as _platform
+        import platform as _platform  # noqa: PLC0415
 
         impl = _platform.python_implementation().lower()
         return f"{impl}{sys.version_info.major}.{sys.version_info.minor}"

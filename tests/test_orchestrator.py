@@ -145,7 +145,7 @@ def test_fallback_result_when_no_valid_encoding():
 
 def test_demote_niche_latin():
     """iso-8859-10 at top should be demoted when no distinguishing bytes."""
-    from chardet.pipeline.orchestrator import _demote_niche_latin
+    from chardet.pipeline.orchestrator import _demote_niche_latin  # noqa: PLC0415
 
     results = [
         DetectionResult("iso8859-10", 0.90, None),
@@ -159,7 +159,7 @@ def test_demote_niche_latin():
 
 def test_demote_niche_latin_no_demote_when_distinguishing():
     """iso-8859-10 should NOT be demoted when distinguishing bytes are present."""
-    from chardet.pipeline.orchestrator import _demote_niche_latin
+    from chardet.pipeline.orchestrator import _demote_niche_latin  # noqa: PLC0415
 
     results = [
         DetectionResult("iso8859-10", 0.90, None),
@@ -173,7 +173,7 @@ def test_demote_niche_latin_no_demote_when_distinguishing():
 
 def test_promote_koi8t_with_tajik_bytes():
     """KOI8-T should be promoted when Tajik-specific bytes are present."""
-    from chardet.pipeline.orchestrator import _promote_koi8t
+    from chardet.pipeline.orchestrator import _promote_koi8t  # noqa: PLC0415
 
     results = [
         DetectionResult("koi8-r", 0.90, "ru"),
@@ -187,7 +187,7 @@ def test_promote_koi8t_with_tajik_bytes():
 
 def test_promote_koi8t_no_promote_without_tajik_bytes():
     """KOI8-T should NOT be promoted when no Tajik-specific bytes are present."""
-    from chardet.pipeline.orchestrator import _promote_koi8t
+    from chardet.pipeline.orchestrator import _promote_koi8t  # noqa: PLC0415
 
     results = [
         DetectionResult("koi8-r", 0.90, "ru"),
@@ -201,7 +201,7 @@ def test_promote_koi8t_no_promote_without_tajik_bytes():
 
 def test_promote_koi8t_returns_early_when_koi8t_absent():
     """When KOI8-R is first but KOI8-T is not in results, return unchanged."""
-    from chardet.pipeline.orchestrator import _promote_koi8t
+    from chardet.pipeline.orchestrator import _promote_koi8t  # noqa: PLC0415
 
     results = [
         DetectionResult("koi8-r", 0.90, "ru"),
@@ -215,7 +215,7 @@ def test_promote_koi8t_returns_early_when_koi8t_absent():
 
 def test_fill_metadata_produces_language():
     """_fill_metadata should fill in language for single-language encodings."""
-    from chardet.pipeline.orchestrator import _fill_metadata
+    from chardet.pipeline.orchestrator import _fill_metadata  # noqa: PLC0415
 
     results = [DetectionResult("koi8-r", 0.90, None)]
     filled = _fill_metadata(b"test data", results)
@@ -235,7 +235,7 @@ def test_confidence_clamped_to_one():
 
 def test_to_utf8_unknown_encoding():
     """_to_utf8 with an unknown encoding should return None."""
-    from chardet.pipeline.orchestrator import _to_utf8
+    from chardet.pipeline.orchestrator import _to_utf8  # noqa: PLC0415
 
     result = _to_utf8(b"Hello world", "not-a-real-encoding")
     assert result is None
@@ -243,7 +243,7 @@ def test_to_utf8_unknown_encoding():
 
 def test_to_utf8_passthrough():
     """_to_utf8 with utf-8 encoding should return data unchanged."""
-    from chardet.pipeline.orchestrator import _to_utf8
+    from chardet.pipeline.orchestrator import _to_utf8  # noqa: PLC0415
 
     data = b"Hello \xc3\xa9"
     result = _to_utf8(data, "utf-8")
@@ -252,7 +252,7 @@ def test_to_utf8_passthrough():
 
 def test_demote_niche_latin_iso_8859_14():
     """iso-8859-14 at top should be demoted when no distinguishing bytes."""
-    from chardet.pipeline.orchestrator import _demote_niche_latin
+    from chardet.pipeline.orchestrator import _demote_niche_latin  # noqa: PLC0415
 
     results = [
         DetectionResult("iso8859-14", 0.90, None),
@@ -265,7 +265,7 @@ def test_demote_niche_latin_iso_8859_14():
 
 def test_demote_niche_latin_windows_1254():
     """windows-1254 at top should be demoted when no distinguishing bytes."""
-    from chardet.pipeline.orchestrator import _demote_niche_latin
+    from chardet.pipeline.orchestrator import _demote_niche_latin  # noqa: PLC0415
 
     results = [
         DetectionResult("cp1254", 0.90, None),
@@ -278,7 +278,7 @@ def test_demote_niche_latin_windows_1254():
 
 def test_fallback_when_no_valid_candidates(monkeypatch: pytest.MonkeyPatch):
     """When validity filtering eliminates all candidates, return fallback."""
-    from chardet.pipeline import orchestrator
+    from chardet.pipeline import orchestrator  # noqa: PLC0415
 
     monkeypatch.setattr(orchestrator, "filter_by_validity", lambda _data, _cands: ())
     # Data must bypass BOM, UTF-16/32, escape, binary, markup, ASCII, and UTF-8
@@ -289,7 +289,7 @@ def test_fallback_when_no_valid_candidates(monkeypatch: pytest.MonkeyPatch):
 
 def test_fallback_when_cjk_gate_eliminates_all(monkeypatch: pytest.MonkeyPatch):
     """When CJK gating eliminates all candidates, return fallback."""
-    from chardet.pipeline import orchestrator
+    from chardet.pipeline import orchestrator  # noqa: PLC0415
 
     original_gate = orchestrator._gate_cjk_candidates
 

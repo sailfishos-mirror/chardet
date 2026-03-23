@@ -368,7 +368,7 @@ def get_texts(
     start_index = len(cached)
     print(f"  Downloading CulturaX ({lang}): have {len(cached)}, need {needed} more...")
 
-    from datasets import load_dataset
+    from datasets import load_dataset  # noqa: PLC0415
 
     try:
         ds = load_dataset(

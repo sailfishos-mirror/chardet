@@ -513,7 +513,9 @@ def test_universaldetector_compat_import() -> None:
     """chardet.universaldetector re-exports UniversalDetector for 6.x compat."""
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
-        from chardet.universaldetector import UniversalDetector as CompatUD
+        from chardet.universaldetector import (  # noqa: PLC0415
+            UniversalDetector as CompatUD,
+        )
 
         dep = [x for x in w if issubclass(x.category, DeprecationWarning)]
         assert len(dep) == 1

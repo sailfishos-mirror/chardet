@@ -87,9 +87,9 @@ def test_cold_cache_concurrent_init():
     Marked ``serial`` because the global cache mutations are not safe to
     run concurrently with other tests that call ``detect()``.
     """
-    import chardet.models as _models
-    import chardet.pipeline.confusion as _confusion
-    import chardet.registry as _registry
+    import chardet.models as _models  # noqa: PLC0415
+    import chardet.pipeline.confusion as _confusion  # noqa: PLC0415
+    import chardet.registry as _registry  # noqa: PLC0415
 
     try:
         # Clear all caches to cold state.

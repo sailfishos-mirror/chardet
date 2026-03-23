@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 
 def main() -> None:
-    from utils import build_benchmark_parser, load_benchmark_data
+    from utils import build_benchmark_parser, load_benchmark_data  # noqa: PLC0415
 
     parser = build_benchmark_parser(
         "Benchmark a single encoding detector (timing only)."
@@ -41,8 +41,8 @@ def main() -> None:
     # Import detector and build detect function — timed with perf_counter only
     if args.detector == "chardet" and args.encoding_era != "none":
         t0 = time.perf_counter()
-        import chardet
-        from chardet.enums import EncodingEra
+        import chardet  # noqa: PLC0415
+        from chardet.enums import EncodingEra  # noqa: PLC0415
 
         import_time = time.perf_counter() - t0
         era = EncodingEra.ALL if args.encoding_era == "all" else EncodingEra.MODERN_WEB
@@ -55,7 +55,7 @@ def main() -> None:
 
     elif args.detector == "chardet":
         t0 = time.perf_counter()
-        import chardet
+        import chardet  # noqa: PLC0415
 
         import_time = time.perf_counter() - t0
 
@@ -65,7 +65,7 @@ def main() -> None:
 
     elif args.detector == "cchardet":
         t0 = time.perf_counter()
-        import cchardet
+        import cchardet  # noqa: PLC0415
 
         import_time = time.perf_counter() - t0
 
@@ -74,7 +74,7 @@ def main() -> None:
 
     else:
         t0 = time.perf_counter()
-        import charset_normalizer
+        import charset_normalizer  # noqa: PLC0415
 
         import_time = time.perf_counter() - t0
 

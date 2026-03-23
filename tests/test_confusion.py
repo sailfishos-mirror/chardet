@@ -48,7 +48,7 @@ def test_category_voting_returns_none_on_no_distinguishing_bytes():
 
 def test_bigram_rescore_returns_valid_result():
     """Bigram re-scoring should return one of the encodings or None."""
-    from chardet.models import load_models
+    from chardet.models import load_models  # noqa: PLC0415
 
     models = load_models()
     if not models:
@@ -84,7 +84,7 @@ def test_resolve_confusion_groups_preserves_all_results():
 
 def test_load_confusion_data_empty_file():
     """Empty confusion.bin should emit RuntimeWarning and return empty dict."""
-    import chardet.pipeline.confusion as mod
+    import chardet.pipeline.confusion as mod  # noqa: PLC0415
 
     mod.load_confusion_data.cache_clear()
     try:
@@ -106,7 +106,7 @@ def test_load_confusion_data_empty_file():
 
 def test_load_confusion_data_corrupt_file():
     """Corrupt confusion.bin should raise ValueError."""
-    import chardet.pipeline.confusion as mod
+    import chardet.pipeline.confusion as mod  # noqa: PLC0415
 
     mod.load_confusion_data.cache_clear()
     try:
