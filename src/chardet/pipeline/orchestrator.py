@@ -13,6 +13,7 @@ from chardet.models import (
     score_best_language,
 )
 from chardet.pipeline import (
+    _NONE_RESULT,
     DETERMINISTIC_CONFIDENCE,
     HIGH_BYTES,
     DetectionResult,
@@ -23,6 +24,7 @@ from chardet.pipeline.binary import is_binary
 from chardet.pipeline.bom import detect_bom
 from chardet.pipeline.confusion import resolve_confusion_groups
 from chardet.pipeline.escape import detect_escape_encoding
+from chardet.pipeline.magic import detect_magic
 from chardet.pipeline.markup import detect_markup_charset
 from chardet.pipeline.statistical import score_candidates
 from chardet.pipeline.structural import (
@@ -36,9 +38,11 @@ from chardet.pipeline.validity import filter_by_validity
 from chardet.registry import EncodingInfo, get_candidates
 
 _BINARY_RESULT = DetectionResult(
-    encoding=None, confidence=DETERMINISTIC_CONFIDENCE, language=None
+    encoding=None,
+    confidence=DETERMINISTIC_CONFIDENCE,
+    language=None,
+    mime_type="application/octet-stream",
 )
-_NONE_RESULT = DetectionResult(encoding=None, confidence=0.0, language=None)
 # Threshold at which a CJK structural score is confident enough to trigger
 # combined structural+statistical ranking rather than purely statistical.
 _STRUCTURAL_CONFIDENCE_THRESHOLD = 0.85
@@ -337,9 +341,7 @@ def _score_structural_candidates(
         if coverage >= 0.95:
             boosted.append(
                 DetectionResult(
-                    encoding=r.encoding,
-                    confidence=r.confidence * (1 + coverage),
-                    language=r.language,
+                    r.encoding, r.confidence * (1 + coverage), r.language, r.mime_type
                 )
             )
         else:
@@ -426,20 +428,26 @@ def _to_utf8(data: bytes, encoding: str) -> bytes | None:
         return None
 
 
-def _fill_language(
+def _fill_metadata(
     data: bytes, results: list[DetectionResult]
 ) -> list[DetectionResult]:
-    """Fill in language for results missing it.
+    """Fill in language and mime_type for results missing them.
+
+    **Language** (only for text results where ``encoding is not None``):
 
     Tier 1: single-language encodings via hardcoded map (instant).
     Tier 2: multi-language encodings via statistical bigram scoring (lazy).
     Tier 3: decode to UTF-8, score against UTF-8 language models (universal fallback).
+
+    **MIME type**: text results default to ``"text/plain"``, binary results
+    (``encoding is None``) default to ``"application/octet-stream"``.
     """
     filled: list[DetectionResult] = []
     profile: BigramProfile | None = None
     utf8_profile: BigramProfile | None = None
     for result in results:
-        if result.language is None and result.encoding is not None:
+        lang = result.language
+        if lang is None and result.encoding is not None:
             # Tier 1: single-language encoding
             lang = infer_language(result.encoding)
             # Tier 2: statistical scoring for multi-language encodings
@@ -456,16 +464,21 @@ def _fill_language(
                     _, lang = score_best_language(
                         utf8_data, "utf-8", profile=utf8_profile
                     )
-            if lang is not None:
-                filled.append(
-                    DetectionResult(
-                        encoding=result.encoding,
-                        confidence=result.confidence,
-                        language=lang,
-                    )
-                )
-                continue
-        filled.append(result)
+
+        mime = result.mime_type
+        if mime is None:
+            mime = (
+                "text/plain"
+                if result.encoding is not None
+                else "application/octet-stream"
+            )
+
+        if lang != result.language or mime != result.mime_type:
+            filled.append(
+                DetectionResult(result.encoding, result.confidence, lang, mime)
+            )
+        else:
+            filled.append(result)
     return filled
 
 
@@ -527,6 +540,12 @@ def _run_pipeline_core(  # noqa: PLR0913
         and escape_result.encoding in allowed
     ):
         return [escape_result]
+
+    # Magic number detection for known binary formats — runs before
+    # UTF-8/ASCII prechecks to avoid unnecessary analysis on binary data.
+    magic_result = detect_magic(data)
+    if magic_result is not None:
+        return [magic_result]
 
     # Pre-check UTF-8 to prevent false binary classification.  Valid UTF-8
     # with multi-byte sequences can contain control bytes (e.g. ESC for ANSI
@@ -641,7 +660,7 @@ def run_pipeline(  # noqa: PLR0913
     )
     # Language scoring uses only the first 2 KB — bigrams converge quickly
     # and this keeps Tier 3 (language-model scoring) fast even on large inputs.
-    results = _fill_language(data[:_LANG_SCORE_MAX_BYTES], results)
+    results = _fill_metadata(data[:_LANG_SCORE_MAX_BYTES], results)
     if not results:  # pragma: no cover
         msg = "pipeline must always return at least one result"
         raise RuntimeError(msg)
@@ -649,7 +668,7 @@ def run_pipeline(  # noqa: PLR0913
     # stages may boost confidence above 1.0 for ranking purposes (e.g.
     # CJK byte-coverage boost), but callers expect a probability-like value.
     return [
-        DetectionResult(r.encoding, min(r.confidence, 1.0), r.language)
+        DetectionResult(r.encoding, min(r.confidence, 1.0), r.language, r.mime_type)
         if r.confidence > 1.0
         else r
         for r in results

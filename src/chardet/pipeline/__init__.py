@@ -31,6 +31,7 @@ class DetectionDict(TypedDict):
     encoding: str | None
     confidence: float
     language: str | None
+    mime_type: str | None
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -44,17 +45,24 @@ class DetectionResult:
     encoding: str | None
     confidence: float
     language: str | None
+    mime_type: str | None = None
 
     def to_dict(self) -> DetectionDict:
         """Convert this result to a plain dict.
 
-        :returns: A dict with ``'encoding'``, ``'confidence'``, and ``'language'`` keys.
+        :returns: A dict with ``'encoding'``, ``'confidence'``, ``'language'``, and ``'mime_type'`` keys.
         """
         return {
             "encoding": self.encoding,
             "confidence": self.confidence,
             "language": self.language,
+            "mime_type": self.mime_type,
         }
+
+
+#: Sentinel result for "no detection" — used by the orchestrator for
+#: filtered-out fallbacks and by UniversalDetector before close().
+_NONE_RESULT = DetectionResult(encoding=None, confidence=0.0, language=None)
 
 
 @dataclasses.dataclass(slots=True)
