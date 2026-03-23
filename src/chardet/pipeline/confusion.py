@@ -5,9 +5,11 @@ and uses them to resolve statistical scoring ties between similar encodings.
 
 Build-time computation (``compute_confusion_groups``, ``compute_distinguishing_maps``,
 ``serialize_confusion_data``) lives in ``scripts/confusion_training.py``.
-"""
 
-from __future__ import annotations
+Note: ``from __future__ import annotations`` is intentionally omitted because
+this module is compiled with mypyc, which does not support PEP 563 string
+annotations.
+"""
 
 import functools
 import importlib.resources

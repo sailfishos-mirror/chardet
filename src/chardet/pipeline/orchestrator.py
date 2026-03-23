@@ -1,6 +1,9 @@
-"""Pipeline orchestrator — runs all detection stages in sequence."""
+"""Pipeline orchestrator — runs all detection stages in sequence.
 
-from __future__ import annotations
+Note: ``from __future__ import annotations`` is intentionally omitted because
+this module is compiled with mypyc, which does not support PEP 563 string
+annotations.
+"""
 
 import warnings
 

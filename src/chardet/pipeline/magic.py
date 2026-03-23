@@ -1,6 +1,9 @@
-"""Magic number detection for binary file types."""
+"""Magic number detection for binary file types.
 
-from __future__ import annotations
+Note: ``from __future__ import annotations`` is intentionally omitted because
+this module is compiled with mypyc, which does not support PEP 563 string
+annotations.
+"""
 
 from chardet.pipeline import DetectionResult
 
