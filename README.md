@@ -149,7 +149,6 @@ cat somefile.txt | chardetect
 - **MIME type detection** — identifies 40+ binary file formats (images, audio/video, archives, documents, executables, fonts) via magic number signatures, plus `text/html`, `text/xml`, and `text/x-python` for markup
 - **Encoding filters** — `include_encodings` and `exclude_encodings` parameters to restrict or exclude specific encodings from the candidate set
 - **99 encodings** — full coverage including EBCDIC, Mac, DOS, and Baltic/Central European families
-- **`EncodingEra` filtering** — scope detection to modern web encodings, legacy ISO/Mac/DOS, mainframe, or all
 - **Optional mypyc compilation** — 1.42x additional speedup on CPython
 - **Thread-safe** — `detect()` and `detect_all()` are safe to call concurrently; scales on free-threaded Python
 - **Same API** — `detect()`, `detect_all()`, `UniversalDetector`, and the `chardetect` CLI all work as before
