@@ -9,6 +9,23 @@ Changelog
   license with no attribution requirement. All prior 7.x releases are
   should also be considered 0BSD licensed as of this release.
   (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+- Added ``mime_type`` field to detection results — identifies file types
+  for both binary (via magic number matching) and text content. Returned
+  in all ``detect()``, ``detect_all()``, and ``UniversalDetector`` results.
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_,
+  `#350 <https://github.com/chardet/chardet/pull/350>`_)
+- New ``pipeline/magic.py`` module detects 40+ binary file formats
+  including images, audio/video, archives, documents, executables, and
+  fonts. ZIP-based formats (XLSX, DOCX, JAR, APK, EPUB, wheel,
+  OpenDocument) are distinguished by entry filenames.
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_,
+  `#350 <https://github.com/chardet/chardet/pull/350>`_)
+- Added 4 new modules to mypyc compilation (orchestrator, confusion,
+  magic, ascii). Capped statistical scoring at 16KB for faster processing
+  of large files. Replaced ``dataclasses.replace()`` with direct
+  construction on hot paths.
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_,
+  `#350 <https://github.com/chardet/chardet/pull/350>`_)
 
 7.2.0 (2026-03-17)
 -------------------

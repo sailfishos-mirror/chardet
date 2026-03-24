@@ -22,14 +22,17 @@ Use :func:`chardet.detect` to detect the encoding of a byte string:
        " schönsten Städte Deutschlands.".encode("windows-1252")
    )
    print(result)
-   # {'encoding': 'windows-1252', 'confidence': 0.34, 'language': 'de'}
+   # {'encoding': 'windows-1252', 'confidence': 0.34, 'language': 'de', 'mime_type': 'text/plain'}
 
-The result is a dictionary with three keys:
+The result is a dictionary with four keys:
 
 - ``"encoding"`` — the detected encoding name (e.g., ``"utf-8"``,
   ``"windows-1252"``), or ``None`` if detection failed
 - ``"confidence"`` — a float between 0 and 1
 - ``"language"`` — the detected language (e.g., ``"French"``), or ``None``
+- ``"mime_type"`` — the detected MIME type (e.g., ``"text/plain"``,
+  ``"image/png"``), or ``None`` if unknown. For binary files detected via
+  magic number signatures, this identifies the file format.
 
 Multiple Candidates
 ~~~~~~~~~~~~~~~~~~~

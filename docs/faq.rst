@@ -36,13 +36,13 @@ How is chardet different from charset-normalizer?
 `charset-normalizer <https://github.com/jawah/charset_normalizer>`_ is
 an alternative encoding detector. Key differences:
 
-- **Accuracy:** chardet achieves 98.2% vs charset-normalizer's 84.2% on
+- **Accuracy:** chardet achieves 98.1% vs charset-normalizer's 85.4% on
   the same test suite.
-- **Speed:** chardet is 4.2x faster with mypyc (476 vs 113 files/s),
+- **Speed:** chardet is 1.6x faster with mypyc (582 vs 373 files/s),
   5.8x faster pure Python (384 vs 66 files/s).
 - **Memory:** chardet uses 3.9x less peak memory (26.2 vs 101.2 MiB).
 - **Language detection:** chardet detects language with 95.2% accuracy vs
-  charset-normalizer's 59.0%.
+  charset-normalizer's 59.3%.
 
 How is chardet different from cchardet?
 ----------------------------------------
@@ -50,7 +50,7 @@ How is chardet different from cchardet?
 `cchardet <https://github.com/faust-streaming/faust-cchardet>`_ wraps
 Mozilla's uchardet C/C++ library. Key differences:
 
-- **Accuracy:** chardet achieves 98.2% vs cchardet's 56.0%.
+- **Accuracy:** chardet achieves 98.1% vs cchardet's 55.9%.
 - **Speed:** cchardet is faster (1.4s vs 4.5s) due to C implementation.
 - **Encoding breadth:** chardet supports 49 more encodings than cchardet,
   including EBCDIC, Mac, Baltic, and BOM-less UTF-16/32.

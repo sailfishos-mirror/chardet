@@ -23,41 +23,47 @@ order:
    ISO-2022-JP, ISO-2022-KR, and HZ-GB-2312 by matching their
    characteristic escape byte sequences.
 
-4. **Binary Detection** — If the data contains null bytes or a high
+4. **Magic Number Detection** — Identifies binary file types (PNG, JPEG,
+   PDF, ZIP, etc.) by their magic number signatures. Returns immediately
+   with ``encoding=None`` and a specific ``mime_type`` (e.g.,
+   ``"image/png"``). ZIP-based formats like XLSX, DOCX, and EPUB are
+   further distinguished by inspecting entry filenames.
+
+5. **Binary Detection** — If the data contains null bytes or a high
    proportion of control characters without matching any of the above,
    it is classified as binary (encoding ``None``).
 
-5. **Markup Charset** — Extracts explicit charset declarations from
+6. **Markup Charset** — Extracts explicit charset declarations from
    ``<meta charset="...">`` tags, ``<?xml encoding="..."?>``
    processing instructions, and PEP 263 ``# -*- coding: ... -*-``
    declarations in the first two lines of Python source files.
 
-6. **ASCII Check** — If every byte is in the 7-bit ASCII range, returns
+7. **ASCII Check** — If every byte is in the 7-bit ASCII range, returns
    ``ascii`` immediately.
 
-7. **UTF-8 Validation** — Tests whether the data is valid UTF-8 by
+8. **UTF-8 Validation** — Tests whether the data is valid UTF-8 by
    checking multi-byte sequence structure. UTF-8 has very distinctive
    byte patterns that are unlikely to occur in other encodings.
 
-8. **Byte Validity Filtering** — Attempts to decode the data with each
+9. **Byte Validity Filtering** — Attempts to decode the data with each
    candidate encoding's Python codec. Any encoding that raises a decode
    error is eliminated.
 
-9. **CJK Gating** — Eliminates CJK candidates that lack genuine
-   multi-byte structure. Checks pair ratio, high-byte count, byte
-   coverage, and lead byte diversity to prevent false CJK matches on
-   single-byte data.
+10. **CJK Gating** — Eliminates CJK candidates that lack genuine
+    multi-byte structure. Checks pair ratio, high-byte count, byte
+    coverage, and lead byte diversity to prevent false CJK matches on
+    single-byte data.
 
-10. **Structural Probing** — For multi-byte encodings (CJK), analyzes
+11. **Structural Probing** — For multi-byte encodings (CJK), analyzes
     byte sequences to verify they follow the encoding's structural rules
     (lead byte / trail byte patterns, valid ranges).
 
-11. **Statistical Scoring** — Scores remaining candidates using pre-trained
+12. **Statistical Scoring** — Scores remaining candidates using pre-trained
     bigram frequency models. Each model captures the characteristic byte
     pair frequencies of a language written in a specific encoding. The
     candidate with the highest score wins.
 
-12. **Post-processing** — Resolves confusion groups (encodings that are
+13. **Post-processing** — Resolves confusion groups (encodings that are
     statistically hard to distinguish), demotes niche Latin encodings
     when a more common alternative scores similarly, and promotes KOI8-T
     when appropriate.
