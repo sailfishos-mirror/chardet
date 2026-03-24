@@ -193,24 +193,16 @@ def main() -> None:
     print("text files get MIME types from the detection pipeline stage that")
     print("identified them, or default to ``text/plain``.")
     print()
-
-    for category in CATEGORY_ORDER:
-        cat_entries = [(m, method) for m, method, c in entries if c == category]
-        if not cat_entries:
-            continue
-        print(category)
-        print("-" * len(category))
-        print()
-        print(".. list-table::")
-        print("   :header-rows: 1")
-        print("   :widths: 40 40")
-        print()
-        print("   * - MIME Type")
-        print("     - Detection Method")
-        for mime, method in sorted(cat_entries):
-            print(f"   * - ``{mime}``")
-            print(f"     - {method}")
-        print()
+    print(".. list-table::")
+    print("   :header-rows: 1")
+    print("   :widths: 40 40")
+    print()
+    print("   * - MIME Type")
+    print("     - Detection Method")
+    for mime, method, _category in sorted(entries):
+        print(f"   * - ``{mime}``")
+        print(f"     - {method}")
+    print()
 
 
 if __name__ == "__main__":
