@@ -26,6 +26,13 @@ Changelog
   (`Dan Blanchard <https://github.com/dan-blanchard>`_,
   `#350 <https://github.com/chardet/chardet/pull/350>`_)
 
+**Bug Fixes:**
+
+- Fixed incorrect equivalence between UTF-16-LE and UTF-16-BE in
+  accuracy testing — these are distinct encodings with different byte
+  order, not interchangeable
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+
 **Performance:**
 
 - Added 4 new modules to mypyc compilation (orchestrator, confusion,
@@ -39,6 +46,13 @@ Changelog
   construction on hot paths, eliminating ~354k function calls per full
   test suite run
   (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+
+**Build:**
+
+- Added riscv64 to the mypyc wheel build matrix — prebuilt wheels are
+  now published for RISC-V Linux alongside existing architectures
+  (`Bruno Verachten <https://github.com/gounthar>`_,
+  `#348 <https://github.com/chardet/chardet/pull/348>`_)
 
 7.2.0 (2026-03-17)
 -------------------
