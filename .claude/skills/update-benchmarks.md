@@ -64,13 +64,14 @@ From thread safety (1e), extract **wall-clock** detection time (the `(detection:
 
 ### docs/performance.rst
 Update all tables and derived comparison text:
-- "Xx faster than chardet 6.0.0" = chardet_6_mean / chardet_7_mean
-- "X.Xx faster than charset-normalizer" = cn_mean / chardet_mean
-- "+X.Xpp" accuracy differences
-- Thread safety speedup = 1_thread_time / N_thread_time for free-threaded runs
-- mypyc speedup = pure_files_per_sec / mypyc_files_per_sec
-- "CPython X.XX + mypyc is the fastest" = highest files/s from cross-version table
-- PyPy reaches "XX-XX% of mypyc" = pypy_fps / min_mypyc_fps and pypy_fps / max_mypyc_fps
+- Accuracy & Speed tables: numbers from step 1a
+- Memory table: numbers from step 1a (skip if unchanged)
+- Language Detection table: numbers from step 1a
+- charset-normalizer's Test Set table: numbers from step 1b
+- Thread Safety table: wall-clock times from step 1e
+- Optional mypyc Compilation table: use the current default CPython (e.g., 3.14) pure and mypyc numbers from steps 1c/1d. Speedup = mypyc_files_per_sec / pure_files_per_sec
+- Performance Across Python Versions table: all numbers from steps 1c/1d
+- Derived text: "Xx faster than chardet 6.0.0" = chardet_6_mean / chardet_7_mean, "+X.Xpp" accuracy differences, "CPython X.XX + mypyc is the fastest" = highest files/s, PyPy reaches "XX-XX% of mypyc" = pypy_fps / min_mypyc_fps and pypy_fps / max_mypyc_fps
 
 ### docs/index.rst
 - Accuracy percentage and file count
