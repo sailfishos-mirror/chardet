@@ -1,14 +1,19 @@
 Changelog
 =========
 
-7.3.0 (unreleased)
+7.3.0 (2026-03-24)
 -------------------
+
+**License:**
 
 - **0BSD license** — the project license has been changed from MIT to
   `0BSD <https://opensource.org/license/0bsd>`_, a maximally permissive
-  license with no attribution requirement. All prior 7.x releases are
+  license with no attribution requirement. All prior 7.x releases
   should also be considered 0BSD licensed as of this release.
   (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+
+**Features:**
+
 - Added ``mime_type`` field to detection results — identifies file types
   for both binary (via magic number matching) and text content. Returned
   in all ``detect()``, ``detect_all()``, and ``UniversalDetector`` results.
@@ -20,12 +25,20 @@ Changelog
   OpenDocument) are distinguished by entry filenames.
   (`Dan Blanchard <https://github.com/dan-blanchard>`_,
   `#350 <https://github.com/chardet/chardet/pull/350>`_)
+
+**Performance:**
+
 - Added 4 new modules to mypyc compilation (orchestrator, confusion,
-  magic, ascii). Capped statistical scoring at 16KB for faster processing
-  of large files. Replaced ``dataclasses.replace()`` with direct
-  construction on hot paths.
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_,
-  `#350 <https://github.com/chardet/chardet/pull/350>`_)
+  magic, ascii), bringing the total to 11 compiled modules
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+- Capped statistical scoring at 16 KB — bigram models converge quickly,
+  so large files no longer score the full 200 KB. Worst-case detection
+  time dropped from 62ms to 26ms with no accuracy loss.
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+- Replaced ``dataclasses.replace()`` with direct ``DetectionResult``
+  construction on hot paths, eliminating ~354k function calls per full
+  test suite run
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
 
 7.2.0 (2026-03-17)
 -------------------
