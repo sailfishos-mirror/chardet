@@ -142,6 +142,42 @@ chardet detects language with **95.2% accuracy** — +35.9pp vs
 charset-normalizer and +55.2pp vs chardet 6.0.0. cchardet does not report
 language.
 
+Accuracy on charset-normalizer's Test Set
+------------------------------------------
+
+charset-normalizer maintains its own test dataset at
+`char-dataset <https://github.com/Ousret/char-dataset>`_. 469 of those
+files also exist in the chardet test suite (matched by content hash),
+so we can compare both detectors on charset-normalizer's own ground
+truth. We filed
+`an issue <https://github.com/Ousret/char-dataset/issues/1>`_ about
+the 5 files we excluded (4 ambiguous Cyrillic files and 1 corrupted
+Vietnamese file) and 2 we relabeled (UTF-8-SIG, not UTF-8).
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 15 15 15
+
+   * - Detector
+     - Correct
+     - Encoding Accuracy
+     - Language Accuracy
+   * - **chardet 7.3.0 (mypyc)**
+     - **461/469**
+     - **98.3%**
+     - **92.8%**
+   * - charset-normalizer 3.4.6 (mypyc)
+     - 453/469
+     - 96.6%
+     - 85.9%
+
+chardet is **+1.7pp more accurate** than charset-normalizer on
+charset-normalizer's own test data, and **+6.9pp** on language
+detection.
+
+You can reproduce these numbers with
+``python scripts/compare_detectors.py --cn-dataset --cn --mypyc``.
+
 Thread Safety
 -------------
 
