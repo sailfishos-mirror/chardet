@@ -6,6 +6,13 @@ Benchmarked against 2,521 test files from the
 detectors evaluated with the same equivalence rules. Numbers below are
 CPython 3.14 unless noted.
 
+Detecting a superset of the expected encoding is counted as correct,
+since the superset decodes the data without loss (e.g., detecting
+Windows-1252 when the expected answer is ISO-8859-1, or GB18030 when
+the expected answer is GB2312). Byte-order variants of the same
+encoding (e.g., UTF-16-LE vs UTF-16) are also treated as equivalent.
+These rules are applied equally to all detectors.
+
 Accuracy
 --------
 
