@@ -91,20 +91,21 @@ each stage either returns a definitive result or passes to the next:
 1. **BOM** (``bom.py``) — byte order mark
 2. **UTF-16/32 patterns** (``utf1632.py``) — null-byte patterns
 3. **Escape sequences** (``escape.py``) — ISO-2022-JP/KR, HZ-GB-2312
-4. **Binary detection** (``binary.py``) — null bytes / control chars
-5. **Markup charset** (``markup.py``) — ``<meta charset>`` / ``<?xml encoding>``
-6. **ASCII** (``ascii.py``) — pure 7-bit check
-7. **UTF-8** (``utf8.py``) — structural multi-byte validation
-8. **Byte validity** (``validity.py``) — eliminate invalid encodings
-9. **CJK gating** (in orchestrator) — eliminate spurious CJK candidates
-10. **Structural probing** (``structural.py``) — multi-byte encoding fit
-11. **Statistical scoring** (``statistical.py``) — bigram frequency models
-12. **Post-processing** (orchestrator) — confusion groups, niche demotion
+4. **Magic numbers** (``magic.py``) — binary file type identification
+5. **Binary detection** (``binary.py``) — null bytes / control chars
+6. **Markup charset** (``markup.py``) — ``<meta charset>`` / ``<?xml encoding>``
+7. **ASCII** (``ascii.py``) — pure 7-bit check
+8. **UTF-8** (``utf8.py``) — structural multi-byte validation
+9. **Byte validity** (``validity.py``) — eliminate invalid encodings
+10. **CJK gating** (in orchestrator) — eliminate spurious CJK candidates
+11. **Structural probing** (``structural.py``) — multi-byte encoding fit
+12. **Statistical scoring** (``statistical.py``) — bigram frequency models
+13. **Post-processing** (orchestrator) — confusion groups, niche demotion
 
 Key types:
 
 - ``DetectionResult`` — frozen dataclass: ``encoding``, ``confidence``,
-  ``language``
+  ``language``, ``mime_type``
 - ``EncodingInfo`` (``registry.py``) — frozen dataclass: ``name``,
   ``aliases``, ``era``, ``is_multibyte``, ``languages``
 - ``EncodingEra`` (``enums.py``) — IntFlag for filtering candidates
@@ -127,7 +128,9 @@ Hot-path modules can be compiled to C extensions with
 
 Compiled modules: ``models/__init__.py``, ``pipeline/structural.py``,
 ``pipeline/validity.py``, ``pipeline/statistical.py``,
-``pipeline/utf1632.py``, ``pipeline/utf8.py``, ``pipeline/escape.py``.
+``pipeline/utf1632.py``, ``pipeline/utf8.py``, ``pipeline/escape.py``,
+``pipeline/orchestrator.py``, ``pipeline/confusion.py``,
+``pipeline/magic.py``, ``pipeline/ascii.py``.
 
 These modules cannot use ``from __future__ import annotations``
 (``FA100`` is ignored for them in ruff config).

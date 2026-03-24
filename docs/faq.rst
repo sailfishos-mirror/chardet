@@ -11,7 +11,7 @@ of control characters that don't match any known text encoding.
 .. code-block:: python
 
    result = chardet.detect(b"\x00\x01\x02\x03")
-   # {'encoding': None, 'confidence': 0.95, 'language': None}
+   # {'encoding': None, 'confidence': 0.95, 'language': None, 'mime_type': 'application/octet-stream'}
 
 How do I increase accuracy?
 ----------------------------
@@ -38,9 +38,8 @@ an alternative encoding detector. Key differences:
 
 - **Accuracy:** chardet achieves 98.1% vs charset-normalizer's 85.4% on
   the same test suite.
-- **Speed:** chardet is 1.6x faster with mypyc (582 vs 373 files/s),
-  5.8x faster pure Python (384 vs 66 files/s).
-- **Memory:** chardet uses 3.9x less peak memory (26.2 vs 101.2 MiB).
+- **Speed:** chardet is 1.6x faster with mypyc (582 vs 373 files/s).
+- **Memory:** chardet uses 3.9x less peak memory (25.9 vs 101.3 MiB).
 - **Language detection:** chardet detects language with 95.2% accuracy vs
   charset-normalizer's 59.3%.
 
