@@ -91,7 +91,7 @@ git push
 
 ## Notes
 
-- `compare_detectors.py` caches results per version+python+build. Cache keys include the chardet version and a content hash, so results auto-invalidate when code changes. Only use `--no-cache` if you suspect stale results.
+- `compare_detectors.py` caches results in `.benchmark_results/`. Cache keys include the detector version, Python version, build type (pure/mypyc), thread count, and a content hash of the benchmark scripts (`benchmark_time.py`, `benchmark_memory.py`, `utils.py`) and equivalence rules (`equivalences.py`). Results auto-invalidate when any of these change. The chardet version includes the git commit hash (e.g., `7.2.1.dev25+g3680cc1ad`), so any commit invalidates the local chardet cache. Only use `--no-cache` if you need to re-benchmark an unchanged version (e.g., to reduce measurement noise).
 - PyPy can't use `--mypyc` (mypyc is CPython-only). Always use `--pure` for PyPy.
 - `--python` is repeatable: `--python 3.12 --python 3.13` runs both sequentially.
 - The test file count (currently 2,521) may change when test-data is updated.
