@@ -120,7 +120,11 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _compute_benchmark_hash() -> str:
-    """SHA-256 (first 12 hex chars) of benchmark-related source files."""
+    """SHA-256 (first 12 hex chars) of benchmark-related source files + test data.
+
+    Includes the git commit hash of the test-data submodule so that adding,
+    removing, or modifying test files invalidates cached results.
+    """
     scripts_dir = _PROJECT_ROOT / "scripts"
     equiv_path = _PROJECT_ROOT / "src" / "chardet" / "equivalences.py"
     paths = [
@@ -132,6 +136,20 @@ def _compute_benchmark_hash() -> str:
     h = hashlib.sha256()
     for p in paths:
         h.update(p.read_bytes())
+    # Include test-data commit hash (changes when files are added/modified)
+    data_dir = _PROJECT_ROOT / "tests" / "data"
+    if data_dir.is_dir():
+        try:
+            result = subprocess.run(
+                ["git", "-C", str(data_dir), "rev-parse", "HEAD"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode == 0:
+                h.update(result.stdout.strip().encode())
+        except FileNotFoundError:
+            pass  # git not available
     return h.hexdigest()[:12]
 
 
@@ -156,6 +174,10 @@ def _cache_filename(  # noqa: PLR0913
 
     When *threads* > 1, a ``{N}threads`` segment is inserted before *kind*:
     ``chardet_7.0.1_a1b2c3_cpython3.11_mypyc_4threads_time.json``.
+
+    The ``--cn-dataset`` flag does not affect the cache key because the
+    benchmark subprocess always runs on all files — the cn-dataset filter
+    is applied when aggregating results, not when detecting.
 
     *detector_name* should be the package name (e.g. ``"chardet"``,
     ``"charset-normalizer"``), **not** the display label.
