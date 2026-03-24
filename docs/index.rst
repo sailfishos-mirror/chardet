@@ -31,6 +31,7 @@ runtime dependencies, works on PyPy.
 
    usage
    supported-encodings
+   supported-mime-types
    how-it-works
    performance
    faq
