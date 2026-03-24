@@ -6,11 +6,11 @@ Universal character encoding detector.
 [![Documentation](https://readthedocs.org/projects/chardet/badge/?version=latest)](https://chardet.readthedocs.io)
 [![codecov](https://codecov.io/github/chardet/chardet/branch/main/graph/badge.svg?token=m5ZQrMd3vk)](https://codecov.io/github/chardet/chardet)
 
-chardet 7.0 is a ground-up, 0BSD-licensed rewrite of [chardet](https://github.com/chardet/chardet).
+chardet 7 is a ground-up, 0BSD-licensed rewrite of [chardet](https://github.com/chardet/chardet).
 Same package name, same public API — drop-in replacement for chardet 5.x/6.x, just much faster and more accurate.
 Python 3.10+, zero runtime dependencies, works on PyPy.
 
-## Why chardet 7.0?
+## Why chardet 7?
 
 **98.1% accuracy** on 2,521 test files. **50x faster** than chardet 6.0.0
 and **1.6x faster** than charset-normalizer. **Language detection** for
@@ -139,7 +139,7 @@ cat somefile.txt | chardetect
 # stdin: utf-8 with confidence 0.99
 ```
 
-## What's New in 7.0
+## What's New in 7
 
 - **0BSD license** (previous versions were LGPL)
 - **Ground-up rewrite** — 13-stage detection pipeline using BOM detection, magic number identification, structural probing, byte validity filtering, and bigram statistical models
