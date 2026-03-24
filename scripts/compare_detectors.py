@@ -1264,106 +1264,22 @@ def run_comparison(  # noqa: PLR0913
 
 
 # ---------------------------------------------------------------------------
-# Entry point
+# Per-python-version runner
 # ---------------------------------------------------------------------------
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Compare chardet vs other detectors on the chardet test suite.",
-    )
-    parser.add_argument(
-        "-c",
-        "--chardet-version",
-        action="append",
-        default=[],
-        metavar="X.Y.Z",
-        help="Chardet version to include (repeatable, e.g. -c 6.0.0 -c 5.2.0)",
-    )
-    parser.add_argument(
-        "--cchardet",
-        action="store_true",
-        default=False,
-        help="Include cchardet (faust-cchardet) in the comparison",
-    )
-    parser.add_argument(
-        "--cn",
-        "--charset-normalizer",
-        action="store_true",
-        default=False,
-        dest="charset_normalizer",
-        help="Include charset-normalizer in the comparison",
-    )
-    parser.add_argument(
-        "--python",
-        default=None,
-        metavar="VERSION",
-        help="Python version to pass to 'uv venv --python' (e.g. 3.11, pypy3.10)",
-    )
-    parser.add_argument(
-        "--no-cache",
-        action="store_true",
-        default=False,
-        help="Force re-run, ignoring cached results",
-    )
-    parser.add_argument(
-        "--no-memory",
-        action="store_true",
-        default=False,
-        help="Skip memory benchmarks (much faster runs)",
-    )
-    parser.add_argument(
-        "--pure",
-        action="store_true",
-        default=False,
-        help=(
-            "Ensure detectors are pure Python (strips HATCH_BUILD_HOOK_ENABLE_MYPYC, "
-            "propagates --pure to subprocesses to abort if .so/.pyd files are found)"
-        ),
-    )
-    parser.add_argument(
-        "--mypyc",
-        action="store_true",
-        default=False,
-        help=(
-            "Forces mypyc versions of chardet and charset-normalizer"
-            " (sets HATCH_BUILD_HOOK_ENABLE_MYPYC=true)"
-        ),
-    )
-    parser.add_argument(
-        "--threads",
-        type=int,
-        default=1,
-        metavar="N",
-        help="Number of detection threads for benchmark_time.py (default: 1)",
-    )
-    parser.add_argument(
-        "--cn-dataset",
-        action="store_true",
-        default=False,
-        help=(
-            "Restrict to the ~472 files that overlap with charset-normalizer's "
-            "char-dataset (github.com/Ousret/char-dataset)"
-        ),
-    )
-    args = parser.parse_args()
+# Type alias for venv specs: (label, pip_args, env, detector_type, python_version)
+_VenvSpec = tuple[str, list[str], dict[str, str] | None, str, str | None]
 
-    if args.pure and args.mypyc:
-        parser.error("--pure and --mypyc are mutually exclusive")
-    if args.threads < 1:
-        parser.error("--threads must be >= 1")
 
-    # Force line-buffered stdout so progress is visible when piped (e.g. tee).
-    sys.stdout.reconfigure(line_buffering=True)
-
-    data_dir = Path(__file__).resolve().parent.parent / "tests" / "data"
-    if not data_dir.is_dir():
-        print(f"ERROR: Test data directory not found: {data_dir}")
-        sys.exit(1)
-
-    project_root = str(Path(__file__).resolve().parent.parent)
-    benchmark_hash = _compute_benchmark_hash()
-    use_cache = not args.no_cache
-
+def _run_for_python_version(  # noqa: PLR0913
+    args: argparse.Namespace,
+    python_version: str | None,
+    data_dir: Path,
+    project_root: str,
+    benchmark_hash: str,
+    use_cache: bool,  # noqa: FBT001
+) -> None:
+    """Run the full comparison for a single Python version."""
     # --pure: strip the mypyc build hook env var so the chardet venv is
     # guaranteed to be pure Python even if the caller has it set.
     # --mypyc: build a mypyc wheel locally first, then install it.
@@ -1388,8 +1304,8 @@ if __name__ == "__main__":
             str(mypyc_wheel_dir),
             project_root,
         ]
-        if args.python:
-            build_cmd.extend(["--python", args.python])
+        if python_version:
+            build_cmd.extend(["--python", python_version])
         subprocess.run(
             build_cmd,
             check=True,
@@ -1403,9 +1319,8 @@ if __name__ == "__main__":
         print(f"  Built: {wheels[0].name}")
 
     # Build venv specs: (label, pip_args, env, detector_type, python_version)
-    VenvSpec = tuple[str, list[str], dict[str, str] | None, str, str | None]
-    venv_specs: list[VenvSpec] = [
-        ("chardet", chardet_pip_args, install_env, "chardet", args.python),
+    venv_specs: list[_VenvSpec] = [
+        ("chardet", chardet_pip_args, install_env, "chardet", python_version),
     ]
 
     for version in args.chardet_version:
@@ -1413,7 +1328,7 @@ if __name__ == "__main__":
         if args.pure:
             cv_pip_args.extend(["--no-binary", "chardet"])
         venv_specs.append(
-            (f"chardet {version}", cv_pip_args, None, "chardet", args.python)
+            (f"chardet {version}", cv_pip_args, None, "chardet", python_version)
         )
 
     if args.charset_normalizer:
@@ -1427,13 +1342,13 @@ if __name__ == "__main__":
                 cn_pip_args,
                 None,
                 "charset-normalizer",
-                args.python,
+                python_version,
             )
         )
 
     if args.cchardet:
         venv_specs.append(
-            ("cchardet", ["faust-cchardet"], None, "cchardet", args.python)
+            ("cchardet", ["faust-cchardet"], None, "cchardet", python_version)
         )
 
     # --- Pre-resolve versions and tags without creating venvs ---
@@ -1443,7 +1358,7 @@ if __name__ == "__main__":
     build_tags: dict[str, str] = {}
     detector_type_map: dict[str, str] = {}
 
-    pre_python_tag = _resolve_python_tag_without_venv(args.python)
+    pre_python_tag = _resolve_python_tag_without_venv(python_version)
 
     for spec in venv_specs:
         label, pip_args, _env, det_type, _pyver = spec
@@ -1465,7 +1380,7 @@ if __name__ == "__main__":
 
     # --- Check cache: partition specs into cached vs needs-venv ---
     cache_dir = _get_cache_dir() if use_cache else None
-    uncached_specs: list[VenvSpec] = []
+    uncached_specs: list[_VenvSpec] = []
 
     for spec in venv_specs:
         label = spec[0]
@@ -1488,11 +1403,11 @@ if __name__ == "__main__":
     venvs: dict[str, tuple[Path, Path]] = {}
 
     def _create_venv_from_spec(
-        spec: VenvSpec,
+        spec: _VenvSpec,
     ) -> tuple[str, Path, Path]:
-        label, pip_args, env, _det_type, python_version = spec
+        label, pip_args, env, _det_type, pv = spec
         venv_dir, python_path = _create_detector_venv(
-            label, pip_args, python_version=python_version, env=env
+            label, pip_args, python_version=pv, env=env
         )
         return label, venv_dir, python_path
 
@@ -1591,3 +1506,129 @@ if __name__ == "__main__":
             _cleanup_venv(venv_dir)
         if mypyc_wheel_dir is not None:
             shutil.rmtree(mypyc_wheel_dir, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Compare chardet vs other detectors on the chardet test suite.",
+    )
+    parser.add_argument(
+        "-c",
+        "--chardet-version",
+        action="append",
+        default=[],
+        metavar="X.Y.Z",
+        help="Chardet version to include (repeatable, e.g. -c 6.0.0 -c 5.2.0)",
+    )
+    parser.add_argument(
+        "--cchardet",
+        action="store_true",
+        default=False,
+        help="Include cchardet (faust-cchardet) in the comparison",
+    )
+    parser.add_argument(
+        "--cn",
+        "--charset-normalizer",
+        action="store_true",
+        default=False,
+        dest="charset_normalizer",
+        help="Include charset-normalizer in the comparison",
+    )
+    parser.add_argument(
+        "--python",
+        action="append",
+        default=[],
+        metavar="VERSION",
+        help=(
+            "Python version to pass to 'uv venv --python' (e.g. 3.11, pypy3.10). "
+            "Repeatable: --python 3.12 --python 3.13 runs a full comparison for each."
+        ),
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        default=False,
+        help="Force re-run, ignoring cached results",
+    )
+    parser.add_argument(
+        "--no-memory",
+        action="store_true",
+        default=False,
+        help="Skip memory benchmarks (much faster runs)",
+    )
+    parser.add_argument(
+        "--pure",
+        action="store_true",
+        default=False,
+        help=(
+            "Ensure detectors are pure Python (strips HATCH_BUILD_HOOK_ENABLE_MYPYC, "
+            "propagates --pure to subprocesses to abort if .so/.pyd files are found)"
+        ),
+    )
+    parser.add_argument(
+        "--mypyc",
+        action="store_true",
+        default=False,
+        help=(
+            "Forces mypyc versions of chardet and charset-normalizer"
+            " (sets HATCH_BUILD_HOOK_ENABLE_MYPYC=true)"
+        ),
+    )
+    parser.add_argument(
+        "--threads",
+        type=int,
+        default=1,
+        metavar="N",
+        help="Number of detection threads for benchmark_time.py (default: 1)",
+    )
+    parser.add_argument(
+        "--cn-dataset",
+        action="store_true",
+        default=False,
+        help=(
+            "Restrict to the ~472 files that overlap with charset-normalizer's "
+            "char-dataset (github.com/Ousret/char-dataset)"
+        ),
+    )
+    args = parser.parse_args()
+
+    if args.pure and args.mypyc:
+        parser.error("--pure and --mypyc are mutually exclusive")
+    if args.threads < 1:
+        parser.error("--threads must be >= 1")
+
+    # Force line-buffered stdout so progress is visible when piped (e.g. tee).
+    sys.stdout.reconfigure(line_buffering=True)
+
+    data_dir = Path(__file__).resolve().parent.parent / "tests" / "data"
+    if not data_dir.is_dir():
+        print(f"ERROR: Test data directory not found: {data_dir}")
+        sys.exit(1)
+
+    project_root = str(Path(__file__).resolve().parent.parent)
+    benchmark_hash = _compute_benchmark_hash()
+    use_cache = not args.no_cache
+
+    # Normalize --python: empty list means "current interpreter" (single run).
+    python_versions: list[str | None] = args.python or [None]
+    multi = len(python_versions) > 1
+
+    for i, python_version in enumerate(python_versions):
+        if multi:
+            tag = python_version or "default"
+            print(f"\n{'=' * 72}")
+            print(f"  Python: {tag}  ({i + 1}/{len(python_versions)})")
+            print(f"{'=' * 72}\n")
+
+        _run_for_python_version(
+            args,
+            python_version,
+            data_dir,
+            project_root,
+            benchmark_hash,
+            use_cache,
+        )
