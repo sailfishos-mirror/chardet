@@ -206,45 +206,45 @@ Benchmarked with 2,521 files, ``encoding_era=ALL``:
      - 4 threads
      - 8 threads
    * - 3.13 (pure)
-     - 8,740ms
-     - 8,720ms
-     - 8,700ms
-     - 8,700ms
+     - 8,100ms
+     - 8,290ms
+     - 8,280ms
+     - 8,300ms
    * - 3.13t (pure)
-     - 10,150ms
-     - 8,530ms (1.2x)
-     - 4,360ms (2.3x)
-     - 5,050ms (2.0x)
+     - 9,690ms
+     - 5,510ms (1.8x)
+     - 3,820ms (2.5x)
+     - 4,710ms (2.1x)
    * - 3.13 (mypyc)
-     - 4,650ms
-     - 4,700ms
-     - 4,760ms
-     - 4,760ms
+     - 4,380ms
+     - 4,170ms
+     - 4,170ms
+     - 4,170ms
    * - **3.13t (mypyc)**
-     - 4,630ms
-     - 2,350ms (2.0x)
-     - 1,300ms (3.6x)
-     - **1,120ms (4.1x)**
+     - 4,400ms
+     - 2,230ms (2.0x)
+     - 1,180ms (3.7x)
+     - **940ms (4.7x)**
    * - 3.14 (pure)
-     - 6,460ms
-     - 6,490ms
-     - 6,510ms
-     - 6,500ms
+     - 6,260ms
+     - 6,210ms
+     - 6,230ms
+     - 6,270ms
    * - 3.14t (pure)
-     - 7,280ms
-     - 6,330ms (1.2x)
-     - 3,000ms (2.4x)
-     - 1,830ms (4.0x)
+     - 6,760ms
+     - 5,240ms (1.3x)
+     - 2,840ms (2.4x)
+     - 1,690ms (4.0x)
    * - 3.14 (mypyc)
-     - 4,700ms
-     - 4,690ms
-     - 4,670ms
-     - 4,670ms
+     - 4,370ms
+     - 4,200ms
+     - 4,190ms
+     - 4,260ms
    * - **3.14t (mypyc)**
-     - 5,390ms
-     - 2,690ms (2.0x)
-     - 1,450ms (3.7x)
-     - **1,160ms (4.6x)**
+     - 5,080ms
+     - 2,570ms (2.0x)
+     - 1,350ms (3.8x)
+     - **980ms (5.2x)**
 
 Individual :class:`~chardet.UniversalDetector` instances are not thread-safe.
 Create one instance per thread when using the streaming API.
@@ -265,11 +265,11 @@ needed.
      - Files/s
      - Speedup
    * - Pure Python
-     - 390
+     - 415
      - baseline
    * - mypyc compiled
-     - 581
-     - **1.49x**
+     - 588
+     - **1.42x**
 
 Pure-Python wheels are always available for PyPy and platforms without
 prebuilt binaries.
@@ -296,103 +296,103 @@ pure-Python wheel.
      - p95
    * - CPython 3.10
      - mypyc
-     - 4,336ms
-     - 579
-     - 1.73ms
-     - 0.54ms
-     - 4.15ms
+     - 4,057ms
+     - 621
+     - 1.61ms
+     - 0.53ms
+     - 4.02ms
      - 5.16ms
    * - CPython 3.10
      - pure
-     - 7,987ms
-     - 314
-     - 3.18ms
-     - 1.16ms
-     - 7.03ms
-     - 9.02ms
+     - 7,662ms
+     - 329
+     - 3.04ms
+     - 1.17ms
+     - 7.07ms
+     - 8.94ms
    * - **CPython 3.11**
      - **mypyc**
-     - **3,746ms**
-     - **670**
-     - **1.49ms**
-     - **0.46ms**
-     - **3.56ms**
-     - **4.51ms**
+     - **3,454ms**
+     - **730**
+     - **1.37ms**
+     - **0.45ms**
+     - **3.37ms**
+     - **4.30ms**
    * - CPython 3.11
      - pure
-     - 6,490ms
-     - 387
-     - 2.59ms
-     - 0.94ms
-     - 5.73ms
-     - 7.44ms
+     - 5,821ms
+     - 433
+     - 2.31ms
+     - 0.88ms
+     - 5.41ms
+     - 7.04ms
    * - CPython 3.12
      - mypyc
-     - 4,320ms
-     - 581
-     - 1.72ms
-     - 0.54ms
-     - 4.02ms
-     - 5.16ms
+     - 3,994ms
+     - 631
+     - 1.58ms
+     - 0.53ms
+     - 3.95ms
+     - 5.07ms
    * - CPython 3.12
      - pure
-     - 6,433ms
-     - 390
-     - 2.56ms
-     - 0.95ms
-     - 5.55ms
+     - 6,017ms
+     - 419
+     - 2.39ms
+     - 0.93ms
+     - 5.53ms
      - 7.20ms
    * - CPython 3.13
      - mypyc
-     - 4,703ms
-     - 534
-     - 1.87ms
-     - 0.58ms
-     - 4.37ms
-     - 5.67ms
+     - 4,260ms
+     - 592
+     - 1.69ms
+     - 0.56ms
+     - 4.24ms
+     - 5.24ms
    * - CPython 3.13
      - pure
-     - 8,560ms
-     - 293
-     - 3.41ms
-     - 1.28ms
-     - 7.44ms
-     - 9.44ms
+     - 7,984ms
+     - 316
+     - 3.17ms
+     - 1.24ms
+     - 7.26ms
+     - 9.55ms
    * - CPython 3.14
      - mypyc
-     - 4,616ms
-     - 544
-     - 1.84ms
-     - 0.58ms
-     - 4.36ms
-     - 5.61ms
+     - 4,283ms
+     - 588
+     - 1.70ms
+     - 0.57ms
+     - 4.26ms
+     - 5.39ms
    * - CPython 3.14
      - pure
-     - 6,514ms
-     - 385
-     - 2.60ms
-     - 0.97ms
-     - 5.67ms
-     - 7.43ms
+     - 6,080ms
+     - 415
+     - 2.41ms
+     - 0.93ms
+     - 5.58ms
+     - 7.38ms
    * - PyPy 3.10
      - pure
-     - 6,194ms
-     - 405
-     - 2.47ms
+     - 6,106ms
+     - 413
+     - 2.42ms
      - 0.26ms
-     - 5.15ms
-     - 7.37ms
+     - 5.03ms
+     - 7.23ms
    * - PyPy 3.11
      - pure
-     - 6,128ms
-     - 410
-     - 2.44ms
-     - 0.26ms
-     - 5.08ms
-     - 7.83ms
+     - 6,047ms
+     - 417
+     - 2.40ms
+     - 0.27ms
+     - 5.03ms
+     - 7.38ms
 
-**CPython 3.11 + mypyc is the fastest combination** at 670 files/s.
-mypyc provides a 1.4--1.8x speedup across CPython versions. PyPy's JIT
-is competitive with mypyc: pure Python on PyPy (410 files/s) beats every
-pure CPython version and reaches 61--100% of mypyc-compiled CPython
+**CPython 3.11 + mypyc is the fastest combination** at 730 files/s.
+mypyc provides a 1.4--1.9x speedup across CPython versions. PyPy's JIT
+is competitive with mypyc: pure Python on PyPy (417 files/s) beats every
+pure CPython version and reaches 57--71% of mypyc-compiled CPython
 throughput.
