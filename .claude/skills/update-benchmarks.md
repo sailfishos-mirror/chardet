@@ -17,7 +17,7 @@ Regenerate all benchmark data and update `docs/performance.rst`.
 6. **Optional mypyc Compilation table** (pure vs mypyc on current CPython)
 7. **Performance Across Python Versions table** (CPython 3.10-3.14 mypyc + pure, PyPy 3.10-3.11 pure)
 
-Also update `docs/index.rst` and `docs/faq.rst` with derived numbers.
+Also update `docs/index.rst`, `docs/faq.rst`, and `README.md` with derived numbers.
 
 ## Step 1: Run Benchmarks
 
@@ -80,11 +80,17 @@ Update all tables and derived comparison text:
 - charset-normalizer comparison numbers (accuracy, speed, memory, language)
 - cchardet comparison numbers
 
+### README.md
+- "Why chardet 7.0?" section: accuracy, speed multipliers, file count
+- Comparison table: accuracy, speed (files/s), language accuracy, peak memory for chardet (mypyc + pure), chardet 6.0.0, charset-normalizer
+- Example output dicts (add `mime_type` key if missing)
+- "What's New in 7.0" section: speed/accuracy claims
+
 ## Step 4: Verify and Commit
 
 ```bash
 uv run sphinx-build -W docs docs/_build
-git add docs/performance.rst docs/index.rst docs/faq.rst
+git add docs/performance.rst docs/index.rst docs/faq.rst README.md
 git commit -m "docs: update benchmark numbers for 7.X.0"
 git push
 ```

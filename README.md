@@ -12,21 +12,22 @@ Python 3.10+, zero runtime dependencies, works on PyPy.
 
 ## Why chardet 7.0?
 
-**98.2% accuracy** on 2,510 test files. **44x faster** than chardet 6.0.0
-and **4.1x faster** than
-charset-normalizer. **Language
-detection** for every result. **0BSD licensed.**
+**98.1% accuracy** on 2,521 test files. **50x faster** than chardet 6.0.0
+and **1.6x faster** than charset-normalizer. **Language detection** for
+every result. **MIME type detection** for binary files. **0BSD licensed.**
 
-|                        | chardet 7.1.0 (mypyc) | chardet 7.1.0 (pure) | chardet 6.0.0 | [charset-normalizer] |
-| ---------------------- | :--------------------: | :------------------: | :-----------: | :------------------: |
-| Accuracy (2,510 files) |       **98.2%**        |      **98.2%**       |     88.3%     |        84.2%         |
-| Speed                  |    **533 files/s**     |   **372 files/s**    |  12 files/s   |     129 files/s      |
-| Language detection     |       **95.2%**        |      **95.2%**       |     40.0%     |        59.0%         |
-| Peak memory            |     **25.9 MiB**       |    **25.9 MiB**      |   29.5 MiB    |      101.3 MiB       |
-| Streaming detection    |        **yes**         |       **yes**        |      yes      |          no          |
-| Encoding era filtering |        **yes**         |       **yes**        |      no       |          no          |
-| Supported encodings    |          99            |         99           |      84       |          99          |
-| License                |          0BSD          |         0BSD         |     LGPL      |         MIT          |
+|                        | chardet 7.3.0 (mypyc) | chardet 6.0.0 | [charset-normalizer] 3.4.6 |
+| ---------------------- | :--------------------: | :-----------: | :-------------------------: |
+| Accuracy (2,521 files) |       **98.1%**        |     88.2%     |            85.4%            |
+| Speed                  |    **582 files/s**     |  12 files/s   |         373 files/s         |
+| Language detection     |       **95.2%**        |     40.0%     |            59.3%            |
+| Peak memory            |     **25.9 MiB**       |   29.5 MiB    |          101.3 MiB          |
+| Streaming detection    |        **yes**         |      yes      |             no              |
+| Encoding era filtering |        **yes**         |      no       |             no              |
+| Encoding filters       |        **yes**         |      no       |             no              |
+| MIME type detection    |        **yes**         |      no       |             no              |
+| Supported encodings    |          99            |      84       |             99              |
+| License                |          0BSD          |     LGPL      |            MIT              |
 
 [charset-normalizer]: https://github.com/jawah/charset_normalizer
 
@@ -42,15 +43,15 @@ pip install chardet
 import chardet
 
 chardet.detect(b"Hello, world!")
-# {'encoding': 'ascii', 'confidence': 1.0, 'language': 'en'}
+# {'encoding': 'ascii', 'confidence': 1.0, 'language': 'en', 'mime_type': 'text/plain'}
 
 # UTF-8 with typographic punctuation
 chardet.detect("It\u2019s a lovely day \u2014 let\u2019s grab coffee.".encode("utf-8"))
-# {'encoding': 'utf-8', 'confidence': 0.99, 'language': 'es'}
+# {'encoding': 'utf-8', 'confidence': 0.99, 'language': 'es', 'mime_type': 'text/plain'}
 
 # Japanese EUC-JP
 chardet.detect("これは日本語のテストです。文字コードの検出を行います。".encode("euc-jp"))
-# {'encoding': 'EUC-JP', 'confidence': 1.0, 'language': 'ja'}
+# {'encoding': 'EUC-JP', 'confidence': 1.0, 'language': 'ja', 'mime_type': 'text/plain'}
 
 # Get all candidate encodings ranked by confidence
 text = "Le café est une boisson très populaire en France et dans le monde entier."
@@ -141,9 +142,9 @@ cat somefile.txt | chardetect
 ## What's New in 7.0
 
 - **0BSD license** (previous versions were LGPL)
-- **Ground-up rewrite** — 12-stage detection pipeline using BOM detection, structural probing, byte validity filtering, and bigram statistical models
-- **42x faster** than chardet 6.0.0 with mypyc (**34x** pure Python), **4.2x faster** than charset-normalizer
-- **98.2% accuracy** — +10.0pp vs chardet 6.0.0, +14.0pp vs charset-normalizer
+- **Ground-up rewrite** — 13-stage detection pipeline using BOM detection, magic number identification, structural probing, byte validity filtering, and bigram statistical models
+- **50x faster** than chardet 6.0.0 with mypyc, **1.6x faster** than charset-normalizer
+- **98.1% accuracy** — +9.9pp vs chardet 6.0.0, +12.7pp vs charset-normalizer
 - **Language detection** — 95.2% accuracy across 49 languages, returned with every result
 - **99 encodings** — full coverage including EBCDIC, Mac, DOS, and Baltic/Central European families
 - **`EncodingEra` filtering** — scope detection to modern web encodings, legacy ISO/Mac/DOS, mainframe, or all
