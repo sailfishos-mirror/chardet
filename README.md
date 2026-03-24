@@ -139,13 +139,15 @@ cat somefile.txt | chardetect
 # stdin: utf-8 with confidence 0.99
 ```
 
-## What's New in 7
+## What's New in chardet 7?
 
 - **0BSD license** (previous versions were LGPL)
 - **Ground-up rewrite** — 13-stage detection pipeline using BOM detection, magic number identification, structural probing, byte validity filtering, and bigram statistical models
 - **50x faster** than chardet 6.0.0 with mypyc, **1.6x faster** than charset-normalizer
 - **98.1% accuracy** — +9.9pp vs chardet 6.0.0, +12.7pp vs charset-normalizer
 - **Language detection** — 95.2% accuracy across 49 languages, returned with every result
+- **MIME type detection** — identifies 40+ binary file formats (images, audio/video, archives, documents, executables, fonts) via magic number signatures, plus `text/html`, `text/xml`, and `text/x-python` for markup
+- **Encoding filters** — `include_encodings` and `exclude_encodings` parameters to restrict or exclude specific encodings from the candidate set
 - **99 encodings** — full coverage including EBCDIC, Mac, DOS, and Baltic/Central European families
 - **`EncodingEra` filtering** — scope detection to modern web encodings, legacy ISO/Mac/DOS, mainframe, or all
 - **Optional mypyc compilation** — 1.42x additional speedup on CPython
