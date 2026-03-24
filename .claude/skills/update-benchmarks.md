@@ -47,7 +47,7 @@ for py in 3.13 3.14 3.13t 3.14t; do
 done
 ```
 
-For older chardet versions (6.0.0), charset-normalizer, and cchardet, pass `--no-memory` if memory numbers haven't changed.
+Steps 1c-1e use `--no-memory` because memory usage doesn't vary across Python versions or thread counts. Step 1a includes memory since it compares across detectors. If memory numbers haven't changed since the last release, add `--no-memory` to 1a too.
 
 ## Step 2: Extract Key Numbers
 
@@ -91,7 +91,7 @@ git push
 
 ## Notes
 
-- `compare_detectors.py` caches results per version+python+build. Use `--no-cache` to force re-run.
+- `compare_detectors.py` caches results per version+python+build. Cache keys include the chardet version and a content hash, so results auto-invalidate when code changes. Only use `--no-cache` if you suspect stale results.
 - PyPy can't use `--mypyc` (mypyc is CPython-only). Always use `--pure` for PyPy.
 - `--python` is repeatable: `--python 3.12 --python 3.13` runs both sequentially.
 - The test file count (currently 2,521) may change when test-data is updated.
