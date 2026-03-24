@@ -41,8 +41,64 @@ from chardet.equivalences import (
     is_equivalent_detection,
 )
 
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_CHAR_DATASET_URL = "https://github.com/Ousret/char-dataset.git"
+_CHAR_DATASET_DIR = _PROJECT_ROOT / ".char-dataset"
+
 # Per-file detection result: (expected_enc, expected_lang, path, detected_enc, detected_lang)
 _DetectionRow = tuple[str, str, str, str | None, str | None]
+
+
+def _norm_hash(data: bytes) -> str:
+    """SHA-256 hash after normalizing line endings to LF."""
+    return hashlib.sha256(
+        data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    ).hexdigest()
+
+
+def _ensure_char_dataset() -> Path:
+    """Clone or update charset-normalizer's char-dataset."""
+    if _CHAR_DATASET_DIR.is_dir():
+        subprocess.run(
+            ["git", "-C", str(_CHAR_DATASET_DIR), "pull", "--ff-only"],
+            check=True,
+            capture_output=True,
+        )
+    else:
+        print(f"Cloning char-dataset to {_CHAR_DATASET_DIR} ...")
+        subprocess.run(
+            ["git", "clone", "--depth=1", _CHAR_DATASET_URL, str(_CHAR_DATASET_DIR)],
+            check=True,
+            capture_output=True,
+        )
+    return _CHAR_DATASET_DIR
+
+
+def _compute_cn_dataset_overlap(
+    test_files: list[tuple[str | None, str | None, Path]],
+) -> list[tuple[str | None, str | None, Path]]:
+    """Filter test_files to only those also present in char-dataset.
+
+    Matches by content hash after normalizing line endings (some files
+    differ only in CR/LF vs LF).
+    """
+    cn_dir = _ensure_char_dataset()
+
+    # Build set of normalized hashes from char-dataset
+    cn_hashes: set[str] = set()
+    for subdir in cn_dir.iterdir():
+        if not subdir.is_dir() or subdir.name.startswith("."):
+            continue
+        for f in subdir.iterdir():
+            if f.is_file() and f.name != "README.md":
+                cn_hashes.add(_norm_hash(f.read_bytes()))
+
+    # Filter test_files to those whose content matches
+    return [
+        (enc, lang, fp)
+        for enc, lang, fp in test_files
+        if _norm_hash(fp.read_bytes()) in cn_hashes
+    ]
 
 
 @dataclass(slots=True)
@@ -680,6 +736,7 @@ def run_comparison(  # noqa: PLR0913
     benchmark_hash: str = "",
     no_memory: bool = False,
     threads: int = 1,
+    cn_dataset: bool = False,
 ) -> None:
     """Run accuracy and performance comparison across detectors.
 
@@ -718,6 +775,13 @@ def run_comparison(  # noqa: PLR0913
     if not test_files:
         print("ERROR: No test files found!")
         sys.exit(1)
+
+    if cn_dataset:
+        full_count = len(test_files)
+        test_files = _compute_cn_dataset_overlap(test_files)
+        print(
+            f"Filtered to {len(test_files)}/{full_count} files overlapping with char-dataset"
+        )
 
     detector_labels = [label for label, *_ in detectors]
 
@@ -761,6 +825,15 @@ def run_comparison(  # noqa: PLR0913
 
     data_dir_str = str(data_dir)
     cache_dir = _get_cache_dir() if use_cache else None
+
+    # Build a set of allowed file suffixes for filtering (used with --cn-dataset).
+    # Uses "encoding-dir/filename" rather than full paths because cached results
+    # may use a different base path (symlink vs resolved).
+    allowed_suffixes: frozenset[str] | None = None
+    if cn_dataset:
+        allowed_suffixes = frozenset(
+            f"{fp.parent.name}/{fp.name}" for _, _, fp in test_files
+        )
 
     # --- Parallel timing benchmarks ---
     import_times: dict[str, float] = {}
@@ -852,10 +925,19 @@ def run_comparison(  # noqa: PLR0913
         for future in concurrent.futures.as_completed(futures):
             label, timing = future.result()
             stats[label]["time"] = timing.elapsed
-            stats[label]["file_times"] = timing.file_times
             import_times[label] = timing.import_time
             first_detect_times[label] = timing.first_detect_time
-            for expected, exp_lang, path_str, detected, det_lang in timing.results:
+            filtered_file_times: list[float] = []
+            for i, (expected, exp_lang, path_str, detected, det_lang) in enumerate(
+                timing.results
+            ):
+                if allowed_suffixes is not None:
+                    p = Path(path_str)
+                    suffix = f"{p.parent.name}/{p.name}"
+                    if suffix not in allowed_suffixes:
+                        continue
+                if i < len(timing.file_times):
+                    filtered_file_times.append(timing.file_times[i])
                 _record_result(
                     stats[label],
                     expected,
@@ -864,6 +946,7 @@ def run_comparison(  # noqa: PLR0913
                     detected,
                     det_lang,
                 )
+            stats[label]["file_times"] = filtered_file_times
 
     total = stats[detectors[0][0]]["total"]
 
@@ -1253,6 +1336,15 @@ if __name__ == "__main__":
         metavar="N",
         help="Number of detection threads for benchmark_time.py (default: 1)",
     )
+    parser.add_argument(
+        "--cn-dataset",
+        action="store_true",
+        default=False,
+        help=(
+            "Restrict to the ~472 files that overlap with charset-normalizer's "
+            "char-dataset (github.com/Ousret/char-dataset)"
+        ),
+    )
     args = parser.parse_args()
 
     if args.pure and args.mypyc:
@@ -1491,6 +1583,7 @@ if __name__ == "__main__":
             benchmark_hash=benchmark_hash,
             no_memory=args.no_memory,
             threads=args.threads,
+            cn_dataset=args.cn_dataset,
         )
     finally:
         for label, (venv_dir, _) in venvs.items():
