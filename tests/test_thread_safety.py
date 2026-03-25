@@ -10,11 +10,13 @@ from chardet import detect
 from chardet.enums import EncodingEra
 
 # Acceptable encoding sets for each test sample.
-_JAPANESE_ENCODINGS = frozenset({"shift_jis", "cp932"})
+# Names use canonical codec names (codecs.lookup(name).name) since the
+# worker calls detect() with compat_names=False.
+_JAPANESE_ENCODINGS = frozenset({"shift_jis_2004", "cp932"})
 _GERMAN_ENCODINGS = frozenset(
-    {"windows-1252", "iso-8859-1", "iso-8859-15", "iso-8859-9", "windows-1254"}
+    {"cp1252", "iso8859-1", "iso8859-15", "iso8859-9", "cp1254"}
 )
-_CHINESE_ENCODINGS = frozenset({"gb18030", "gb2312"})
+_CHINESE_ENCODINGS = frozenset({"gb18030"})
 
 # Test data shared across tests.
 _JAPANESE = "これはテストです。日本語のテキスト。".encode("shift_jis")
@@ -44,10 +46,8 @@ def _run_concurrent_detect(
     def worker(data: bytes, expected: frozenset[str]) -> None:
         barrier.wait()
         for _ in range(iterations):
-            result = detect(data, encoding_era=EncodingEra.ALL)
+            result = detect(data, encoding_era=EncodingEra.ALL, compat_names=False)
             enc = result["encoding"]
-            if enc is not None:
-                enc = enc.lower()
             if enc not in expected:
                 errors.append(f"Expected one of {expected}, got {enc!r}")
 
