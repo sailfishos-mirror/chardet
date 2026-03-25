@@ -6,6 +6,7 @@ enabling training on modern text for historical code pages.
 
 from __future__ import annotations
 
+import codecs
 import re
 import unicodedata
 
@@ -353,7 +354,12 @@ _VIETNAMESE_DECOMPOSITION: dict[str, str] = {
 
 
 def get_substitutions(charset_name: str, langs: list[str]) -> dict[str, str]:
-    """Build the character substitution table for a given encoding."""
+    """Build the character substitution table for a given encoding.
+
+    Only includes substitutions for characters the encoding cannot represent.
+    Characters the encoding supports natively are left intact so training
+    data preserves their actual byte patterns.
+    """
     subs = dict(_UNIVERSAL_SUBSTITUTIONS)
 
     upper = charset_name.upper()
@@ -375,7 +381,20 @@ def get_substitutions(charset_name: str, langs: list[str]) -> dict[str, str]:
     if "ro" in langs and upper != "ISO-8859-16":
         subs.update(_ROMANIAN_CEDILLA_SUBSTITUTIONS)
 
-    return subs
+    # Validate codec upfront — a bad charset_name is a caller bug
+    codecs.lookup(charset_name)
+
+    # Filter: only keep substitutions for unencodable characters.
+    # Applies uniformly to all tables — if the encoding can represent a
+    # character natively, its actual byte pattern is informative signal.
+    filtered = {}
+    for char, replacement in subs.items():
+        try:
+            char.encode(charset_name, errors="strict")
+        except UnicodeEncodeError:
+            filtered[char] = replacement
+
+    return filtered
 
 
 def normalize_text(text: str, charset_name: str) -> str:
