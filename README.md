@@ -24,7 +24,7 @@ every result. **MIME type detection** for binary files. **0BSD licensed.**
 | Peak memory            |     **25.9 MiB**       |   29.5 MiB    |          101.3 MiB          |
 | Streaming detection    |        **yes**         |      yes      |             no              |
 | Encoding era filtering |        **yes**         |      no       |             no              |
-| Encoding filters       |        **yes**         |      no       |             no              |
+| Encoding filters       |        **yes**         |      no       |             yes             |
 | MIME type detection    |        **yes**         |      no       |             no              |
 | Supported encodings    |          99            |      84       |             99              |
 | License                |          0BSD          |     LGPL      |            MIT              |
