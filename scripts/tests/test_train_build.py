@@ -18,7 +18,6 @@ def test_build_one_model_returns_tuple(tmp_path: Path) -> None:
         codec="utf-8",
         cache_dir=tmp_path / "nonexistent_cache",
         max_samples=10,
-        min_weight=1,
     )
     assert isinstance(result, tuple)
     assert len(result) == 4
@@ -48,7 +47,6 @@ def test_build_one_model_with_real_texts(tmp_path: Path) -> None:
         codec="iso-8859-1",
         cache_dir=tmp_path,
         max_samples=100,
-        min_weight=1,
     )
     key, bigrams, samples, total_bytes = result
     assert key == "fr/iso-8859-1"

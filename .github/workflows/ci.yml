@@ -39,7 +39,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync
-      - run: uv run pytest tests/ -q --tb=short --ignore=tests/test_accuracy.py --cov --cov-report=xml --cov-report=term-missing
+      - run: uv run pytest tests/ scripts/tests/ -q --tb=short --ignore=tests/test_accuracy.py --cov --cov-report=xml --cov-report=term-missing
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.14' && matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v5
@@ -47,6 +47,18 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: chardet/chardet
           fail_ci_if_error: false
+
+  accuracy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+      - run: uv sync
+      - run: uv run pytest tests/test_accuracy.py -n auto -q --tb=short
 
   free-threaded:
     runs-on: ${{ matrix.os }}
@@ -68,4 +80,4 @@ jobs:
       - name: Run thread-safety tests
         run: uv run pytest tests/test_thread_safety.py -v -s -W error::pytest.PytestUnhandledThreadExceptionWarning
       - name: Run full test suite
-        run: uv run pytest tests/ -q --tb=short --ignore=tests/test_accuracy.py --cov --cov-report=term-missing
+        run: uv run pytest tests/ scripts/tests/ -q --tb=short --ignore=tests/test_accuracy.py --cov --cov-report=term-missing
