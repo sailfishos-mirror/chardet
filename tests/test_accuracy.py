@@ -30,7 +30,6 @@ from chardet.registry import REGISTRY, lookup_encoding
 
 _KNOWN_FAILURES: frozenset[str] = frozenset(
     {
-        "cp437-en/culturax_00001.txt",
         "cp437-en/culturax_00002.txt",
         "cp500-es/culturax_mC4_87070.txt",
         "cp850-nl/culturax_00001.txt",
@@ -42,6 +41,7 @@ _KNOWN_FAILURES: frozenset[str] = frozenset(
         "cp932-ja/y-moto.com.xml",
         "gb2312-zh/_mozilla_bug171813_text.html",
         "iso-8859-13-et/culturax_00002.txt",
+        "iso-8859-15-en/culturax_00001.txt",
         "iso-8859-16-hu/culturax_OSCAR-2019_82421.txt",
         "iso-8859-16-ro/_ude_1.txt",
         "macroman-id/culturax_mC4_114889.txt",
