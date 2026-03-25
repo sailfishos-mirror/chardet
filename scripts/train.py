@@ -395,7 +395,7 @@ def main() -> None:
     parser.add_argument(
         "--max-samples",
         type=int,
-        default=15000,
+        default=25000,
         help="Maximum number of text samples per language",
     )
     parser.add_argument(
