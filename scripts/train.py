@@ -118,13 +118,130 @@ _UNIVERSAL_SUBSTITUTIONS: dict[str, str] = {
 _ARABIC_SUBSTITUTIONS: dict[str, str] = {
     "\u060c": ",",  # ARABIC COMMA
     "\u061b": ";",  # ARABIC SEMICOLON
+    "\u061f": "?",  # ARABIC QUESTION MARK (missing from CP720)
     "\u066a": "%",  # ARABIC PERCENT SIGN
+    # Standard Arabic-Indic digits → Western digits (missing from CP720/ISO-8859-6)
+    "\u0660": "0",
+    "\u0661": "1",
+    "\u0662": "2",
+    "\u0663": "3",
+    "\u0664": "4",
+    "\u0665": "5",
+    "\u0666": "6",
+    "\u0667": "7",
+    "\u0668": "8",
+    "\u0669": "9",
 }
 
-# CP866: Belarusian/Ukrainian workaround — historical substitution
+# CP866: Belarusian/Ukrainian/Serbian/Macedonian workaround.
+# CP866 is a Russian Cyrillic code page.  Other Cyrillic languages have
+# letters not in CP866 that were historically approximated with the
+# closest Russian letter (or Latin letter in the case of Serbian ј).
+# Note: Serbians primarily used CP855 (which has all Serbian letters
+# natively) rather than CP866.  These substitutions are plausible
+# approximations for the rare case of Serbian text on CP866 systems.
 _CP866_SUBSTITUTIONS: dict[str, str] = {
-    "\u0456": "\u0438",  # і → и (Ukrainian/Belarusian I → Russian I)
-    "\u0406": "\u0418",  # І → И (uppercase)
+    # Ukrainian/Belarusian
+    "\u0456": "\u0438",  # і → и
+    "\u0406": "\u0418",  # І → И
+    "\u0491": "\u0433",  # ґ → г (reintroduced 1990, missing from Soviet-era CP866)
+    "\u0490": "\u0413",  # Ґ → Г
+    # Serbian-specific Cyrillic → closest Russian/Latin equivalents
+    "\u0452": "\u0434",  # ђ (DJE) → д (DE) — visual base letter
+    "\u0402": "\u0414",  # Ђ → Д
+    "\u0458": "j",  # ј (JE) → Latin j (identical appearance)
+    "\u0408": "J",  # Ј → J
+    "\u0459": "\u043b",  # љ (LJE) → л (EL) — visual base letter
+    "\u0409": "\u041b",  # Љ → Л
+    "\u045a": "\u043d",  # њ (NJE) → н (EN) — visual base letter
+    "\u040a": "\u041d",  # Њ → Н
+    "\u045b": "\u0442",  # ћ (TSHE) → т (TE) — visual base letter
+    "\u040b": "\u0422",  # Ћ → Т
+    "\u045f": "\u0446",  # џ (DZHE) → ц (TSE) — visually more similar than д
+    "\u040f": "\u0426",  # Џ → Ц
+    # Macedonian-specific Cyrillic → closest Russian equivalents
+    "\u0453": "\u0433",  # ѓ (GJE) → г (GHE)
+    "\u0403": "\u0413",  # Ѓ → Г
+    "\u045c": "\u043a",  # ќ (KJE) → к (KA)
+    "\u040c": "\u041a",  # Ќ → К
+    "\u0455": "\u0437",  # ѕ (DZE) → з (ZE) — closest sound
+    "\u0405": "\u0417",  # Ѕ → З
+}
+
+# Farsi-specific letters → closest standard Arabic equivalents for
+# encodings that only support basic Arabic (CP720, ISO-8859-6, and
+# CP1256 for FARSI YEH only).
+# These substitutions mirror what Farsi writers historically used when
+# limited to Arabic-only code pages.
+_FARSI_SUBSTITUTIONS: dict[str, str] = {
+    "\u067e": "\u0628",  # پ (PEH) → ب (BEH) — same shape without dots
+    "\u0686": "\u062c",  # چ (TCHEH) → ج (JEEM) — same base shape
+    "\u0698": "\u0632",  # ژ (JEH) → ز (ZAIN) — same base shape
+    "\u06a9": "\u0643",  # ک (KEHEH) → ك (KAF) — standard Arabic KAF
+    "\u06af": "\u0643",  # گ (GAF) → ك (KAF) — closest available
+    "\u06cc": "\u064a",  # ی (FARSI YEH) → ي (YEH) — standard Arabic YEH
+    # Extended Arabic-Indic digits → Western digits
+    "\u06f0": "0",
+    "\u06f1": "1",
+    "\u06f2": "2",
+    "\u06f3": "3",
+    "\u06f4": "4",
+    "\u06f5": "5",
+    "\u06f6": "6",
+    "\u06f7": "7",
+    "\u06f8": "8",
+    "\u06f9": "9",
+}
+
+# CP1256 Farsi YEH substitution — CP1256 supports most Farsi letters
+# natively (PEH, TCHEH, JEH, KEHEH, GAF) but NOT Farsi YEH (U+06CC).
+_CP1256_FARSI_SUBSTITUTIONS: dict[str, str] = {
+    "\u06cc": "\u064a",  # ی (FARSI YEH) → ي (YEH) — standard Arabic YEH
+}
+
+# Arabic standard letters → isolated presentation forms for encodings
+# that use presentation forms (CP1006, CP864).  Modern Unicode uses
+# standard Arabic letters (U+0621-U+064A) but these legacy encodings
+# store the positional presentation forms (U+FE70-U+FEFF) instead.
+# Using the isolated form as a catch-all is historically accurate for
+# training data that contains standalone or mixed-context Arabic text.
+_ARABIC_PRESENTATION_FORM_SUBSTITUTIONS: dict[str, str] = {
+    "\u0621": "\ufe80",  # HAMZA
+    "\u0622": "\ufe81",  # ALEF WITH MADDA ABOVE
+    "\u0623": "\ufe83",  # ALEF WITH HAMZA ABOVE
+    "\u0624": "\ufe85",  # WAW WITH HAMZA ABOVE
+    "\u0625": "\ufe87",  # ALEF WITH HAMZA BELOW
+    "\u0626": "\ufe89",  # YEH WITH HAMZA ABOVE
+    "\u0627": "\ufe8d",  # ALEF
+    "\u0628": "\ufe8f",  # BEH
+    "\u0629": "\ufe93",  # TEH MARBUTA
+    "\u062a": "\ufe95",  # TEH
+    "\u062b": "\ufe99",  # THEH
+    "\u062c": "\ufe9d",  # JEEM
+    "\u062d": "\ufea1",  # HAH
+    "\u062e": "\ufea5",  # KHAH
+    "\u062f": "\ufea9",  # DAL
+    "\u0630": "\ufeab",  # THAL
+    "\u0631": "\ufead",  # REH
+    "\u0632": "\ufeaf",  # ZAIN
+    "\u0633": "\ufeb1",  # SEEN
+    "\u0634": "\ufeb5",  # SHEEN
+    "\u0635": "\ufeb9",  # SAD
+    "\u0636": "\ufebd",  # DAD
+    "\u0637": "\ufec1",  # TAH
+    "\u0638": "\ufec5",  # ZAH
+    "\u0639": "\ufec9",  # AIN
+    "\u063a": "\ufecd",  # GHAIN
+    "\u0641": "\ufed1",  # FEH
+    "\u0642": "\ufed5",  # QAF
+    "\u0643": "\ufed9",  # KAF
+    "\u0644": "\ufedd",  # LAM
+    "\u0645": "\ufee1",  # MEEM
+    "\u0646": "\ufee5",  # NOON
+    "\u0647": "\ufee9",  # HEH
+    "\u0648": "\ufeed",  # WAW
+    "\u0649": "\ufeef",  # ALEF MAKSURA
+    "\u064a": "\ufef1",  # YEH
 }
 
 # Romanian: comma-below → cedilla for encodings without modern forms
@@ -276,6 +393,16 @@ def get_substitutions(charset_name: str, langs: list[str]) -> dict[str, str]:
     upper = charset_name.upper()
     if upper in ("CP720", "CP864", "ISO-8859-6"):
         subs.update(_ARABIC_SUBSTITUTIONS)
+    # Farsi-specific letters for encodings that only support basic Arabic
+    if "fa" in langs and upper in ("CP720", "ISO-8859-6"):
+        subs.update(_FARSI_SUBSTITUTIONS)
+    # CP1256 supports most Farsi letters but NOT Farsi YEH
+    if "fa" in langs and upper == "CP1256":
+        subs.update(_CP1256_FARSI_SUBSTITUTIONS)
+    # Arabic presentation forms for legacy encodings that store positional
+    # forms instead of standard Arabic letters
+    if upper in ("CP1006", "CP864"):
+        subs.update(_ARABIC_PRESENTATION_FORM_SUBSTITUTIONS)
     if upper == "CP866":
         subs.update(_CP866_SUBSTITUTIONS)
     # Romanian comma-below → cedilla for all encodings except ISO-8859-16
@@ -285,12 +412,40 @@ def get_substitutions(charset_name: str, langs: list[str]) -> dict[str, str]:
     return subs
 
 
+def _build_fancy_up_map(
+    subs: dict[str, str],
+    codec: str,
+) -> dict[str, str]:
+    """Build a single reverse substitution map: ASCII → fanciest encodable version.
+
+    For each fancy→ASCII mapping in *subs*, check if the fancy character is
+    encodable in *codec*.  If so, add the reverse mapping ``{ASCII: fancy}``.
+
+    When multiple fancy characters map to the same ASCII character (e.g.,
+    both ``\u201c`` and ``\u201d`` map to ``"``), the last encodable one wins.
+    This is acceptable for training — the goal is to create bigrams for at
+    least one fancy variant of each ASCII character.
+
+    Returns a single dict.  Only single-char replacements are reversible.
+    """
+    result: dict[str, str] = {}
+    for fancy_char, ascii_str in subs.items():
+        if len(ascii_str) != 1 or ascii_str == "":
+            continue
+        try:
+            fancy_char.encode(codec, errors="strict")
+        except (UnicodeEncodeError, LookupError):
+            continue
+        result[ascii_str] = fancy_char
+    return result
+
+
 def normalize_text(text: str, charset_name: str) -> str:
     """Clean and normalize text for encoding into a legacy charset."""
     # Collapse repeated whitespace
     text = re.sub(r"(\s)\1+", r"\1", text)
     # Vietnamese decomposition for Windows-1258
-    if charset_name.upper() == "WINDOWS-1258":
+    if charset_name.upper() in ("WINDOWS-1258", "CP1258"):
         nfc = unicodedata.normalize("NFC", text)
         text = "".join(_VIETNAMESE_DECOMPOSITION.get(c, c) for c in nfc)
     return text
@@ -304,12 +459,20 @@ def apply_substitutions(text: str, subs: dict[str, str]) -> str:
     return text
 
 
-def encode_text(text: str, codec_name: str) -> bytes | None:
-    """Encode text into the target encoding, skipping unencodable characters."""
+def encode_text(text: str, codec_name: str, *, strict: bool = False) -> bytes | None:
+    """Encode text into the target encoding.
+
+    When *strict* is False (the default), unencodable characters are silently
+    dropped.  This is appropriate for the ASCII-normalized form where
+    substitutions have already handled most characters.
+
+    When *strict* is True, any unencodable character causes the entire text
+    to be skipped (returns None).  This avoids phantom bigrams from gaps
+    where characters were silently dropped.
+    """
     try:
-        # Use 'ignore' for characters that still can't be encoded after
-        # substitution — these are genuinely outside the charset's repertoire
-        result = text.encode(codec_name, errors="ignore")
+        errors = "strict" if strict else "ignore"
+        result = text.encode(codec_name, errors=errors)
         return result if len(result) > 10 else None
     except (LookupError, UnicodeEncodeError, UnicodeDecodeError):
         return None
@@ -357,7 +520,15 @@ def normalize_and_prune(
     freqs: dict[tuple[int, int], int],
     min_weight: int,
 ) -> dict[tuple[int, int], int]:
-    """Normalize frequency counts to 0-255 and prune low weights."""
+    """Normalize frequency counts to 0-255 and prune low weights.
+
+    High-byte bigrams (at least one byte >= 0x80) with raw count >= 300 are
+    preserved at minimum weight 1 even when global normalization rounds them
+    to 0.  A count of 300 across ~15K training articles indicates a real
+    language pattern, not noise.  This recovers encoding-diagnostic signal
+    that global normalization crushes because ASCII bigrams dominate by
+    orders of magnitude.
+    """
     if not freqs:
         return {}
 
@@ -370,6 +541,8 @@ def normalize_and_prune(
         weight = int(round(count / max_count * 255))
         if weight >= min_weight:
             result[pair] = weight
+        elif (pair[0] >= 0x80 or pair[1] >= 0x80) and count >= 300:
+            result[pair] = 1
     return result
 
 
@@ -532,7 +705,7 @@ def _build_one_model(  # noqa: PLR0913
     codec: str,
     cache_dir: Path,
     max_samples: int,
-    min_weight: int,
+    min_weight: int,  # noqa: ARG001  # kept for call-site compat; normalization moved to main()
 ) -> tuple[str, dict[tuple[int, int], int] | None, int, int]:
     """Build a single bigram model in a (possibly forked) worker process.
 
@@ -578,15 +751,14 @@ def _build_one_model(  # noqa: PLR0913
     if not encoded:
         return (model_key, None, len(all_texts), 0)
 
-    # Compute bigram frequencies
+    # Compute raw bigram frequencies (normalization happens later in main)
     freqs = compute_bigram_frequencies(encoded)
-    bigrams = normalize_and_prune(freqs, min_weight)
 
-    if not bigrams:
+    if not freqs:
         return (model_key, None, len(encoded), sum(len(e) for e in encoded))
 
     total_bytes = sum(len(e) for e in encoded)
-    return (model_key, bigrams, len(encoded), total_bytes)
+    return (model_key, freqs, len(encoded), total_bytes)
 
 
 # ---------------------------------------------------------------------------
@@ -653,6 +825,13 @@ def main() -> None:
         action="store_true",
         default=False,
         help="Keep existing cache even if exclusion set has changed",
+    )
+    parser.add_argument(
+        "--from-raw-cache",
+        action="store_true",
+        default=False,
+        help="Skip download and model building; load raw bigram counts from "
+        "cache and re-run normalization and serialization only",
     )
     args = parser.parse_args()
     cache_dir = Path(args.cache_dir)
@@ -744,72 +923,98 @@ def main() -> None:
         pool.shutdown(wait=False, cancel_futures=True)
         print()
 
-    # Build models for each encoding
-    print(f"=== Building bigram models ({args.build_workers} workers) ===")
-    models: dict[str, dict[tuple[int, int], int]] = {}
-    skipped = []
+    # Build raw bigram frequency models (or load from cache)
+    import pickle  # noqa: PLC0415
 
-    # Pre-verify codecs and collect work items
-    work_items: list[tuple[str, str, str, Path, int, int]] = []
-    for enc_name, langs in sorted(encoding_map.items()):
-        codec = None
-        codec_candidates = [enc_name]
-        normalized = enc_name.replace("-", "").replace("_", "").lower()
-        codec_candidates.append(normalized)
+    raw_cache_path = cache_dir / "raw_bigram_counts.pkl"
 
-        for candidate in codec_candidates:
-            if verify_codec(candidate):
-                codec = candidate
-                break
+    # raw_models: model_key -> raw frequency dict (not yet normalized)
+    raw_models: dict[str, dict[tuple[int, int], int]] = {}
+    skipped: list[str] = []
 
-        if codec is None:
-            print(f"  SKIP {enc_name}: codec not found")
-            skipped.append(enc_name)
-            continue
-
-        work_items.extend(
-            (lang, enc_name, codec, cache_dir, args.max_samples, args.min_weight)
-            for lang in langs
-        )
-
-    if args.build_workers == 1:
-        # Sequential mode (useful for debugging)
-        for item in work_items:
-            key, bigrams, samples, total_bytes = _build_one_model(*item)
-            if bigrams:
-                models[key] = bigrams
-                print(
-                    f"  {key}: {len(bigrams)} bigrams from "
-                    f"{samples} samples ({total_bytes:,} bytes)"
-                )
-            else:
-                print(f"  SKIP {key}: no usable bigrams")
+    if args.from_raw_cache and raw_cache_path.is_file():
+        print("=== Loading raw bigram counts from cache ===")
+        with raw_cache_path.open("rb") as f:
+            raw_models = pickle.load(f)  # noqa: S301
+        print(f"  Loaded {len(raw_models)} raw models from {raw_cache_path}")
+        print()
     else:
-        # Parallel mode
-        with concurrent.futures.ProcessPoolExecutor(
-            max_workers=args.build_workers,
-        ) as pool:
-            futures = {
-                pool.submit(_build_one_model, *item): item[1]  # enc_name for error msg
-                for item in work_items
-            }
-            for future in concurrent.futures.as_completed(futures):
-                try:
-                    key, bigrams, samples, total_bytes = future.result()
-                except Exception as exc:
-                    enc = futures[future]
-                    print(f"  ERROR {enc}: {exc}")
-                    continue
-                if bigrams:
-                    models[key] = bigrams
+        print(f"=== Building bigram models ({args.build_workers} workers) ===")
+
+        # Pre-verify codecs and collect work items
+        work_items: list[tuple[str, str, str, Path, int, int]] = []
+        for enc_name, langs in sorted(encoding_map.items()):
+            codec = None
+            codec_candidates = [enc_name]
+            normalized = enc_name.replace("-", "").replace("_", "").lower()
+            codec_candidates.append(normalized)
+
+            for candidate in codec_candidates:
+                if verify_codec(candidate):
+                    codec = candidate
+                    break
+
+            if codec is None:
+                print(f"  SKIP {enc_name}: codec not found")
+                skipped.append(enc_name)
+                continue
+
+            work_items.extend(
+                (lang, enc_name, codec, cache_dir, args.max_samples, args.min_weight)
+                for lang in langs
+            )
+
+        if args.build_workers == 1:
+            # Sequential mode (useful for debugging)
+            for item in work_items:
+                key, freqs, samples, total_bytes = _build_one_model(*item)
+                if freqs:
+                    raw_models[key] = freqs
                     print(
-                        f"  {key}: {len(bigrams)} bigrams from "
+                        f"  {key}: {len(freqs)} raw bigrams from "
                         f"{samples} samples ({total_bytes:,} bytes)"
                     )
                 else:
                     print(f"  SKIP {key}: no usable bigrams")
+        else:
+            # Parallel mode
+            with concurrent.futures.ProcessPoolExecutor(
+                max_workers=args.build_workers,
+            ) as pool:
+                futures = {
+                    pool.submit(_build_one_model, *item): item[1] for item in work_items
+                }
+                for future in concurrent.futures.as_completed(futures):
+                    try:
+                        key, freqs, samples, total_bytes = future.result()
+                    except Exception as exc:
+                        enc = futures[future]
+                        print(f"  ERROR {enc}: {exc}")
+                        continue
+                    if freqs:
+                        raw_models[key] = freqs
+                        print(
+                            f"  {key}: {len(freqs)} raw bigrams from "
+                            f"{samples} samples ({total_bytes:,} bytes)"
+                        )
+                    else:
+                        print(f"  SKIP {key}: no usable bigrams")
 
-    print()
+        # Cache raw counts for future --from-raw-cache runs
+        print(f"\n  Caching raw bigram counts to {raw_cache_path}")
+        with raw_cache_path.open("wb") as f:
+            pickle.dump(raw_models, f, protocol=pickle.HIGHEST_PROTOCOL)
+        print(f"  Cached {len(raw_models)} raw models")
+        print()
+
+    # Normalize and prune raw counts into final models
+    print("=== Normalizing and pruning ===")
+    models: dict[str, dict[tuple[int, int], int]] = {}
+    for key, freqs in sorted(raw_models.items()):
+        bigrams = normalize_and_prune(freqs, args.min_weight)
+        if bigrams:
+            models[key] = bigrams
+    print(f"  {len(models)} models after normalization")
 
     # Merge with existing models when retraining a subset
     if args.encodings:
