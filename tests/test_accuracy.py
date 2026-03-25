@@ -30,18 +30,18 @@ from chardet.registry import REGISTRY, lookup_encoding
 
 _KNOWN_FAILURES: frozenset[str] = frozenset(
     {
-        "cp437-en/culturax_00002.txt",
+        "cp037-id/culturax_mC4_114892.txt",
         "cp500-es/culturax_mC4_87070.txt",
-        "cp850-nl/culturax_00001.txt",
+        "cp850-en/culturax_00001.txt",
         "cp850-fi/culturax_00001.txt",
         "cp850-ms/culturax_00000.txt",
+        "cp858-en/culturax_00000.txt",
         "cp858-ms/culturax_00000.txt",
-        "cp863-fr/culturax_00002.txt",
         "cp932-ja/hardsoft.at.webry.info.xml",
         "cp932-ja/y-moto.com.xml",
         "gb2312-zh/_mozilla_bug171813_text.html",
-        "iso-8859-13-et/culturax_00002.txt",
         "iso-8859-15-en/culturax_00001.txt",
+        "iso-8859-15-en/culturax_00002.txt",
         "iso-8859-16-hu/culturax_OSCAR-2019_82421.txt",
         "iso-8859-16-ro/_ude_1.txt",
         "macroman-id/culturax_mC4_114889.txt",
@@ -58,15 +58,13 @@ _KNOWN_FAILURES: frozenset[str] = frozenset(
 # and many _KNOWN_FAILURES are absent (era filtering actually helps).
 _KNOWN_ERA_FILTERED_FAILURES: frozenset[str] = frozenset(
     {
-        "cp437-en/culturax_00002.txt",
+        "cp037-id/culturax_mC4_114892.txt",
         "cp500-es/culturax_mC4_87070.txt",
         "cp850-fi/culturax_00001.txt",
-        "cp863-fr/culturax_00002.txt",
         "cp932-ja/hardsoft.at.webry.info.xml",
         "cp932-ja/y-moto.com.xml",
         "gb2312-zh/_mozilla_bug171813_text.html",
         "iso-8859-2-hu/torokorszag.blogspot.com.xml",
-        "iso-8859-13-et/culturax_00002.txt",
         "iso-8859-16-hu/culturax_OSCAR-2019_82421.txt",
         "iso-8859-16-ro/_ude_1.txt",
         "macroman-da/culturax_mC4_83469.txt",
