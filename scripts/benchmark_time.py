@@ -54,14 +54,35 @@ def main() -> None:
             return r["encoding"], r["language"]
 
     elif args.detector == "chardet":
+        # Old chardet (< 6.0) — no encoding_era support.
+        # Try should_rename_legacy (5.x+), fall back to plain detect (3.x/4.x).
         t0 = time.perf_counter()
         import chardet  # noqa: PLC0415
 
         import_time = time.perf_counter() - t0
 
+        import inspect  # noqa: PLC0415
+
+        _has_rename = (
+            "should_rename_legacy" in inspect.signature(chardet.detect).parameters
+        )
+
         def detect(data: bytes) -> tuple[str | None, str | None]:
-            r = chardet.detect(data, should_rename_legacy=True)
-            return r["encoding"], r["language"]
+            if _has_rename:
+                r = chardet.detect(data, should_rename_legacy=True)
+            else:
+                r = chardet.detect(data)
+            return r["encoding"], r.get("language")
+
+    elif args.detector == "charade":
+        t0 = time.perf_counter()
+        import charade  # noqa: PLC0415
+
+        import_time = time.perf_counter() - t0
+
+        def detect(data: bytes) -> tuple[str | None, str | None]:
+            r = charade.detect(data)
+            return r["encoding"], r.get("language")
 
     elif args.detector == "cchardet":
         t0 = time.perf_counter()

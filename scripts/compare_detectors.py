@@ -214,6 +214,7 @@ def _get_detector_version(python_executable: str, detector_type: str) -> str:
         "chardet": "chardet",
         "charset-normalizer": "charset_normalizer",
         "cchardet": "cchardet",
+        "charade": "charade",
     }[detector_type]
     script = f"import {module}; print({module}.__version__)"
     fd, tmp_path = tempfile.mkstemp(suffix=".py")
@@ -266,6 +267,7 @@ def _get_build_tag(python_executable: str, detector_type: str) -> str:
         "chardet": "chardet",
         "charset-normalizer": "charset_normalizer",
         "cchardet": "cchardet",
+        "charade": "charade",
     }[detector_type]
     # Look for .so/.pyd files under the package directory
     script = (
@@ -332,6 +334,7 @@ def _resolve_version_without_venv(
         "charset-normalizer": "charset-normalizer",
         "cchardet": "faust-cchardet",
         "chardet": "chardet",
+        "charade": "charade",
     }.get(detector_type, detector_type)
     try:
         result = subprocess.run(
@@ -366,6 +369,8 @@ def _predict_build_tag(
       -> ``"mypyc"``, ``"pure"`` on PyPy.
     """
     if pure:
+        return "pure"
+    if detector_type == "charade":
         return "pure"
     if mypyc:
         return "mypyc"
@@ -520,7 +525,7 @@ def _run_timing_subprocess(  # noqa: PLR0913
     data_dir : str
         Path to the test data directory.
     detector_type : str
-        One of ``"chardet"``, ``"charset-normalizer"``, or ``"cchardet"``.
+        One of ``"chardet"``, ``"charset-normalizer"``, ``"cchardet"``, or ``"charade"``.
     encoding_era : str
         For ``"chardet"`` only -- ``"all"``, ``"modern_web"``, or ``"none"``.
     pure : bool
@@ -1368,6 +1373,11 @@ def _run_for_python_version(  # noqa: PLR0913
             )
         )
 
+    venv_specs.extend(
+        (f"charade {version}", [f"charade=={version}"], None, "charade", python_version)
+        for version in args.charade
+    )
+
     if args.cchardet:
         venv_specs.append(
             ("cchardet", ["faust-cchardet"], None, "cchardet", python_version)
@@ -1551,6 +1561,13 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="Include cchardet (faust-cchardet) in the comparison",
+    )
+    parser.add_argument(
+        "--charade",
+        action="append",
+        default=[],
+        metavar="VERSION",
+        help="Charade version to include (repeatable, e.g. --charade 1.0.3)",
     )
     parser.add_argument(
         "--cn",

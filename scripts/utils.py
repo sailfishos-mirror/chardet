@@ -214,7 +214,7 @@ def build_benchmark_parser(description: str) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
         "--detector",
-        choices=["chardet", "charset-normalizer", "cchardet"],
+        choices=["chardet", "charset-normalizer", "cchardet", "charade"],
         default="chardet",
         help="Detector library to benchmark (default: chardet)",
     )
