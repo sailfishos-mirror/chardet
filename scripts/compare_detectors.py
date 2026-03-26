@@ -1507,7 +1507,26 @@ def _run_for_python_version(  # noqa: PLR0913
             old_label = spec[0]
             det_type = spec[3]
             label = label_remap.get(old_label, old_label)
-            # Cached detectors get dummy exe; run_comparison loads from cache
+            # Cached detectors get dummy exe; run_comparison loads from cache.
+            # Skip detectors whose venv failed to create and have no cache.
+            if label not in venvs:
+                cache_dir = _get_cache_dir() if use_cache else None
+                if cache_dir is None:
+                    print(f"  Skipping {label} (no venv and no cache)")
+                    continue
+                # Check if there's a cached result we can use
+                version = detector_versions.get(label, "unknown")
+                fname = _cache_filename(
+                    det_type,
+                    version,
+                    benchmark_hash,
+                    pre_python_tag,
+                    _predict_build_tag(det_type, pure=args.pure, mypyc=args.mypyc),
+                    "time",
+                )
+                if not _load_cached(cache_dir, fname):
+                    print(f"  Skipping {label} (no venv and no cache)")
+                    continue
             python_exe = str(venvs[label][1]) if label in venvs else "/dev/null"
             version = detector_versions.get(label, "unknown")
             if det_type == "chardet":

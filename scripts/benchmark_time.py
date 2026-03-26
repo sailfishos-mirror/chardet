@@ -72,6 +72,8 @@ def main() -> None:
                 r = chardet.detect(data, should_rename_legacy=True)
             else:
                 r = chardet.detect(data)
+            if r is None:
+                return None, None
             return r["encoding"], r.get("language")
 
     elif args.detector == "charade":
@@ -82,6 +84,8 @@ def main() -> None:
 
         def detect(data: bytes) -> tuple[str | None, str | None]:
             r = charade.detect(data)
+            if r is None:
+                return None, None
             return r["encoding"], r.get("language")
 
     elif args.detector == "cchardet":
