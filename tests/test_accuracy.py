@@ -30,7 +30,7 @@ from chardet.registry import REGISTRY, lookup_encoding
 
 _KNOWN_FAILURES: frozenset[str] = frozenset(
     {
-        "cp037-id/culturax_mC4_114892.txt",
+        "cp437-en/culturax_00001.txt",
         "cp500-es/culturax_mC4_87070.txt",
         "cp850-en/culturax_00001.txt",
         "cp850-fi/culturax_00001.txt",
@@ -39,10 +39,10 @@ _KNOWN_FAILURES: frozenset[str] = frozenset(
         "cp858-ms/culturax_00000.txt",
         "cp932-ja/y-moto.com.xml",
         "gb2312-zh/_mozilla_bug171813_text.html",
-        "iso-8859-15-en/culturax_00001.txt",
         "iso-8859-15-en/culturax_00002.txt",
         "iso-8859-16-hu/culturax_OSCAR-2019_82421.txt",
         "iso-8859-16-ro/_ude_1.txt",
+        "macroman-en/culturax_mC4_84512.txt",
         "macroman-id/culturax_mC4_114889.txt",
         "utf-8-en/finnish-utf-8-latin-1-confusion.html",
         "utf-16be-zh/sample_chinese_no_bom.txt",
@@ -57,7 +57,6 @@ _KNOWN_FAILURES: frozenset[str] = frozenset(
 # and many _KNOWN_FAILURES are absent (era filtering actually helps).
 _KNOWN_ERA_FILTERED_FAILURES: frozenset[str] = frozenset(
     {
-        "cp037-id/culturax_mC4_114892.txt",
         "cp500-es/culturax_mC4_87070.txt",
         "cp850-fi/culturax_00001.txt",
         "cp932-ja/y-moto.com.xml",

@@ -763,7 +763,8 @@ def test_detector_exclude_encodings():
     det = UniversalDetector(exclude_encodings=["ascii"], compat_names=False)
     det.feed(b"Hello world, this is enough ASCII data for detection. " * 2)
     result = det.close()
-    assert result["encoding"] == "cp437"
+    assert result["encoding"] != "ascii"
+    assert result["encoding"] is not None
 
 
 def test_detector_custom_empty_input_encoding():

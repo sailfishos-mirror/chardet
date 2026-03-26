@@ -26,6 +26,7 @@ import concurrent.futures
 # Ensure progress output is visible when piped through tee.
 import functools
 import itertools
+import math
 import os
 import pickle
 import shutil
@@ -657,6 +658,29 @@ def main() -> None:
     # Serialize
     print("=== Serializing models ===")
     file_size = serialize_models(models, output_path)
+
+    # Compute and serialize IDF weights for bigram profile construction.
+    # This is a 65536-byte table where each byte is a quantized IDF weight
+    # for the corresponding bigram index.
+    print("=== Computing IDF weights ===")
+    idf_path = output_path.parent / "idf.bin"
+    num_models = len(models)
+    doc_freq = [0] * 65536
+    for bigrams in models.values():
+        for b1, b2 in bigrams:
+            doc_freq[(b1 << 8) | b2] += 1
+    max_idf = math.log(num_models) if num_models > 1 else 1.0
+    scale = 254.0 / max_idf if max_idf > 0 else 0.0
+    idf_table = bytearray(65536)
+    for idx in range(65536):
+        df = doc_freq[idx]
+        if df > 0:
+            idf_val = math.log(num_models / df)
+            idf_table[idx] = max(1, round(idf_val * scale) + 1)
+        else:
+            idf_table[idx] = 1
+    idf_path.write_bytes(idf_table)
+    print(f"IDF weights:  {idf_path} ({len(idf_table):,} bytes)")
 
     print("=== Computing confusion groups ===")
     confusion_maps = compute_distinguishing_maps(threshold=0.80)

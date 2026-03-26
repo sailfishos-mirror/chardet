@@ -174,47 +174,25 @@ def _get_model_norms() -> dict[str, float]:
 def get_idf_weights() -> bytearray:
     """Return a 65536-byte IDF weight table for bigram profile construction.
 
+    Loads a precomputed table from ``idf.bin`` (generated at training time).
     For each bigram index, the weight reflects how discriminative that bigram
-    is across all loaded models:
+    is across all models:
 
     - Bigrams in every model (common ASCII) → weight 1 (minimal signal)
     - Bigrams in one model → weight 255 (maximum signal)
     - Bigrams not in any model → weight 1 (unknown, treat as neutral)
-
-    This replaces the flat ``NON_ASCII_BIGRAM_WEIGHT = 8`` with per-bigram
-    IDF (inverse document frequency) weighting.  Computed once from the
-    loaded models and cached.
     """
-    models = load_models()
-    num_models = len(models)
-    if num_models == 0:
-        return bytearray(65536)
-
-    # Count how many models contain each bigram.
-    doc_freq = bytearray(65536)  # uint8 is enough — max 352 models < 255
-    # For >255 models, would need a wider array, but we cap at 255.
-    for model in models.values():
-        for idx in range(65536):
-            if model[idx] and doc_freq[idx] < 255:
-                doc_freq[idx] += 1
-
-    # Map IDF to uint8 weights [1, 255].
-    # idf = ln(num_models / doc_freq), max when doc_freq=1.
-    _log = math.log
-    max_idf = _log(num_models)  # IDF when bigram is in exactly 1 model
-    if max_idf == 0:
+    ref = importlib.resources.files("chardet.models").joinpath("idf.bin")
+    data = ref.read_bytes()
+    if len(data) != 65536:
+        warnings.warn(
+            f"chardet idf.bin has wrong size ({len(data)}), "
+            "falling back to uniform weights",
+            RuntimeWarning,
+            stacklevel=2,
+        )
         return bytearray(b"\x01" * 65536)
-
-    scale = 254.0 / max_idf
-    table = bytearray(65536)
-    for idx in range(65536):
-        df = doc_freq[idx]
-        if df > 0:
-            idf = _log(num_models / df)
-            table[idx] = max(1, round(idf * scale) + 1)
-        else:
-            table[idx] = 1  # Not in any model — neutral weight
-    return table
+    return bytearray(data)
 
 
 class BigramProfile:

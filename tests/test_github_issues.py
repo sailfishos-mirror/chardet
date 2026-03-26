@@ -11,8 +11,6 @@ ordering issues) documented for future improvement.
 
 from __future__ import annotations
 
-import pytest
-
 import chardet
 from chardet.enums import EncodingEra
 from chardet.equivalences import is_correct, is_equivalent_detection
@@ -239,11 +237,6 @@ class TestCjkShortInputs:
         """Issue #161: Korean name (6 bytes) in EUC-KR."""
         _assert_detection(b"\xb1\xe8\xbc\xba\xbd\xc4", "euc-kr")
 
-    @pytest.mark.xfail(
-        reason="Only 4 non-ASCII bytes in mostly-ASCII context — below "
-        "CJK gating threshold (chardet/chardet#294)",
-        strict=True,
-    )
     def test_chinese_in_ascii_path(self) -> None:
         """Issue #294: Two Chinese chars in a file path."""
         _assert_detection(
@@ -351,12 +344,6 @@ class TestWrongEncodingModernWeb:
 class TestKnownFailures:
     """Cases that still fail — documented for future improvement."""
 
-    @pytest.mark.xfail(
-        reason="French windows-1252 text with anonymized content — "
-        "statistical model ranks windows-1251 higher due to mostly-'x' "
-        "bigrams (chardet/chardet#96)",
-        strict=True,
-    )
     def test_french_win1252_anonymized(self) -> None:
         """Issue #96: French windows-1252 text detected as windows-1251."""
         _assert_detection(
