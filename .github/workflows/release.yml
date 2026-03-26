@@ -59,10 +59,6 @@ jobs:
         env:
           CIBW_ENVIRONMENT_PASS_LINUX: HATCH_BUILD_HOOK_ENABLE_MYPYC
           HATCH_BUILD_HOOK_ENABLE_MYPYC: "true"
-          # MSVC has a 16,380-char string literal limit (C2026); multi_file
-          # splits mypyc output into one C file per module to stay under it.
-          CIBW_BEFORE_BUILD_WINDOWS: >-
-            python -c "import pathlib; p=pathlib.Path('pyproject.toml'); p.write_text(p.read_text().replace('multi_file = false', 'multi_file = true'))"
       - uses: actions/upload-artifact@v4
         with:
           name: dist-mypyc-${{ matrix.os }}
