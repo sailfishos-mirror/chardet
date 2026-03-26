@@ -72,7 +72,7 @@ include = [
     "/src/chardet/pipeline/ascii.py",
 ]
 mypy-args = ["--ignore-missing-imports"]
-options = { debug_level = "0", separate = true }
+options = { debug_level = "0", multi_file = true }
 
 [tool.pytest]
 testpaths = ["tests", "scripts/tests"]
