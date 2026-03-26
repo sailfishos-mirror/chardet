@@ -65,7 +65,7 @@ identified them, or default to ``text/plain``.
    * - ``application/x-tar``
      - ustar at offset 257
    * - ``application/x-wheel+zip``
-     - ZIP entry (*.dist-info/)
+     - ZIP entry (\*.dist-info/)
    * - ``application/x-xz``
      - Magic (fd 37 7a 58 5a 00)
    * - ``application/zip``

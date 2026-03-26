@@ -12,16 +12,16 @@ Python 3.10+, zero runtime dependencies, works on PyPy.
 
 ## Why chardet 7?
 
-**98.6% accuracy** on 2,518 test files. **44x faster** than chardet 6.0.0
-and **1.4x faster** than charset-normalizer. **Language detection** for
+**99.3% accuracy** on 2,517 test files. **47x faster** than chardet 6.0.0
+and **1.5x faster** than charset-normalizer 3.4.6. **Language detection** for
 every result. **MIME type detection** for binary files. **0BSD licensed.**
 
-|                        | chardet 7.3.0 (mypyc) | chardet 6.0.0 | [charset-normalizer] 3.4.6 |
+|                        | chardet 7.3.1 (mypyc) | chardet 6.0.0 | [charset-normalizer] 3.4.6 |
 | ---------------------- | :--------------------: | :-----------: | :-------------------------: |
-| Accuracy (2,518 files) |       **98.6%**        |     88.2%     |            85.3%            |
-| Speed                  |    **512 files/s**     |  12 files/s   |         363 files/s         |
-| Language detection     |       **95.9%**        |     40.0%     |            59.2%            |
-| Peak memory            |     **25.9 MiB**       |   29.5 MiB    |          101.3 MiB          |
+| Accuracy (2,517 files) |       **99.3%**        |     88.2%     |            85.4%            |
+| Speed                  |    **551 files/s**     |  12 files/s   |         376 files/s         |
+| Language detection     |       **95.7%**        |     40.0%     |            59.2%            |
+| Peak memory            |     **52.9 MiB**       |   29.5 MiB    |          78.8 MiB           |
 | Streaming detection    |        **yes**         |      yes      |             no              |
 | Encoding era filtering |        **yes**         |      no       |             no              |
 | Encoding filters       |        **yes**         |      no       |             yes             |
@@ -142,16 +142,16 @@ cat somefile.txt | chardetect
 ## What's New in chardet 7?
 
 - **0BSD license** (previous versions were LGPL)
-- **Ground-up rewrite** — 13-stage detection pipeline using BOM detection, magic number identification, structural probing, byte validity filtering, and bigram statistical models
-- **44x faster** than chardet 6.0.0 with mypyc, **1.4x faster** than charset-normalizer
-- **98.6% accuracy** — +10.4pp vs chardet 6.0.0, +13.3pp vs charset-normalizer
-- **Language detection** — 95.9% accuracy across 49 languages, returned with every result
-- **MIME type detection** — identifies 40+ binary file formats (images, audio/video, archives, documents, executables, fonts) via magic number signatures, plus `text/html`, `text/xml`, and `text/x-python` for markup
-- **Encoding filters** — `include_encodings` and `exclude_encodings` parameters to restrict or exclude specific encodings from the candidate set
-- **99 encodings** — full coverage including EBCDIC, Mac, DOS, and Baltic/Central European families
-- **Optional mypyc compilation** — 1.31x additional speedup on CPython
-- **Thread-safe** — `detect()` and `detect_all()` are safe to call concurrently; scales on free-threaded Python
-- **Same API** — `detect()`, `detect_all()`, `UniversalDetector`, and the `chardetect` CLI all work as before
+- **Ground-up rewrite:** 13-stage detection pipeline using BOM detection, magic number identification, structural probing, byte validity filtering, and bigram statistical models
+- **47x faster** than chardet 6.0.0 with mypyc, **1.5x faster** than charset-normalizer 3.4.6
+- **99.3% accuracy:** +11.1pp vs chardet 6.0.0, +13.9pp vs charset-normalizer 3.4.6
+- **Language detection:** 95.7% accuracy across 49 languages, returned with every result
+- **MIME type detection:** identifies 40+ binary file formats (images, audio/video, archives, documents, executables, fonts) via magic number signatures, plus `text/html`, `text/xml`, and `text/x-python` for markup
+- **Encoding filters:** `include_encodings` and `exclude_encodings` parameters to restrict or exclude specific encodings from the candidate set
+- **99 encodings:** full coverage including EBCDIC, Mac, DOS, and Baltic/Central European families
+- **Optional mypyc compilation:** 1.67x additional speedup on CPython
+- **Thread-safe:** `detect()` and `detect_all()` are safe to call concurrently; scales on free-threaded Python
+- **Same API:** `detect()`, `detect_all()`, `UniversalDetector`, and the `chardetect` CLI all work as before
 
 ## Documentation
 
