@@ -973,7 +973,7 @@ def run_comparison(  # noqa: PLR0913
     total = stats[detectors[0][0]]["total"]
 
     # --- Sequential memory benchmarks (with caching) ---
-    memory: dict[str, dict] = {}
+    memory_results: dict[str, dict] = {}
     if not memory:
         print("Skipping memory benchmarks (pass --memory to include)")
     else:
@@ -993,11 +993,11 @@ def run_comparison(  # noqa: PLR0913
             cached = _load_cached(cache_dir, fname)
             if cached is not None:
                 print(f"  Using cached memory results for {label}")
-                memory[label] = cached
+                memory_results[label] = cached
                 continue
 
         print(f"  Measuring memory for {label} ...")
-        memory[label] = _measure_memory_subprocess(
+        memory_results[label] = _measure_memory_subprocess(
             detector_type,
             data_dir_str,
             python_executable=python_exe,
@@ -1010,7 +1010,7 @@ def run_comparison(  # noqa: PLR0913
             fname = _cache_filename(
                 detector_type, version, benchmark_hash, py_tag, b_tag, "memory"
             )
-            _save_cache(cache_dir, fname, memory[label])
+            _save_cache(cache_dir, fname, memory_results[label])
 
     # ===================================================================
     # Report
@@ -1099,7 +1099,7 @@ def run_comparison(  # noqa: PLR0913
             f"{(import_times[label] + first_detect) * 1000:>23.1f}ms"
         )
         if memory:
-            sub = memory[label]
+            sub = memory_results[label]
             row += (
                 f"  {_format_bytes(sub['traced_import']):>14} "
                 f"{_format_bytes(sub['traced_peak']):>14}  "
