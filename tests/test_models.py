@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import struct
+import zlib
 from collections.abc import Callable
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -99,7 +100,7 @@ def test_score_best_language_high_byte_weighting() -> None:
 def test_bigram_profile_empty() -> None:
     p = BigramProfile(b"")
     assert p.weight_sum == 0
-    assert len(p.weighted_freq) == 0
+    assert len(p.nonzero) == 0
 
 
 def test_bigram_profile_single_byte() -> None:
@@ -116,6 +117,29 @@ def test_bigram_profile_high_byte_weight() -> None:
     p = BigramProfile(b"\xc3\xa9")
     # High-byte bigrams should get IDF-based weight >= 1
     assert p.weight_sum >= 1
+
+
+def test_get_idf_weights_wrong_size() -> None:
+    """idf.bin with wrong size should warn and return uniform weights."""
+    import chardet.models as mod  # noqa: PLC0415
+
+    mod.get_idf_weights.cache_clear()
+    mock_ref = MagicMock()
+    mock_ref.read_bytes.return_value = b"\x42" * 100  # wrong size
+
+    with (
+        patch.object(
+            mod.importlib.resources,
+            "files",
+            return_value=MagicMock(joinpath=MagicMock(return_value=mock_ref)),
+        ),
+        pytest.warns(RuntimeWarning, match="idf.bin has wrong size"),
+    ):
+        result = mod.get_idf_weights()
+
+    assert len(result) == 65536
+    assert all(b == 1 for b in result)
+    mod.get_idf_weights.cache_clear()
 
 
 # ---------------------------------------------------------------------------
@@ -258,16 +282,65 @@ def test_deserialize_trailing_bytes_raises(tmp_models_path: Path) -> None:
     """File with trailing bytes after valid data should raise ValueError."""
     original = {"utf-8": {(65, 66): 200}}
     serialize_models(original, tmp_models_path)
-    # Append garbage bytes
+    # Append garbage bytes — zlib.decompress raises on trailing garbage
     tmp_models_path.write_bytes(tmp_models_path.read_bytes() + b"\xff\xff")
-    with pytest.raises(ValueError, match="trailing bytes"):
+    with pytest.raises(ValueError, match="Corrupt models file"):
+        deserialize_models(tmp_models_path)
+
+
+def test_serialize_v2_magic(tmp_models_path: Path) -> None:
+    """v2 format should start with CMD2 magic bytes."""
+    original = {"test/enc": {(65, 66): 200, (0xC3, 0xA4): 150}}
+    serialize_models(original, tmp_models_path)
+    data = tmp_models_path.read_bytes()
+    assert data[:4] == b"CMD2"
+
+
+def test_roundtrip_v2_multiple_encodings(tmp_models_path: Path) -> None:
+    """v2 serialize -> deserialize roundtrip with multiple encodings."""
+    original = {
+        "en/utf-8": {(65, 66): 200, (67, 68): 100},
+        "fr/iso-8859-1": {(0xE4, 0x20): 255},
+        "ja/shift_jis": {(0x82, 0xA0): 180, (0x83, 0x41): 90},
+    }
+    serialize_models(original, tmp_models_path)
+    loaded = deserialize_models(tmp_models_path)
+    assert loaded == original
+
+
+def test_deserialize_v2_corrupt_zlib(tmp_models_path: Path) -> None:
+    """Corrupt zlib data in v2 format should raise ValueError."""
+    name = b"test/enc"
+    header = b"CMD2"
+    header += struct.pack("!I", 1)
+    header += struct.pack("!I", len(name)) + name
+    header += struct.pack("!d", 0.0)
+    tmp_models_path.write_bytes(header + b"\xff\xff\xff")  # invalid zlib
+    with pytest.raises(ValueError, match="Corrupt models file"):
+        deserialize_models(tmp_models_path)
+
+
+def test_deserialize_v2_wrong_decompressed_size(tmp_models_path: Path) -> None:
+    """v2 with decompressed size != num_models * 65536 should raise ValueError."""
+    name = b"test/enc"
+    header = b"CMD2"
+    header += struct.pack("!I", 2)  # claim 2 models
+    header += struct.pack("!I", len(name)) + name
+    header += struct.pack("!d", 0.0)
+    name2 = b"test/enc2"
+    header += struct.pack("!I", len(name2)) + name2
+    header += struct.pack("!d", 0.0)
+    # Only 1 model's worth of data
+    blob = zlib.compress(bytes(65536), 9)
+    tmp_models_path.write_bytes(header + blob)
+    with pytest.raises(ValueError, match="decompressed size"):
         deserialize_models(tmp_models_path)
 
 
 def test_roundtrip_matches_load_models(tmp_path: Path) -> None:
     """The production models.bin should roundtrip through serialize/deserialize."""
-    production_tables = load_models()  # dict[str, bytearray]
-    # Convert bytearray tables back to dict format for serialize/deserialize roundtrip
+    production_tables = load_models()  # dict[str, memoryview]
+    # Convert memoryview tables back to dict format for serialize/deserialize roundtrip
     production_dicts: dict[str, dict[tuple[int, int], int]] = {}
     for name, table in production_tables.items():
         bigrams: dict[tuple[int, int], int] = {}
@@ -314,69 +387,111 @@ def test_load_models_empty_file(mock_models_bin: Callable[[bytes], None]) -> Non
     assert result == {}
 
 
-def test_load_models_num_encodings_exceeds_limit(
-    mock_models_bin: Callable[[bytes], None],
-) -> None:
-    """num_encodings > 10000 should raise ValueError."""
-    mock_models_bin(struct.pack("!I", 10001))
-    with pytest.raises(ValueError, match="num_encodings=10001 exceeds limit"):
+def test_load_models_missing_magic(mock_models_bin: Callable[[bytes], None]) -> None:
+    """Data without CMD2 magic should raise ValueError."""
+    mock_models_bin(struct.pack("!I", 1))
+    with pytest.raises(ValueError, match="missing CMD2 magic"):
         load_models()
 
 
-def test_load_models_name_len_exceeds_limit(
+def test_load_models_v2_num_models_exceeds_limit(
     mock_models_bin: Callable[[bytes], None],
 ) -> None:
-    """name_len > 256 should raise ValueError."""
-    data = struct.pack("!I", 1)  # num_encodings=1
+    """v2 num_models > 10000 should raise ValueError."""
+    data = b"CMD2" + struct.pack("!I", 10001)
+    mock_models_bin(data)
+    with pytest.raises(ValueError, match="num_models=10001 exceeds limit"):
+        load_models()
+
+
+def test_load_models_v2_name_len_exceeds_limit(
+    mock_models_bin: Callable[[bytes], None],
+) -> None:
+    """v2 name_len > 256 should raise ValueError."""
+    data = b"CMD2"
+    data += struct.pack("!I", 1)  # num_models=1
     data += struct.pack("!I", 300)  # name_len=300
     mock_models_bin(data)
     with pytest.raises(ValueError, match="name_len=300 exceeds 256"):
         load_models()
 
 
-def test_load_models_num_entries_exceeds_limit(
+def test_load_models_v2_truncated_header(
     mock_models_bin: Callable[[bytes], None],
 ) -> None:
-    """num_entries > 65536 should raise ValueError."""
-    name = b"test/enc"
-    data = struct.pack("!I", 1)  # num_encodings=1
-    data += struct.pack("!I", len(name)) + name  # name
-    data += struct.pack("!I", 70000)  # num_entries=70000
-    mock_models_bin(data)
-    with pytest.raises(ValueError, match="num_entries=70000 exceeds 65536"):
-        load_models()
-
-
-def test_load_models_truncated_data(mock_models_bin: Callable[[bytes], None]) -> None:
-    """Truncated model data should raise ValueError."""
-    name = b"test/enc"
-    data = struct.pack("!I", 1)  # num_encodings=1
-    data += struct.pack("!I", len(name)) + name  # name
-    data += struct.pack("!I", 2)  # num_entries=2
-    data += struct.pack("!BBB", 65, 66, 200)  # entry 1 (valid)
-    # entry 2 is missing — truncated
+    """v2 data truncated mid-header should raise ValueError."""
+    # CMD2 + num_models=1 but no name/norm data
+    data = b"CMD2" + struct.pack("!I", 1)
     mock_models_bin(data)
     with pytest.raises(ValueError, match=r"corrupt models\.bin"):
         load_models()
 
 
-def test_load_models_truncated_header(mock_models_bin: Callable[[bytes], None]) -> None:
-    """Data truncated mid-header should raise ValueError (struct.error wrapped)."""
-    # num_encodings=1 but no more data — struct.unpack_from will fail
-    mock_models_bin(struct.pack("!I", 1))
-    with pytest.raises(ValueError, match=r"corrupt models\.bin"):
-        load_models()
-
-
-def test_load_models_invalid_utf8_name(
+def test_load_models_v2_invalid_utf8_name(
     mock_models_bin: Callable[[bytes], None],
 ) -> None:
-    """Invalid UTF-8 in model name should raise ValueError (UnicodeDecodeError wrapped)."""
-    invalid_name = b"\xff\xfe"  # not valid UTF-8
-    data = struct.pack("!I", 1)  # num_encodings=1
-    data += struct.pack("!I", len(invalid_name)) + invalid_name  # name
+    """v2 with invalid UTF-8 in model name should raise ValueError."""
+    invalid_name = b"\xff\xfe"
+    data = b"CMD2"
+    data += struct.pack("!I", 1)  # num_models=1
+    data += struct.pack("!I", len(invalid_name)) + invalid_name
     mock_models_bin(data)
     with pytest.raises(ValueError, match=r"corrupt models\.bin"):
+        load_models()
+
+
+def test_load_models_v2_format(
+    mock_models_bin: Callable[[bytes], None],
+) -> None:
+    """v2 format should load via _parse_models_bin and produce correct tables."""
+    # Build a minimal v2 file with one model
+    name = b"fr/cp1252"
+    table = bytearray(65536)
+    table[(0xE9 << 8) | 0x20] = 200  # é followed by space
+    table[(0x6C << 8) | 0x65] = 50  # "le"
+    sq_sum = 200 * 200 + 50 * 50
+    norm = sq_sum**0.5
+
+    header = b"CMD2"
+    header += struct.pack("!I", 1)  # num_models
+    header += struct.pack("!I", len(name)) + name
+    header += struct.pack("!d", norm)
+    compressed = zlib.compress(bytes(table), 9)
+
+    mock_models_bin(header + compressed)
+    models = load_models()
+    assert "fr/cp1252" in models
+    assert models["fr/cp1252"][(0xE9 << 8) | 0x20] == 200
+    assert models["fr/cp1252"][(0x6C << 8) | 0x65] == 50
+
+
+def test_load_models_v2_corrupt_zlib(
+    mock_models_bin: Callable[[bytes], None],
+) -> None:
+    """Corrupt zlib data in v2 should raise ValueError."""
+    name = b"test/enc"
+    header = b"CMD2"
+    header += struct.pack("!I", 1)
+    header += struct.pack("!I", len(name)) + name
+    header += struct.pack("!d", 0.0)
+    mock_models_bin(header + b"\xff\xff\xff")
+    with pytest.raises(ValueError, match=r"corrupt models\.bin"):
+        load_models()
+
+
+def test_load_models_v2_wrong_decompressed_size(
+    mock_models_bin: Callable[[bytes], None],
+) -> None:
+    """v2 with wrong decompressed size should raise ValueError."""
+    header = b"CMD2"
+    header += struct.pack("!I", 2)  # claim 2 models
+    for name in [b"a/enc1", b"b/enc2"]:
+        header += struct.pack("!I", len(name)) + name
+        header += struct.pack("!d", 0.0)
+    # Only 1 model's worth of data
+    blob = zlib.compress(bytes(65536), 9)
+    mock_models_bin(header + blob)
+    with pytest.raises(ValueError, match="decompressed size"):
         load_models()
 
 
