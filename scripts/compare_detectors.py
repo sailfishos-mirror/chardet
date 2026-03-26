@@ -414,7 +414,7 @@ def _has_full_cache(  # noqa: PLR0913
     python_tag: str,
     build_tag: str,
     *,
-    skip_memory: bool = False,
+    skip_memory: bool = True,
     threads: int = 1,
 ) -> bool:
     """Return ``True`` if all required cache files exist."""
@@ -756,7 +756,7 @@ def run_comparison(  # noqa: PLR0913
     build_tags: dict[str, str] | None = None,
     use_cache: bool = True,
     benchmark_hash: str = "",
-    no_memory: bool = False,
+    memory: bool = False,
     threads: int = 1,
     cn_dataset: bool = False,
 ) -> None:
@@ -780,8 +780,8 @@ def run_comparison(  # noqa: PLR0913
         Whether to use cached results.
     benchmark_hash : str
         Hash of benchmark source files for cache invalidation.
-    no_memory : bool
-        Skip memory benchmarks when ``True``.
+    memory : bool
+        Run memory benchmarks when ``True``.
     threads : int
         Number of detection threads to pass to ``benchmark_time.py``.
 
@@ -974,12 +974,12 @@ def run_comparison(  # noqa: PLR0913
 
     # --- Sequential memory benchmarks (with caching) ---
     memory: dict[str, dict] = {}
-    if no_memory:
-        print("Skipping memory benchmarks (--no-memory)")
+    if not memory:
+        print("Skipping memory benchmarks (pass --memory to include)")
     else:
         print("Measuring memory (isolated subprocesses)...")
     for label, detector_type, python_exe, era in detectors:
-        if no_memory:
+        if not memory:
             continue
         version = detector_versions.get(label, "unknown")
         py_tag = python_tags.get(label, "unknown")
@@ -1072,7 +1072,7 @@ def run_comparison(  # noqa: PLR0913
         )
 
     # -- Startup & memory --
-    section_title = "STARTUP" if no_memory else "STARTUP & MEMORY"
+    section_title = "STARTUP & MEMORY" if memory else "STARTUP"
     print()
     print("=" * 100)
     print(f"{section_title} (isolated subprocesses)")
@@ -1082,7 +1082,7 @@ def run_comparison(  # noqa: PLR0913
         f"{'time to 1st result (ms)':>24}"
     )
     sep = f"  {'-' * max_label}  {'-' * 12}  {'-' * 16}  {'-' * 24}"
-    if not no_memory:
+    if memory:
         header += (
             f"  {'traced import':>14} {'traced peak':>14}  "
             f"{'RSS before':>12} {'RSS after':>12}"
@@ -1098,7 +1098,7 @@ def run_comparison(  # noqa: PLR0913
             f"{first_detect * 1000:>15.1f}ms  "
             f"{(import_times[label] + first_detect) * 1000:>23.1f}ms"
         )
-        if not no_memory:
+        if memory:
             sub = memory[label]
             row += (
                 f"  {_format_bytes(sub['traced_import']):>14} "
@@ -1108,7 +1108,7 @@ def run_comparison(  # noqa: PLR0913
             )
         print(row)
     print()
-    if not no_memory:
+    if memory:
         print("  traced = tracemalloc (CPython allocations only)")
         print(
             "  RSS    = resident set size"
@@ -1414,7 +1414,7 @@ def _run_for_python_version(  # noqa: PLR0913
             benchmark_hash,
             python_tags[label],
             build_tags[label],
-            skip_memory=args.no_memory,
+            skip_memory=not args.memory,
             threads=args.threads,
         ):
             print(f"  {label}: full cache hit, skipping venv creation")
@@ -1518,7 +1518,7 @@ def _run_for_python_version(  # noqa: PLR0913
             build_tags=build_tags,
             use_cache=use_cache,
             benchmark_hash=benchmark_hash,
-            no_memory=args.no_memory,
+            memory=args.memory,
             threads=args.threads,
             cn_dataset=args.cn_dataset,
         )
@@ -1577,10 +1577,10 @@ if __name__ == "__main__":
         help="Force re-run, ignoring cached results",
     )
     parser.add_argument(
-        "--no-memory",
+        "--memory",
         action="store_true",
         default=False,
-        help="Skip memory benchmarks (much faster runs)",
+        help="Include memory benchmarks (slow, only needed for release notes)",
     )
     parser.add_argument(
         "--pure",
