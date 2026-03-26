@@ -17,9 +17,9 @@ import struct
 import warnings
 
 from chardet.models import (
-    NON_ASCII_BIGRAM_WEIGHT,
     BigramProfile,
     get_enc_index,
+    get_idf_weights,
     score_with_profile,
 )
 from chardet.pipeline import DetectionResult
@@ -255,6 +255,7 @@ def resolve_by_bigram_rescore(
     if len(data) < 2:
         return None
 
+    idf = get_idf_weights()
     freq: dict[int, int] = {}
     for i in range(len(data) - 1):
         b1 = data[i]
@@ -262,8 +263,7 @@ def resolve_by_bigram_rescore(
         if b1 not in diff_bytes and b2 not in diff_bytes:
             continue
         idx = (b1 << 8) | b2
-        weight = NON_ASCII_BIGRAM_WEIGHT if (b1 > 0x7F or b2 > 0x7F) else 1
-        freq[idx] = freq.get(idx, 0) + weight
+        freq[idx] = freq.get(idx, 0) + idf[idx]
 
     if not freq:
         return None

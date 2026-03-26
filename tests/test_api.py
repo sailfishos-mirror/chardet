@@ -620,7 +620,8 @@ def test_detect_exclude_encodings_removes():
     """exclude_encodings prevents specific encodings from being returned."""
     data = b"Hello world"
     result = chardet.detect(data, exclude_encodings=["ascii"], compat_names=False)
-    assert result["encoding"] == "cp1252"
+    assert result["encoding"] != "ascii"
+    assert result["encoding"] is not None
 
 
 def test_detect_exclude_bom_result():

@@ -16,7 +16,8 @@ from chardet.registry import REGISTRY, lookup_encoding
 _unpack_uint32 = struct.Struct(">I").unpack_from
 _iter_3bytes = struct.Struct(">BBB").iter_unpack
 
-#: Weight applied to non-ASCII bigrams during profile construction.
+#: Flat fallback weight for non-ASCII bigrams when IDF is not yet available
+#: (used only during the brief window before models are loaded).
 #: Imported by pipeline/confusion.py for focused bigram re-scoring.
 NON_ASCII_BIGRAM_WEIGHT: int = 8
 # Encodings that map to exactly one language, derived from the registry.
@@ -169,6 +170,53 @@ def _get_model_norms() -> dict[str, float]:
     return _load_models_data()[1]
 
 
+@functools.cache
+def get_idf_weights() -> bytearray:
+    """Return a 65536-byte IDF weight table for bigram profile construction.
+
+    For each bigram index, the weight reflects how discriminative that bigram
+    is across all loaded models:
+
+    - Bigrams in every model (common ASCII) → weight 1 (minimal signal)
+    - Bigrams in one model → weight 255 (maximum signal)
+    - Bigrams not in any model → weight 1 (unknown, treat as neutral)
+
+    This replaces the flat ``NON_ASCII_BIGRAM_WEIGHT = 8`` with per-bigram
+    IDF (inverse document frequency) weighting.  Computed once from the
+    loaded models and cached.
+    """
+    models = load_models()
+    num_models = len(models)
+    if num_models == 0:
+        return bytearray(65536)
+
+    # Count how many models contain each bigram.
+    doc_freq = bytearray(65536)  # uint8 is enough — max 352 models < 255
+    # For >255 models, would need a wider array, but we cap at 255.
+    for model in models.values():
+        for idx in range(65536):
+            if model[idx] and doc_freq[idx] < 255:
+                doc_freq[idx] += 1
+
+    # Map IDF to uint8 weights [1, 255].
+    # idf = ln(num_models / doc_freq), max when doc_freq=1.
+    _log = math.log
+    max_idf = _log(num_models)  # IDF when bigram is in exactly 1 model
+    if max_idf == 0:
+        return bytearray(b"\x01" * 65536)
+
+    scale = 254.0 / max_idf
+    table = bytearray(65536)
+    for idx in range(65536):
+        df = doc_freq[idx]
+        if df > 0:
+            idf = _log(num_models / df)
+            table[idx] = max(1, round(idf * scale) + 1)
+        else:
+            table[idx] = 1  # Not in any model — neutral weight
+    return table
+
+
 class BigramProfile:
     """Pre-computed bigram frequency distribution for a data sample.
 
@@ -186,6 +234,10 @@ class BigramProfile:
     def __init__(self, data: bytes) -> None:
         """Compute the bigram frequency distribution for *data*.
 
+        Each bigram is weighted by its IDF (inverse document frequency) across
+        all loaded models.  Bigrams unique to few models get high weight;
+        bigrams common to all models get weight 1.
+
         :param data: The raw byte data to profile.
         """
         total_bigrams = len(data) - 1
@@ -195,20 +247,15 @@ class BigramProfile:
             self.input_norm: float = 0.0
             return
 
+        idf = get_idf_weights()
         freq: dict[int, int] = {}
         w_sum = 0
-        hi_w = NON_ASCII_BIGRAM_WEIGHT
         _get = freq.get
         for i in range(total_bigrams):
-            b1 = data[i]
-            b2 = data[i + 1]
-            idx = (b1 << 8) | b2
-            if b1 > 0x7F or b2 > 0x7F:
-                freq[idx] = _get(idx, 0) + hi_w
-                w_sum += hi_w
-            else:
-                freq[idx] = _get(idx, 0) + 1
-                w_sum += 1
+            idx = (data[i] << 8) | data[i + 1]
+            w = idf[idx]
+            freq[idx] = _get(idx, 0) + w
+            w_sum += w
         self.weighted_freq = freq
         self.weight_sum = w_sum
         self.input_norm = math.sqrt(sum(v * v for v in freq.values()))
