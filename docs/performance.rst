@@ -354,6 +354,24 @@ shows "---" for versions that did not support language detection.
      - 88.2%
      - 11
      - 40.0%
+   * - chardet 7.0.1 (mypyc)
+     - 2026-03
+     - 2469/2517
+     - 98.1%
+     - 551
+     - 95.2%
+   * - chardet 7.2.0 (mypyc)
+     - 2026-03
+     - 2470/2517
+     - 98.1%
+     - 540
+     - 95.3%
+   * - chardet 7.3.0 (mypyc)
+     - 2026-03
+     - 2470/2517
+     - 98.1%
+     - 623
+     - 95.3%
    * - **chardet 7.4.0 (mypyc)**
      - **2026-03**
      - **2499/2517**
@@ -362,7 +380,8 @@ shows "---" for versions that did not support language detection.
      - **95.7%**
 
 chardet 3.0.1--3.0.4 had identical accuracy and speed; only 3.0.4 is
-shown. chardet 5.1.0--5.2.0 were likewise identical. charade 1.0.2 could
+shown. chardet 5.1.0--5.2.0 were likewise identical. chardet 7.1.0 and
+7.2.0 had identical accuracy; only 7.2.0 is shown. charade 1.0.2 could
 not be installed on Python 3.14. chardet 3.0.0 crashed on Python 3.14
 and is omitted.
 
