@@ -100,7 +100,7 @@ Memory
      - RSS
    * - **chardet 7.4.0**
      - **0.013s**
-     - **0 B**
+     - **0 B** :sup:`*`
      - **52.9 MiB**
      - **137.0 MiB**
    * - chardet 6.0.0
@@ -118,6 +118,11 @@ Memory
      - 28.1 KiB
      - 155.0 KiB
      - 87.7 MiB
+
+:sup:`*` chardet 7.x uses lazy loading --- models and the detection
+pipeline are not allocated until the first ``detect()`` call, so
+``import chardet`` alone allocates effectively nothing. The full cost
+appears in Peak Memory.
 
 chardet uses **1.5x less peak memory** than charset-normalizer 3.4.6 and
 **1.7x less RSS**.
