@@ -1,6 +1,56 @@
 Changelog
 =========
 
+.. note::
+
+   Entries marked "via Claude" were developed with
+   `Claude Code <https://claude.ai/code>`_.
+   Dan directed the design, reviewed all output, and takes responsibility for
+   the result. Unmarked entries by Dan were written without AI assistance.
+
+7.4.0 (unreleased)
+-------------------
+
+**Performance:**
+
+- Switched to dense zlib-compressed model format (v2): models are now
+  stored as contiguous ``memoryview`` slices of a single decompressed
+  blob, eliminating per-model ``struct.unpack`` overhead. Cold start
+  (import + first detect) dropped from ~75ms to ~13ms with mypyc.
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude,
+  `#354 <https://github.com/chardet/chardet/pull/354>`_)
+
+**Accuracy:**
+
+- Accuracy improved from 98.6% to 99.3% (2499/2517 files) through
+  a combination of training and scoring improvements:
+
+  - Eliminated train/test data overlap by content-fingerprinting test
+    suite articles and excluding them from training data
+    (`#351 <https://github.com/chardet/chardet/pull/351>`_)
+  - Added MADLAD-400 and Wikipedia as supplemental training sources to
+    fill gaps left by exclusion filtering
+    (`#351 <https://github.com/chardet/chardet/pull/351>`_)
+  - Improved non-ASCII bigram scoring: high-byte bigrams are now
+    preserved during training (instead of being crushed by global
+    normalization), and weighted by per-bigram IDF so encoding-specific
+    byte patterns contribute proportionally to how discriminative they
+    are (`#352 <https://github.com/chardet/chardet/pull/352>`_)
+  - Added encoding-aware substitution filtering: character substitutions
+    during training now only apply for characters the target encoding
+    cannot represent
+  - Increased training samples from 15K to 25K per language/encoding pair
+    (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
+
+**Bug Fixes:**
+
+- Added dedicated structural analyzers for CP932, CP949, and
+  Big5-HKSCS: these superset encodings previously shared their base
+  encoding's byte-range analyzer, missing extended ranges unique to each
+  superset
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude,
+  `#353 <https://github.com/chardet/chardet/pull/353>`_)
+
 7.3.0 (2026-03-24)
 -------------------
 
@@ -10,20 +60,20 @@ Changelog
   `0BSD <https://opensource.org/license/0bsd>`_, a maximally permissive
   license with no attribution requirement. All prior 7.x releases
   should also be considered 0BSD licensed as of this release.
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 
 **Features:**
 
 - Added ``mime_type`` field to detection results — identifies file types
   for both binary (via magic number matching) and text content. Returned
   in all ``detect()``, ``detect_all()``, and ``UniversalDetector`` results.
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_,
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude,
   `#350 <https://github.com/chardet/chardet/pull/350>`_)
 - New ``pipeline/magic.py`` module detects 40+ binary file formats
   including images, audio/video, archives, documents, executables, and
   fonts. ZIP-based formats (XLSX, DOCX, JAR, APK, EPUB, wheel,
   OpenDocument) are distinguished by entry filenames.
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_,
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude,
   `#350 <https://github.com/chardet/chardet/pull/350>`_)
 
 **Bug Fixes:**
@@ -31,21 +81,21 @@ Changelog
 - Fixed incorrect equivalence between UTF-16-LE and UTF-16-BE in
   accuracy testing — these are distinct encodings with different byte
   order, not interchangeable
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 
 **Performance:**
 
 - Added 4 new modules to mypyc compilation (orchestrator, confusion,
   magic, ascii), bringing the total to 11 compiled modules
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 - Capped statistical scoring at 16 KB — bigram models converge quickly,
   so large files no longer score the full 200 KB. Worst-case detection
   time dropped from 62ms to 26ms with no accuracy loss.
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 - Replaced ``dataclasses.replace()`` with direct ``DetectionResult``
   construction on hot paths, eliminating ~354k function calls per full
   test suite run
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 
 **Build:**
 
@@ -65,17 +115,17 @@ Changelog
   encodings from the candidate set, with corresponding
   ``-i``/``--include-encodings`` and ``-x``/``--exclude-encodings``
   CLI flags
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_,
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude,
   `#343 <https://github.com/chardet/chardet/pull/343>`_)
 - Added ``no_match_encoding`` (default ``"cp1252"``) and
   ``empty_input_encoding`` (default ``"utf-8"``) parameters — control
   which encoding is returned when no candidate survives the pipeline or
   the input is empty, with corresponding CLI flags
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_,
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude,
   `#343 <https://github.com/chardet/chardet/pull/343>`_)
 - Added ``-l``/``--language`` flag to ``chardetect`` CLI — shows the
   detected language (ISO 639-1 code and English name) alongside the encoding
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_,
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude,
   `#342 <https://github.com/chardet/chardet/pull/342>`_)
 
 7.1.0 (2026-03-11)
@@ -86,12 +136,12 @@ Changelog
 - Added PEP 263 encoding declaration detection — ``# -*- coding: ... -*-``
   and ``# coding=...`` declarations on lines 1–2 of Python source files are
   now recognized with confidence 0.95
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_,
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude,
   `#249 <https://github.com/chardet/chardet/issues/249>`_)
 - Added ``chardet.universaldetector`` backward-compatibility stub so that
   ``from chardet.universaldetector import UniversalDetector`` works with a
   deprecation warning
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_,
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude,
   `#341 <https://github.com/chardet/chardet/issues/341>`_)
 
 **Fixes:**
@@ -103,19 +153,19 @@ Changelog
   `#335 <https://github.com/chardet/chardet/pull/335>`_)
 - Fixed 0.5s startup cost on first ``detect()`` call — model norms are now
   computed during loading instead of lazily iterating 21M entries
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_,
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude,
   `#333 <https://github.com/chardet/chardet/issues/333>`_,
   `#336 <https://github.com/chardet/chardet/pull/336>`_)
 - Fixed undocumented encoding name changes between chardet 5.x and 7.0 —
   ``detect()`` now returns chardet 5.x-compatible names by default
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_,
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude,
   `#338 <https://github.com/chardet/chardet/pull/338>`_)
 - Improved ISO-2022-JP family detection — recognizes ESC sequences for
   ISO-2022-JP-2004 (JIS X 0213) and ISO-2022-JP-EXT (JIS X 0201 Kana)
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 - Fixed silent truncation of corrupt model data (``iter_unpack`` yielded
   fewer tuples instead of raising)
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 - Fixed incorrect date in LICENSE
   (`Dan Blanchard <https://github.com/dan-blanchard>`_)
 
@@ -123,10 +173,10 @@ Changelog
 
 - 5.5x faster first-detect time (~0.42s → ~0.075s) by computing model
   norms as a side-product of ``load_models()``
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 - ~40% faster model parsing via ``struct.iter_unpack`` for bulk entry
   extraction (eliminates ~305K individual ``unpack`` calls)
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 
 **New API parameters:**
 
@@ -134,15 +184,15 @@ Changelog
   :func:`~chardet.detect`, :func:`~chardet.detect_all`, and
   :class:`~chardet.UniversalDetector` — set to ``False`` to get raw Python
   codec names instead of chardet 5.x/6.x compatible display names
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 - Added ``prefer_superset`` parameter (default ``False``) — remaps legacy
   ISO/subset encodings to their modern Windows/CP superset equivalents
   (e.g., ASCII → Windows-1252, ISO-8859-1 → Windows-1252).
   **This will default to ``True`` in the next major version (8.0).**
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 - Deprecated ``should_rename_legacy`` in favor of ``prefer_superset`` —
   a deprecation warning is emitted when used
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 
 **Improvements:**
 
@@ -150,18 +200,18 @@ Changelog
   (e.g., ``"utf-8"`` instead of ``"UTF-8"``), with ``compat_names``
   controlling the public output format.  See :doc:`usage` for the full
   mapping table.
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 - Added ``lookup_encoding()`` to ``registry`` for case-insensitive
   resolution of arbitrary encoding name input to canonical names
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 - Achieved 100% line coverage across all source modules (+31 tests)
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 - Updated benchmark numbers: 98.2% encoding accuracy, 95.2% language
   accuracy on 2,510 test files
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 - Pinned test-data cloning to chardet release version tags for
   reproducible builds
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 
 7.0.1 (2026-03-04)
 -------------------
@@ -180,16 +230,16 @@ Changelog
 **Improvements:**
 
 - Retrained bigram models — 24 previously failing test cases now pass
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 - Updated language equivalences for mutual intelligibility (Slovak/Czech,
   East Slavic + Bulgarian, Malay/Indonesian, Scandinavian languages)
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 
 7.0.0 (2026-03-02)
 -------------------
 
 Ground-up, 0BSD-licensed rewrite of chardet
-(`Dan Blanchard <https://github.com/dan-blanchard>`_,
+(`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude,
 `#322 <https://github.com/chardet/chardet/pull/322>`_). Same package name,
 same public API — drop-in replacement for chardet 5.x/6.x.
 
@@ -254,7 +304,7 @@ same public API — drop-in replacement for chardet 5.x/6.x.
   ``detect_all()``, and ``UniversalDetector``
   (`Dan Blanchard <https://github.com/dan-blanchard>`_)
 - ``-e``/``--encoding-era`` CLI flag
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_)
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude)
 - EBCDIC detection (CP037, CP500)
   (`Dan Blanchard <https://github.com/dan-blanchard>`_)
 - Direct GB18030 support (replaces redundant GB2312 prober)
