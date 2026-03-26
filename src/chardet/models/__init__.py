@@ -16,10 +16,6 @@ from chardet.registry import REGISTRY, lookup_encoding
 _unpack_uint32 = struct.Struct(">I").unpack_from
 _iter_3bytes = struct.Struct(">BBB").iter_unpack
 
-#: Flat fallback weight for non-ASCII bigrams when IDF is not yet available
-#: (used only during the brief window before models are loaded).
-#: Imported by pipeline/confusion.py for focused bigram re-scoring.
-NON_ASCII_BIGRAM_WEIGHT: int = 8
 # Encodings that map to exactly one language, derived from the registry.
 # Keyed by canonical name only — callers always use canonical names.
 _SINGLE_LANG_MAP: dict[str, str] = {}
@@ -202,9 +198,9 @@ class BigramProfile:
     scoring from O(n) to O(distinct_bigrams).
 
     Stores a single ``weighted_freq`` dict mapping bigram index to
-    *count * weight* (weight is 8 for non-ASCII bigrams, 1 otherwise).
-    This pre-multiplies the weight during construction so the scoring
-    inner loop only needs a single dict traversal with no branching.
+    *count * idf_weight*.  Each bigram is weighted by its IDF (inverse
+    document frequency) across all models — bigrams unique to few models
+    get high weight, bigrams common to all models get weight 1.
     """
 
     __slots__ = ("input_norm", "weight_sum", "weighted_freq")
