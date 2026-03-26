@@ -79,7 +79,7 @@ Docs use Sphinx with Furo theme. API reference is auto-generated from source doc
 HATCH_BUILD_HOOK_ENABLE_MYPYC=true uv build  # compile hot-path modules
 ```
 
-Compiled modules: `models/__init__.py`, `pipeline/structural.py`, `pipeline/validity.py`, `pipeline/statistical.py`, `pipeline/utf1632.py`, `pipeline/utf8.py`, `pipeline/escape.py`. These modules cannot use `from __future__ import annotations` (FA100 is ignored for them in ruff config).
+Compiled modules: `models/__init__.py`, `pipeline/structural.py`, `pipeline/validity.py`, `pipeline/statistical.py`, `pipeline/utf1632.py`, `pipeline/utf8.py`, `pipeline/escape.py`, `pipeline/orchestrator.py`, `pipeline/confusion.py`, `pipeline/magic.py`, `pipeline/ascii.py`. These modules cannot use `from __future__ import annotations` (FA100 is ignored for them in ruff config).
 
 ## Architecture
 
@@ -90,31 +90,32 @@ All detection flows through `run_pipeline()`, which runs stages in order — eac
 1. **BOM** (`bom.py`) — byte order mark → confidence 1.0
 2. **UTF-16/32 patterns** (`utf1632.py`) — null-byte patterns for BOM-less Unicode
 3. **Escape sequences** (`escape.py`) — ISO-2022-JP/KR, HZ-GB-2312
-4. **Binary detection** (`binary.py`) — null bytes / control chars → encoding=None
-5. **Markup charset** (`markup.py`) — `<meta charset>` / `<?xml encoding>` extraction
-6. **ASCII** (`ascii.py`) — pure 7-bit check
-7. **UTF-8** (`utf8.py`) — structural multi-byte validation
-8. **Byte validity** (`validity.py`) — eliminate encodings that can't decode the data
-9. **CJK gating** (in orchestrator) — eliminate CJK candidates lacking multi-byte structure
-10. **Structural probing** (`structural.py`) — score multi-byte encoding fit
-11. **Statistical scoring** (`statistical.py`) — bigram frequency models for final ranking
-12. **Post-processing** (`_postprocess_results()` in orchestrator) — confusion group resolution (`confusion.py`), niche Latin demotion, KOI8-T promotion
+4. **Magic numbers** (`magic.py`) — file signature detection (e.g., PDF, images)
+5. **Binary detection** (`binary.py`) — null bytes / control chars → encoding=None
+6. **Markup charset** (`markup.py`) — `<meta charset>` / `<?xml encoding>` extraction
+7. **ASCII** (`ascii.py`) — pure 7-bit check
+8. **UTF-8** (`utf8.py`) — structural multi-byte validation
+9. **Byte validity** (`validity.py`) — eliminate encodings that can't decode the data
+10. **CJK gating** (in orchestrator) — eliminate CJK candidates lacking multi-byte structure
+11. **Structural probing** (`structural.py`) — score multi-byte encoding fit
+12. **Statistical scoring** (`statistical.py`) — bigram frequency models for final ranking
+13. **Post-processing** (`_postprocess_results()` in orchestrator) — confusion group resolution (`confusion.py`), niche Latin demotion, KOI8-T promotion
 
 ### Key Types
 
-- **`DetectionResult`** (`pipeline/__init__.py`) — frozen dataclass: `encoding`, `confidence`, `language`
+- **`DetectionResult`** (`pipeline/__init__.py`) — frozen dataclass: `encoding`, `confidence`, `language`, `mime_type`
 - **`EncodingInfo`** (`registry.py`) — frozen dataclass: `name`, `aliases`, `era`, `is_multibyte`, `languages`
 - **`EncodingEra`** (`enums.py`) — IntFlag for filtering candidates: `MODERN_WEB`, `LEGACY_ISO`, `LEGACY_MAC`, `LEGACY_REGIONAL`, `DOS`, `MAINFRAME`, `ALL`
 - **`BigramProfile`** (`models/__init__.py`) — pre-computed weighted bigram frequencies, computed once and reused across all candidate models
 
 ### Model Format
 
-Binary file `src/chardet/models/models.bin` — sparse bigram tables loaded via `struct.unpack`. Each model is a 65536-byte lookup table indexed by `(b1 << 8) | b2`. Model keys use `language/encoding` format (e.g., `French/windows-1252`). Loaded lazily on first `detect()` call and cached.
+Binary file `src/chardet/models/models.bin` — v2 dense zlib-compressed format (magic `CMD2`). Each model is a 65536-byte lookup table indexed by `(b1 << 8) | b2`, stored as a `memoryview` of the decompressed blob. Model keys use `language/encoding` format (e.g., `French/windows-1252`). Loaded lazily on first `detect()` call and cached.
 
 ### Public API (`src/chardet/__init__.py`)
 
-- `detect(data, max_bytes, chunk_size, encoding_era)` → `{"encoding": ..., "confidence": ..., "language": ...}`
-- `detect_all(...)` → list of result dicts
+- `detect(byte_str, encoding_era, max_bytes, *, prefer_superset, compat_names, include_encodings, exclude_encodings, no_match_encoding, empty_input_encoding)` → `{"encoding": ..., "confidence": ..., "language": ..., "mime_type": ...}`
+- `detect_all(byte_str, ignore_threshold, ...)` → list of result dicts
 - `UniversalDetector` (`detector.py`) — streaming interface with `feed()`/`close()`/`reset()`
 
 ### Encoding Equivalences (`equivalences.py`)
