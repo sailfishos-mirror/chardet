@@ -13,6 +13,11 @@ the expected answer is GB2312). Byte-order variants of the same
 encoding (e.g., UTF-16-LE vs UTF-16) are also treated as equivalent.
 These rules are applied equally to all detectors.
 
+chardet's statistical models are trained on CulturaX, MADLAD-400, and
+Wikipedia data. Test files are excluded from training via content
+fingerprinting to prevent train/test overlap (verified by
+``scripts/verify_no_overlap.py``).
+
 Accuracy
 --------
 
