@@ -157,6 +157,31 @@ cat somefile.txt | chardetect
 
 Full documentation is available at [chardet.readthedocs.io](https://chardet.readthedocs.io).
 
+## Project History
+
+chardet was originally created by [Mark Pilgrim](https://en.wikipedia.org/wiki/Mark_Pilgrim)
+in 2006 as a Python port of [Mozilla's universal charset detection library](https://www-archive.mozilla.org/projects/intl/chardet.html).
+He released versions 1.0 (2006) and 1.0.1 (2008) on PyPI, then developed
+an unreleased Python 3 port (2.0.1) on Google Code. After Mark
+[deleted his online accounts](https://en.wikipedia.org/wiki/Mark_Pilgrim#%22Infocide%22)
+in 2011, the project was continued by David Cramer, Erik Rose, Toshio Kuratomi,
+Ian Cordasco, and Dan Blanchard.
+
+In 2026, Dan Blanchard rewrote chardet using Claude, releasing chardet 7.0
+under a new license. All releases after 7 are not derivative of the original
+chardet code, but are released under the same name to allow an easier
+transition for users who can immediately benefit from the speed and accuracy
+improvements. For historical preservation and to allow easier comparison with
+the other releases, Dan has restored Mark's lost commits to this repository
+in the `history/pilgrim` branch.
+
+To see the full history from 2006 to present in `git log`, fetch the graft
+refs:
+
+```
+git fetch origin 'refs/replace/*:refs/replace/*'
+```
+
 ## License
 
 [0BSD](LICENSE)
