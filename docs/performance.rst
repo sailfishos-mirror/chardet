@@ -24,7 +24,7 @@ Accuracy
      - Correct
      - Accuracy
      - Speed
-   * - **chardet 7.3.1 (mypyc)**
+   * - **chardet 7.4.0 (mypyc)**
      - **2499/2517**
      - **99.3%**
      - **551 files/s**
@@ -63,7 +63,7 @@ Speed
      - 0.04ms
      - 0.64ms
      - 0.99ms
-   * - **chardet 7.3.1 (mypyc)**
+   * - **chardet 7.4.0 (mypyc)**
      - **551**
      - **1.81ms**
      - **0.54ms**
@@ -82,7 +82,7 @@ Speed
      - 190.84ms
      - 394.63ms
 
-With mypyc compilation, chardet 7.3.1 is **47x faster** than chardet 6.0.0 and
+With mypyc compilation, chardet 7.4.0 is **47x faster** than chardet 6.0.0 and
 **1.5x faster** than charset-normalizer 3.4.6 (mypyc). Median time per file is
 0.54ms.
 
@@ -98,7 +98,7 @@ Memory
      - Import Memory
      - Peak Memory
      - RSS
-   * - **chardet 7.3.1**
+   * - **chardet 7.4.0**
      - **0.013s**
      - **0 B**
      - **52.9 MiB**
@@ -132,7 +132,7 @@ Language Detection
    * - Detector
      - Correct
      - Accuracy
-   * - **chardet 7.3.1**
+   * - **chardet 7.4.0**
      - **2400/2509**
      - **95.7%**
    * - charset-normalizer 3.4.6
@@ -169,7 +169,7 @@ Vietnamese file) and 2 we relabeled (UTF-8-SIG, not UTF-8).
      - Correct
      - Encoding Accuracy
      - Language Accuracy
-   * - **chardet 7.3.1 (mypyc)**
+   * - **chardet 7.4.0 (mypyc)**
      - **463/469**
      - **98.7%**
      - **92.8%**
@@ -277,7 +277,7 @@ prebuilt binaries.
 Performance Across Python Versions
 -----------------------------------
 
-Benchmarked chardet 7.3.1 across all supported Python versions
+Benchmarked chardet 7.4.0 across all supported Python versions
 (macOS aarch64, 2,517 files, ``encoding_era=ALL``). CPython versions
 install mypyc-compiled wheels automatically; PyPy receives the
 pure-Python wheel.

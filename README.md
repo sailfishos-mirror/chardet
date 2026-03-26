@@ -16,7 +16,7 @@ Python 3.10+, zero runtime dependencies, works on PyPy.
 and **1.5x faster** than charset-normalizer 3.4.6. **Language detection** for
 every result. **MIME type detection** for binary files. **0BSD licensed.**
 
-|                        | chardet 7.3.1 (mypyc) | chardet 6.0.0 | [charset-normalizer] 3.4.6 |
+|                        | chardet 7.4.0 (mypyc) | chardet 6.0.0 | [charset-normalizer] 3.4.6 |
 | ---------------------- | :--------------------: | :-----------: | :-------------------------: |
 | Accuracy (2,517 files) |       **99.3%**        |     88.2%     |            85.4%            |
 | Speed                  |    **551 files/s**     |  12 files/s   |         376 files/s         |
