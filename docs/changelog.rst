@@ -8,7 +8,7 @@ Changelog
    Dan directed the design, reviewed all output, and takes responsibility for
    the result. Unmarked entries by Dan were written without AI assistance.
 
-7.4.0 (unreleased)
+7.4.0 (2026-03-26)
 -------------------
 
 **Performance:**
