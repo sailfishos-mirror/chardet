@@ -278,7 +278,7 @@ Historical Performance
 ----------------------
 
 Accuracy and speed of every Python 3-compatible chardet release and its
-predecessor `charade <https://pypi.org/project/charade/>`_, measured on
+temporary Python-3-compatible fork `charade <https://pypi.org/project/charade/>`_, measured on
 the same 2,517-file test suite with the same equivalence rules. Pure
 Python on CPython 3.14 for versions before 7.0; mypyc-compiled for
 7.0+, matching what ``pip install chardet`` delivers. Language column
