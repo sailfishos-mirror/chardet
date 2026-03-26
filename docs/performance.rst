@@ -274,6 +274,98 @@ needed.
 Pure-Python wheels are always available for PyPy and platforms without
 prebuilt binaries.
 
+Historical Performance
+----------------------
+
+Accuracy and speed of every Python 3-compatible chardet release and its
+predecessor `charade <https://pypi.org/project/charade/>`_, measured on
+the same 2,517-file test suite with the same equivalence rules. Pure
+Python on CPython 3.14 for versions before 7.0; mypyc-compiled for
+7.0+, matching what ``pip install chardet`` delivers. Language column
+shows "---" for versions that did not support language detection.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 10 12 10 10 10
+
+   * - Version
+     - Date
+     - Correct
+     - Accuracy
+     - Files/s
+     - Language
+   * - charade 1.0.0
+     - 2012-12
+     - 716/2517
+     - 28.4%
+     - 43
+     - ---
+   * - charade 1.0.1
+     - 2012-12
+     - 714/2517
+     - 28.4%
+     - 43
+     - ---
+   * - charade 1.0.3
+     - 2013-01
+     - 1018/2517
+     - 40.4%
+     - 48
+     - ---
+   * - chardet 2.2.1
+     - 2013-12
+     - 1019/2517
+     - 40.5%
+     - 47
+     - ---
+   * - chardet 2.3.0
+     - 2014-10
+     - 1165/2517
+     - 46.3%
+     - 48
+     - ---
+   * - chardet 3.0.4
+     - 2017-06
+     - 1253/2517
+     - 49.8%
+     - 56
+     - 16.2%
+   * - chardet 4.0.0
+     - 2020-12
+     - 1253/2517
+     - 49.8%
+     - 59
+     - 16.9%
+   * - chardet 5.0.0
+     - 2022-06
+     - 1618/2517
+     - 64.3%
+     - 57
+     - 16.9%
+   * - chardet 5.2.0
+     - 2023-08
+     - 1645/2517
+     - 65.4%
+     - 55
+     - 16.7%
+   * - chardet 6.0.0
+     - 2026-02
+     - 2219/2517
+     - 88.2%
+     - 11
+     - 40.0%
+   * - **chardet 7.4.0 (mypyc)**
+     - **2026-03**
+     - **2499/2517**
+     - **99.3%**
+     - **551**
+     - **95.7%**
+
+chardet 3.0.1--3.0.4 had identical accuracy and speed; only 3.0.4 is
+shown. chardet 5.1.0--5.2.0 were likewise identical. charade 1.0.2 could
+not be installed on Python 3.14. chardet 3.0.0 crashed on Python 3.14
+and is omitted.
+
 Performance Across Python Versions
 -----------------------------------
 
