@@ -66,7 +66,10 @@ include = [
     "/src/chardet/pipeline/utf1632.py",
     "/src/chardet/pipeline/utf8.py",
     "/src/chardet/pipeline/escape.py",
+    "/src/chardet/pipeline/orchestrator.py",
     "/src/chardet/pipeline/confusion.py",
+    "/src/chardet/pipeline/magic.py",
+    "/src/chardet/pipeline/ascii.py",
 ]
 mypy-args = ["--ignore-missing-imports"]
 options = { debug_level = "0" }
