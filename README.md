@@ -42,15 +42,15 @@ pip install chardet
 ```python
 import chardet
 
-chardet.detect(b"Hello, world!")
+chardet.detect(b"Python is a great programming language for beginners and experts alike.")
 # {'encoding': 'ascii', 'confidence': 1.0, 'language': 'en', 'mime_type': 'text/plain'}
 
-# UTF-8 with typographic punctuation
-chardet.detect("It\u2019s a lovely day \u2014 let\u2019s grab coffee.".encode("utf-8"))
-# {'encoding': 'utf-8', 'confidence': 0.99, 'language': 'es', 'mime_type': 'text/plain'}
+# UTF-8 English with accented characters
+chardet.detect("The naïve approach doesn't always work in complex systems.".encode("utf-8"))
+# {'encoding': 'utf-8', 'confidence': 0.84, 'language': 'en', 'mime_type': 'text/plain'}
 
 # Japanese EUC-JP
-chardet.detect("これは日本語のテストです。文字コードの検出を行います。".encode("euc-jp"))
+chardet.detect("日本語の文字コード検出テストです。このテキストはEUC-JPでエンコードされています。正しく検出できるか確認します。".encode("euc-jp"))
 # {'encoding': 'EUC-JP', 'confidence': 1.0, 'language': 'ja', 'mime_type': 'text/plain'}
 
 # Get all candidate encodings ranked by confidence
@@ -58,10 +58,10 @@ text = "Le café est une boisson très populaire en France et dans le monde enti
 results = chardet.detect_all(text.encode("windows-1252"))
 for r in results[:4]:
     print(r["encoding"], round(r["confidence"], 2))
-# Windows-1252 0.44
-# iso8859-15 0.44
-# ISO-8859-1 0.44
-# MacRoman 0.42
+# Windows-1252 0.32
+# iso8859-15 0.32
+# ISO-8859-1 0.32
+# MacRoman 0.31
 ```
 
 ### Streaming Detection
@@ -94,15 +94,15 @@ data = "Москва является столицей Российской Фе
 # All encoding eras are considered by default — 4 candidates across eras
 for r in detect_all(data):
     print(r["encoding"], round(r["confidence"], 2))
-# Windows-1251 0.5
-# MacCyrillic 0.47
-# KZ1048 0.22
-# ptcp154 0.22
+# Windows-1251 0.46
+# MacCyrillic 0.42
+# KZ1048 0.2
+# ptcp154 0.2
 
 # Restrict to modern web encodings — 1 confident result
 for r in detect_all(data, encoding_era=EncodingEra.MODERN_WEB):
     print(r["encoding"], round(r["confidence"], 2))
-# Windows-1251 0.5
+# Windows-1251 0.46
 ```
 
 ### Encoding Filters
