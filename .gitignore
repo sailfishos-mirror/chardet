@@ -29,3 +29,4 @@ docs/_templates/
 docs/api/generated/
 .char-dataset/
 .char-dataset-results/
+.superpowers/
