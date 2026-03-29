@@ -80,6 +80,10 @@ jobs:
         run: |
           (Get-Content pyproject.toml) -replace 'options = \{ debug_level = "0" \}', 'options = { debug_level = "0", separate = true }' | Set-Content pyproject.toml
         shell: pwsh
+      # Hide the patch from git so hatch-vcs derives the clean tagged version
+      # instead of a dirty dev version (e.g. 7.4.0.post2.dev0+g...).
+      - name: Restore clean git state for version derivation
+        run: git update-index --assume-unchanged pyproject.toml
       - uses: astral-sh/setup-uv@v7
       - uses: pypa/cibuildwheel@v3.3
         env:
@@ -103,3 +107,5 @@ jobs:
           path: dist
           merge-multiple: true
       - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
