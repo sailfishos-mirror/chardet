@@ -389,10 +389,12 @@ same public API — drop-in replacement for chardet 5.x/6.x.
 -------------------
 
 - Added Johab Korean prober
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_,
+  (`grizlupo <https://github.com/grizlupo>`_,
+  `#172 <https://github.com/chardet/chardet/pull/172>`_,
   `#207 <https://github.com/chardet/chardet/pull/207>`_)
 - Added UTF-16/32 BE/LE probers
-  (`Dan Blanchard <https://github.com/dan-blanchard>`_,
+  (`Jason Zavaglia <https://github.com/jpz>`_,
+  `#109 <https://github.com/chardet/chardet/pull/109>`_,
   `#206 <https://github.com/chardet/chardet/pull/206>`_)
 - Added test data for Croatian, Czech, Hungarian, Polish, Slovak,
   Slovene, Greek, Turkish
