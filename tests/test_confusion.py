@@ -7,13 +7,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import chardet.pipeline.confusion as confusion_mod
 from chardet.pipeline import DetectionResult
-from chardet.pipeline.confusion import (
-    load_confusion_data,
-    resolve_by_bigram_rescore,
-    resolve_by_category_voting,
-    resolve_confusion_groups,
-)
 
 # Ukrainian text in koi8-u encoding; bytes 0xa6/0xa7 are in the koi8-r vs koi8-u
 # distinguishing set (Ukrainian letters i-with-macron/yi, box-drawing in koi8-r).
@@ -30,7 +25,7 @@ _TURKISH_ISO8859_9 = "Türkçe İstanbul Şeker Çiçek Ğüşıöç".encode("is
 
 def test_load_confusion_data():
     """Loading confusion data from the bundled file should return valid maps."""
-    maps = load_confusion_data()
+    maps = confusion_mod.load_confusion_data()
     assert len(maps) > 0
     found_ebcdic = any(
         ("cp1140" in key[0] and "cp500" in key[1])
@@ -45,7 +40,9 @@ def test_category_voting_prefers_letter_over_symbol():
     diff_bytes = frozenset({0xD5})
     categories = {0xD5: ("Ll", "So")}
     data = bytes([0x41, 0xD5, 0x42])
-    winner = resolve_by_category_voting(data, "enc_a", "enc_b", diff_bytes, categories)
+    winner = confusion_mod.resolve_by_category_voting(
+        data, "enc_a", "enc_b", diff_bytes, categories
+    )
     assert winner == "enc_a"
 
 
@@ -54,7 +51,9 @@ def test_category_voting_returns_none_on_no_distinguishing_bytes():
     diff_bytes = frozenset({0xD5})
     categories = {0xD5: ("Ll", "So")}
     data = bytes([0x41, 0x42, 0x43])
-    winner = resolve_by_category_voting(data, "enc_a", "enc_b", diff_bytes, categories)
+    winner = confusion_mod.resolve_by_category_voting(
+        data, "enc_a", "enc_b", diff_bytes, categories
+    )
     assert winner is None
 
 
@@ -67,7 +66,7 @@ def test_bigram_rescore_returns_valid_result():
         return
     diff_bytes = frozenset({0xD5})
     data = bytes([0x41, 0xD5, 0x42, 0xD5, 0x43])
-    result = resolve_by_bigram_rescore(data, "CP850", "CP858", diff_bytes)
+    result = confusion_mod.resolve_by_bigram_rescore(data, "CP850", "CP858", diff_bytes)
     assert result in ("CP850", "CP858", None)
 
 
@@ -77,7 +76,7 @@ def test_resolve_confusion_groups_no_change_when_unrelated():
         DetectionResult(encoding="utf-8", confidence=0.95, language=None),
         DetectionResult(encoding="koi8-r", confidence=0.80, language="Russian"),
     ]
-    resolved = resolve_confusion_groups(b"Hello world", results)
+    resolved = confusion_mod.resolve_confusion_groups(b"Hello world", results)
     assert resolved[0].encoding == "utf-8"
 
 
@@ -88,7 +87,7 @@ def test_resolve_confusion_groups_preserves_all_results():
         DetectionResult(encoding="cp500", confidence=0.94, language="English"),
         DetectionResult(encoding="cp1252", confidence=0.50, language="English"),
     ]
-    resolved = resolve_confusion_groups(bytes(range(256)), results)
+    resolved = confusion_mod.resolve_confusion_groups(bytes(range(256)), results)
     assert len(resolved) == len(results)
     resolved_encs = {r.encoding for r in resolved}
     assert resolved_encs == {"cp1140", "cp500", "cp1252"}
@@ -96,52 +95,48 @@ def test_resolve_confusion_groups_preserves_all_results():
 
 def test_load_confusion_data_empty_file():
     """Empty confusion.bin should emit RuntimeWarning and return empty dict."""
-    import chardet.pipeline.confusion as mod  # noqa: PLC0415
-
-    mod.load_confusion_data.cache_clear()
+    confusion_mod.load_confusion_data.cache_clear()
     try:
         mock_ref = MagicMock()
         mock_ref.read_bytes.return_value = b""
         with (
             patch.object(
-                mod.importlib.resources,
+                confusion_mod.importlib.resources,
                 "files",
                 return_value=MagicMock(joinpath=MagicMock(return_value=mock_ref)),
             ),
             pytest.warns(RuntimeWarning, match="confusion.bin is empty"),
         ):
-            result = mod.load_confusion_data()
+            result = confusion_mod.load_confusion_data()
         assert result == {}
     finally:
-        mod.load_confusion_data.cache_clear()
+        confusion_mod.load_confusion_data.cache_clear()
 
 
 def test_load_confusion_data_corrupt_file():
     """Corrupt confusion.bin should raise ValueError."""
-    import chardet.pipeline.confusion as mod  # noqa: PLC0415
-
-    mod.load_confusion_data.cache_clear()
+    confusion_mod.load_confusion_data.cache_clear()
     try:
         mock_ref = MagicMock()
         # Valid num_pairs=1 but truncated after that
         mock_ref.read_bytes.return_value = struct.pack("!H", 1)
         with (
             patch.object(
-                mod.importlib.resources,
+                confusion_mod.importlib.resources,
                 "files",
                 return_value=MagicMock(joinpath=MagicMock(return_value=mock_ref)),
             ),
             pytest.raises(ValueError, match=r"corrupt confusion\.bin"),
         ):
-            mod.load_confusion_data()
+            confusion_mod.load_confusion_data()
     finally:
-        mod.load_confusion_data.cache_clear()
+        confusion_mod.load_confusion_data.cache_clear()
 
 
 def test_resolve_confusion_groups_single_result():
     """A single result should pass through unchanged."""
     results = [DetectionResult(encoding="utf-8", confidence=0.95, language=None)]
-    resolved = resolve_confusion_groups(b"Hello", results)
+    resolved = confusion_mod.resolve_confusion_groups(b"Hello", results)
     assert resolved is results
 
 
@@ -149,14 +144,14 @@ def test_resolve_by_bigram_rescore_empty_freq():
     """When no bigrams contain distinguishing bytes, return None."""
     diff_bytes = frozenset({0xFE})
     data = b"Hello world, this is plain ASCII text without any high bytes at all."
-    result = resolve_by_bigram_rescore(data, "enc_a", "enc_b", diff_bytes)
+    result = confusion_mod.resolve_by_bigram_rescore(data, "enc_a", "enc_b", diff_bytes)
     assert result is None
 
 
 def test_resolve_by_bigram_rescore_short_data():
     """Data shorter than 2 bytes cannot form any bigrams."""
     diff_bytes = frozenset({0xFE})
-    result = resolve_by_bigram_rescore(b"x", "enc_a", "enc_b", diff_bytes)
+    result = confusion_mod.resolve_by_bigram_rescore(b"x", "enc_a", "enc_b", diff_bytes)
     assert result is None
 
 
@@ -166,7 +161,7 @@ def test_resolve_confusion_groups_none_encoding():
         DetectionResult(encoding=None, confidence=0.95, language=None),
         DetectionResult(encoding="utf-8", confidence=0.90, language=None),
     ]
-    resolved = resolve_confusion_groups(b"Hello", results)
+    resolved = confusion_mod.resolve_confusion_groups(b"Hello", results)
     assert resolved is results
 
 
@@ -176,7 +171,9 @@ def test_category_voting_returns_enc_b():
     # enc_a maps to So (score 4), enc_b maps to Ll (score 10) → enc_b wins
     categories = {0xD5: ("So", "Ll")}
     data = bytes([0x41, 0xD5, 0x42])
-    winner = resolve_by_category_voting(data, "enc_a", "enc_b", diff_bytes, categories)
+    winner = confusion_mod.resolve_by_category_voting(
+        data, "enc_a", "enc_b", diff_bytes, categories
+    )
     assert winner == "enc_b"
 
 
@@ -187,9 +184,11 @@ def test_bigram_rescore_returns_enc_a():
     Bytes 0xa6/0xa7 (Ukrainian i-with-macron/yi) are in the koi8-r/koi8-u
     distinguishing set; the koi8-u bigram model scores them higher, so enc_a wins.
     """
-    maps = load_confusion_data()
+    maps = confusion_mod.load_confusion_data()
     diff_bytes, _ = maps[("koi8-r", "koi8-u")]
-    result = resolve_by_bigram_rescore(_UKRAINIAN_KOI8U, "koi8-u", "koi8-r", diff_bytes)
+    result = confusion_mod.resolve_by_bigram_rescore(
+        _UKRAINIAN_KOI8U, "koi8-u", "koi8-r", diff_bytes
+    )
     assert result == "koi8-u"
 
 
@@ -199,9 +198,11 @@ def test_bigram_rescore_returns_enc_b():
     Uses the same Ukrainian / koi8-u data but passes koi8-r as enc_a and
     koi8-u as enc_b, so this time the winning encoding is the second argument.
     """
-    maps = load_confusion_data()
+    maps = confusion_mod.load_confusion_data()
     diff_bytes, _ = maps[("koi8-r", "koi8-u")]
-    result = resolve_by_bigram_rescore(_UKRAINIAN_KOI8U, "koi8-r", "koi8-u", diff_bytes)
+    result = confusion_mod.resolve_by_bigram_rescore(
+        _UKRAINIAN_KOI8U, "koi8-r", "koi8-u", diff_bytes
+    )
     assert result == "koi8-u"
 
 
@@ -212,7 +213,7 @@ def test_resolve_confusion_groups_skips_none_encoding_candidate():
         DetectionResult(encoding=None, confidence=0.94, language=None),
         DetectionResult(encoding="cp500", confidence=0.93, language="en"),
     ]
-    resolved = resolve_confusion_groups(bytes(range(256)), results)
+    resolved = confusion_mod.resolve_confusion_groups(bytes(range(256)), results)
     # The None candidate at position 1 should be skipped; resolution
     # should still check cp500 at position 2.
     assert len(resolved) == len(results)
@@ -225,7 +226,7 @@ def test_resolve_confusion_groups_band_limit():
         DetectionResult(encoding="cp500", confidence=0.94, language="en"),
         DetectionResult(encoding="cp273", confidence=0.50, language="de"),
     ]
-    resolved = resolve_confusion_groups(bytes(range(256)), results)
+    resolved = confusion_mod.resolve_confusion_groups(bytes(range(256)), results)
     # cp273 at 0.50 is far outside the 0.005 band from 0.95, so it
     # should not be compared. The result should still have all 3 entries.
     assert len(resolved) == len(results)
@@ -244,7 +245,7 @@ def test_resolve_confusion_groups_swaps_top_and_second():
     third = DetectionResult(encoding="utf-8", confidence=0.50, language=None)
     results = [top, second, third]
 
-    resolved = resolve_confusion_groups(_UKRAINIAN_KOI8U, results)
+    resolved = confusion_mod.resolve_confusion_groups(_UKRAINIAN_KOI8U, results)
 
     assert resolved[0].encoding == "koi8-u"
     assert resolved[1].encoding == "koi8-r"
@@ -264,7 +265,7 @@ def test_resolve_confusion_groups_bigram_wins_over_category():
     second = DetectionResult(encoding="iso8859-9", confidence=0.90, language="Turkish")
     results = [top, second]
 
-    resolved = resolve_confusion_groups(_TURKISH_ISO8859_9, results)
+    resolved = confusion_mod.resolve_confusion_groups(_TURKISH_ISO8859_9, results)
 
     assert resolved[0].encoding == "iso8859-9"
     assert resolved[1].encoding == "iso8859-1"
@@ -277,10 +278,12 @@ def test_bigram_rescore_no_variants_for_one_encoding():
     Ukrainian text (koi8-u) produces non-zero distinguishing bigrams, so
     koi8-u (enc_a) should beat ascii (enc_b) whose score defaults to 0.0.
     """
-    maps = load_confusion_data()
+    maps = confusion_mod.load_confusion_data()
     diff_bytes, _ = maps[("koi8-r", "koi8-u")]
     # ascii has no model in the index; koi8-u does.
-    result = resolve_by_bigram_rescore(_UKRAINIAN_KOI8U, "koi8-u", "ascii", diff_bytes)
+    result = confusion_mod.resolve_by_bigram_rescore(
+        _UKRAINIAN_KOI8U, "koi8-u", "ascii", diff_bytes
+    )
     assert result == "koi8-u"
 
 
@@ -300,7 +303,7 @@ def test_resolve_confusion_groups_no_swap_when_winner_is_top():
             return_value="cp1252",
         ),
     ):
-        resolved = resolve_confusion_groups(b"\xd5\xd6\xd7", results)
+        resolved = confusion_mod.resolve_confusion_groups(b"\xd5\xd6\xd7", results)
 
     assert resolved[0].encoding == "cp1252"
     assert resolved[1].encoding == "iso8859-1"

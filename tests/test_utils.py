@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 import pytest
 import utils
-from utils import _REF_FILE, _get_test_data_ref
 
 
 class TestGetTestDataRef:
@@ -15,19 +14,19 @@ class TestGetTestDataRef:
 
     def test_release_version(self) -> None:
         with patch("chardet.__version__", "7.0.1"):
-            assert _get_test_data_ref() == "7.0.1"
+            assert utils._get_test_data_ref() == "7.0.1"
 
     def test_dev_version(self) -> None:
         with patch("chardet.__version__", "7.0.2.dev5+g91df78e"):
-            assert _get_test_data_ref() is None
+            assert utils._get_test_data_ref() is None
 
     def test_post_version(self) -> None:
         with patch("chardet.__version__", "6.0.0.post1"):
-            assert _get_test_data_ref() == "6.0.0.post1"
+            assert utils._get_test_data_ref() == "6.0.0.post1"
 
     def test_rc_version(self) -> None:
         with patch("chardet.__version__", "7.0.0rc4"):
-            assert _get_test_data_ref() == "7.0.0rc4"
+            assert utils._get_test_data_ref() == "7.0.0rc4"
 
 
 class TestGetDataDir:
@@ -44,7 +43,7 @@ class TestGetDataDir:
     ) -> None:
         data_dir = tmp_path / "tests" / "data"
         data_dir.mkdir(parents=True)
-        (data_dir / _REF_FILE).write_text("main\n")
+        (data_dir / utils._REF_FILE).write_text("main\n")
         (data_dir / "utf-8-en").mkdir()
 
         self._setup_fake_repo(tmp_path, monkeypatch)
@@ -66,7 +65,7 @@ class TestGetDataDir:
     ) -> None:
         data_dir = tmp_path / "tests" / "data"
         data_dir.mkdir(parents=True)
-        (data_dir / _REF_FILE).write_text("7.0.0\n")
+        (data_dir / utils._REF_FILE).write_text("7.0.0\n")
         (data_dir / "utf-8-en").mkdir()
 
         self._setup_fake_repo(tmp_path, monkeypatch)

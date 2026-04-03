@@ -76,8 +76,8 @@ def test_load_cached_articles_does_not_filter(tmp_path: Path) -> None:
 
     # Even though article 1 matches an exclusion fingerprint, loading
     # from cache returns all articles (filtering is a download concern).
-    fp = fingerprint_text(articles[1])
-    _exclusions = frozenset([fp])
+    exclusions = frozenset([fingerprint_text(articles[1])])
+    assert len(exclusions) == 1
 
     texts = load_cached_articles(lang_dir, max_articles=10)
     assert len(texts) == 3

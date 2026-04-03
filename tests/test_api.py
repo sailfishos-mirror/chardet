@@ -17,6 +17,7 @@ def test_detect_returns_dict():
     assert "encoding" in result
     assert "confidence" in result
     assert "language" in result
+    assert "mime_type" in result
 
 
 def test_detect_ascii():
@@ -96,6 +97,24 @@ def test_detect_all_each_is_dict():
         assert "encoding" in r
         assert "confidence" in r
         assert "language" in r
+        assert "mime_type" in r
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.param(b"Hello world", id="ascii"),
+        pytest.param("Héllo wörld café résumé".encode(), id="utf8"),
+        pytest.param(b"\xef\xbb\xbfHello", id="bom"),
+        pytest.param(b"\xe9\xe8\xea\xeb\xf6\xfc\xe4" * 20, id="latin"),
+        pytest.param(b"", id="empty"),
+    ],
+)
+def test_detect_all_top_result_matches_detect(data: bytes):
+    """detect_all()[0] must match detect() for the same input and parameters."""
+    single = chardet.detect(data)
+    multi = chardet.detect_all(data)
+    assert multi[0] == single, f"detect()={single}, detect_all()[0]={multi[0]}"
 
 
 def test_version_exists():
@@ -769,6 +788,20 @@ def test_detector_exclude_encodings():
 
 def test_detector_custom_empty_input_encoding():
     det = UniversalDetector(empty_input_encoding="ascii", compat_names=False)
+    result = det.close()
+    assert result["encoding"] == "ascii"
+
+
+def test_detector_custom_no_match_encoding():
+    """Custom no_match_encoding is used when no candidates survive."""
+    det = UniversalDetector(
+        include_encodings=["ascii"],
+        no_match_encoding="ascii",
+        compat_names=False,
+    )
+    # Data has non-ASCII bytes so ascii won't pass byte-validity;
+    # pipeline falls back to the specified no_match_encoding.
+    det.feed(b"\x80\x81\x82\x83\x84\x85")
     result = det.close()
     assert result["encoding"] == "ascii"
 

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import contextlib
 import hashlib
 import json
 import os
@@ -139,7 +140,7 @@ def _compute_benchmark_hash() -> str:
     # Include test-data commit hash (changes when files are added/modified)
     data_dir = _PROJECT_ROOT / "tests" / "data"
     if data_dir.is_dir():
-        try:
+        with contextlib.suppress(FileNotFoundError):
             result = subprocess.run(
                 ["git", "-C", str(data_dir), "rev-parse", "HEAD"],
                 capture_output=True,
@@ -148,8 +149,6 @@ def _compute_benchmark_hash() -> str:
             )
             if result.returncode == 0:
                 h.update(result.stdout.strip().encode())
-        except FileNotFoundError:
-            pass  # git not available
     return h.hexdigest()[:12]
 
 
@@ -336,7 +335,7 @@ def _resolve_version_without_venv(
         "chardet": "chardet",
         "charade": "charade",
     }.get(detector_type, detector_type)
-    try:
+    with contextlib.suppress(subprocess.CalledProcessError):
         result = subprocess.run(
             ["uv", "pip", "compile", "--no-deps", "-"],
             input=pkg_name,
@@ -348,8 +347,6 @@ def _resolve_version_without_venv(
             line = line.strip()
             if line and not line.startswith("#") and "==" in line:
                 return line.split("==", 1)[1]
-    except subprocess.CalledProcessError:
-        pass
     return "unknown"
 
 
@@ -898,11 +895,9 @@ def run_comparison(  # noqa: PLR0913
         # Old chardet (major < 7) gets 1 run (too slow for 3x)
         num_runs = 3
         if detector_type == "chardet" and version != "unknown":
-            try:
+            with contextlib.suppress(ValueError):
                 if int(version.split(".")[0]) < 7:
                     num_runs = 1
-            except ValueError:
-                pass
 
         is_pure = pure and detector_type == "chardet"
         print(f"  Running {num_runs}x timing for {label} ...")
@@ -1492,9 +1487,6 @@ def _run_for_python_version(  # noqa: PLR0913
             label_remap[old_label] = f"{det_type} {version} ({b_tag})"
 
         venvs = {label_remap.get(k, k): v for k, v in venvs.items()}
-        detector_type_map = {
-            label_remap.get(k, k): v for k, v in detector_type_map.items()
-        }
         detector_versions = {
             label_remap.get(k, k): v for k, v in detector_versions.items()
         }

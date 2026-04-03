@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import codecs
+import contextlib
 import hashlib
 import json
 import os
@@ -468,7 +469,7 @@ def load_cn_cache(
 
 def _resolve_cn_version() -> str:
     """Resolve latest charset-normalizer version via uv pip compile."""
-    try:
+    with contextlib.suppress(subprocess.CalledProcessError):
         result = subprocess.run(
             ["uv", "pip", "compile", "--no-deps", "--python", sys.executable, "-"],
             input="charset-normalizer",
@@ -480,8 +481,6 @@ def _resolve_cn_version() -> str:
             line = line.strip()
             if line and not line.startswith("#") and "==" in line:
                 return line.split("==", 1)[1]
-    except subprocess.CalledProcessError:
-        pass
     return "unknown"
 
 

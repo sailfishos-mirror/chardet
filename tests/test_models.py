@@ -9,16 +9,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from train import deserialize_models, serialize_models
 
-from chardet.models import (
-    BigramProfile,
-    get_enc_index,
-    load_models,
-    score_best_language,
-)
+import chardet.models as models_mod
 
 
 def test_enc_index_resolves_aliases() -> None:
-    index = get_enc_index()
+    index = models_mod.get_enc_index()
     # Models keyed by old names should be accessible under new primary names
     assert "big5hkscs" in index
     assert "euc_jis_2004" in index
@@ -27,45 +22,45 @@ def test_enc_index_resolves_aliases() -> None:
 
 
 def test_load_models_returns_dict() -> None:
-    models = load_models()
+    models = models_mod.load_models()
     assert isinstance(models, dict)
 
 
 def test_load_models_has_entries() -> None:
-    models = load_models()
+    models = models_mod.load_models()
     assert len(models) > 0
 
 
 def test_model_keys_are_strings() -> None:
-    models = load_models()
+    models = models_mod.load_models()
     for key in models:
         assert isinstance(key, str)
 
 
 def test_score_best_language_returns_float() -> None:
     """score_best_language should work with plain encoding names (not lang/enc keys)."""
-    load_models()
-    score, _ = score_best_language(b"Hello world this is a test", "cp1252")
+    models_mod.load_models()
+    score, _ = models_mod.score_best_language(b"Hello world this is a test", "cp1252")
     assert isinstance(score, float)
     assert 0.0 < score <= 1.0
 
 
 def test_score_best_language_unknown_encoding() -> None:
-    load_models()
-    score, _ = score_best_language(b"Hello", "not-a-real-encoding")
+    models_mod.load_models()
+    score, _ = models_mod.score_best_language(b"Hello", "not-a-real-encoding")
     assert score == 0.0
 
 
 def test_score_best_language_empty_data() -> None:
-    models = load_models()
+    models = models_mod.load_models()
     encoding = next(iter(models))
-    score, _ = score_best_language(b"", encoding)
+    score, _ = models_mod.score_best_language(b"", encoding)
     assert score == 0.0
 
 
 def test_score_best_language_high_byte_weighting() -> None:
     """High-byte bigrams should be weighted more heavily than ASCII-only."""
-    models = load_models()
+    models = models_mod.load_models()
     # Pick any encoding with a model
     encoding = next(iter(models))
     model = models[encoding]
@@ -83,8 +78,8 @@ def test_score_best_language_high_byte_weighting() -> None:
     if high_pairs:
         # Construct data from high-byte pairs in the model
         high_data = bytes(b for pair in high_pairs[:20] for b in pair)
-        high_score, _ = score_best_language(high_data, encoding)
-        ascii_score, _ = score_best_language(ascii_data, encoding)
+        high_score, _ = models_mod.score_best_language(high_data, encoding)
+        ascii_score, _ = models_mod.score_best_language(ascii_data, encoding)
         # Both should be valid floats
         assert isinstance(high_score, float)
         assert isinstance(ascii_score, float)
@@ -98,48 +93,46 @@ def test_score_best_language_high_byte_weighting() -> None:
 
 
 def test_bigram_profile_empty() -> None:
-    p = BigramProfile(b"")
+    p = models_mod.BigramProfile(b"")
     assert p.weight_sum == 0
     assert len(p.nonzero) == 0
 
 
 def test_bigram_profile_single_byte() -> None:
-    p = BigramProfile(b"A")
+    p = models_mod.BigramProfile(b"A")
     assert p.weight_sum == 0
 
 
 def test_bigram_profile_ascii_weight() -> None:
-    p = BigramProfile(b"AB")
+    p = models_mod.BigramProfile(b"AB")
     assert p.weight_sum > 0
 
 
 def test_bigram_profile_high_byte_weight() -> None:
-    p = BigramProfile(b"\xc3\xa9")
+    p = models_mod.BigramProfile(b"\xc3\xa9")
     # High-byte bigrams should get IDF-based weight >= 1
     assert p.weight_sum >= 1
 
 
 def test_get_idf_weights_wrong_size() -> None:
     """idf.bin with wrong size should warn and return uniform weights."""
-    import chardet.models as mod  # noqa: PLC0415
-
-    mod.get_idf_weights.cache_clear()
+    models_mod.get_idf_weights.cache_clear()
     mock_ref = MagicMock()
     mock_ref.read_bytes.return_value = b"\x42" * 100  # wrong size
 
     with (
         patch.object(
-            mod.importlib.resources,
+            models_mod.importlib.resources,
             "files",
             return_value=MagicMock(joinpath=MagicMock(return_value=mock_ref)),
         ),
         pytest.warns(RuntimeWarning, match="idf.bin has wrong size"),
     ):
-        result = mod.get_idf_weights()
+        result = models_mod.get_idf_weights()
 
     assert len(result) == 65536
     assert all(b == 1 for b in result)
-    mod.get_idf_weights.cache_clear()
+    models_mod.get_idf_weights.cache_clear()
 
 
 # ---------------------------------------------------------------------------
@@ -201,7 +194,7 @@ def test_all_test_data_pairs_have_models() -> None:
     If this test fails, the registry's language associations need updating
     so that ``scripts/train.py`` builds models for the missing pairs.
     """
-    index = get_enc_index()
+    index = models_mod.get_enc_index()
 
     # Build set of (encoding, language) pairs that have models
     model_pairs: set[tuple[str, str]] = set()
@@ -339,7 +332,7 @@ def test_deserialize_v2_wrong_decompressed_size(tmp_models_path: Path) -> None:
 
 def test_roundtrip_matches_load_models(tmp_path: Path) -> None:
     """The production models.bin should roundtrip through serialize/deserialize."""
-    production_tables = load_models()  # dict[str, memoryview]
+    production_tables = models_mod.load_models()  # dict[str, memoryview]
     # Convert memoryview tables back to dict format for serialize/deserialize roundtrip
     production_dicts: dict[str, dict[tuple[int, int], int]] = {}
     for name, table in production_tables.items():
@@ -361,29 +354,27 @@ def mock_models_bin():
     Yields a callable ``set_data(raw_bytes)`` that configures the mock to
     return *raw_bytes* from ``models.bin``.  The cache is cleared on teardown.
     """
-    import chardet.models as mod  # noqa: PLC0415
-
-    mod._load_models_data.cache_clear()
+    models_mod._load_models_data.cache_clear()
     mock_ref = MagicMock()
 
     def set_data(data: bytes) -> None:
         mock_ref.read_bytes.return_value = data
 
     with patch.object(
-        mod.importlib.resources,
+        models_mod.importlib.resources,
         "files",
         return_value=MagicMock(joinpath=MagicMock(return_value=mock_ref)),
     ):
         yield set_data
 
-    mod._load_models_data.cache_clear()
+    models_mod._load_models_data.cache_clear()
 
 
 def test_load_models_empty_file(mock_models_bin: Callable[[bytes], None]) -> None:
     """Empty models.bin should emit RuntimeWarning and return empty dict."""
     mock_models_bin(b"")
     with pytest.warns(RuntimeWarning, match="models.bin is empty"):
-        result = load_models()
+        result = models_mod.load_models()
     assert result == {}
 
 
@@ -391,7 +382,7 @@ def test_load_models_missing_magic(mock_models_bin: Callable[[bytes], None]) -> 
     """Data without CMD2 magic should raise ValueError."""
     mock_models_bin(struct.pack("!I", 1))
     with pytest.raises(ValueError, match="missing CMD2 magic"):
-        load_models()
+        models_mod.load_models()
 
 
 def test_load_models_v2_num_models_exceeds_limit(
@@ -401,7 +392,7 @@ def test_load_models_v2_num_models_exceeds_limit(
     data = b"CMD2" + struct.pack("!I", 10001)
     mock_models_bin(data)
     with pytest.raises(ValueError, match="num_models=10001 exceeds limit"):
-        load_models()
+        models_mod.load_models()
 
 
 def test_load_models_v2_name_len_exceeds_limit(
@@ -413,7 +404,7 @@ def test_load_models_v2_name_len_exceeds_limit(
     data += struct.pack("!I", 300)  # name_len=300
     mock_models_bin(data)
     with pytest.raises(ValueError, match="name_len=300 exceeds 256"):
-        load_models()
+        models_mod.load_models()
 
 
 def test_load_models_v2_truncated_header(
@@ -424,7 +415,7 @@ def test_load_models_v2_truncated_header(
     data = b"CMD2" + struct.pack("!I", 1)
     mock_models_bin(data)
     with pytest.raises(ValueError, match=r"corrupt models\.bin"):
-        load_models()
+        models_mod.load_models()
 
 
 def test_load_models_v2_invalid_utf8_name(
@@ -437,7 +428,7 @@ def test_load_models_v2_invalid_utf8_name(
     data += struct.pack("!I", len(invalid_name)) + invalid_name
     mock_models_bin(data)
     with pytest.raises(ValueError, match=r"corrupt models\.bin"):
-        load_models()
+        models_mod.load_models()
 
 
 def test_load_models_v2_format(
@@ -459,7 +450,7 @@ def test_load_models_v2_format(
     compressed = zlib.compress(bytes(table), 9)
 
     mock_models_bin(header + compressed)
-    models = load_models()
+    models = models_mod.load_models()
     assert "fr/cp1252" in models
     assert models["fr/cp1252"][(0xE9 << 8) | 0x20] == 200
     assert models["fr/cp1252"][(0x6C << 8) | 0x65] == 50
@@ -476,7 +467,7 @@ def test_load_models_v2_corrupt_zlib(
     header += struct.pack("!d", 0.0)
     mock_models_bin(header + b"\xff\xff\xff")
     with pytest.raises(ValueError, match=r"corrupt models\.bin"):
-        load_models()
+        models_mod.load_models()
 
 
 def test_load_models_v2_wrong_decompressed_size(
@@ -492,30 +483,26 @@ def test_load_models_v2_wrong_decompressed_size(
     blob = zlib.compress(bytes(65536), 9)
     mock_models_bin(header + blob)
     with pytest.raises(ValueError, match="decompressed size"):
-        load_models()
+        models_mod.load_models()
 
 
 def test_score_with_profile_fallback_norm():
     """score_with_profile with empty model_key should compute norm on the fly."""
-    from chardet.models import BigramProfile, score_with_profile  # noqa: PLC0415
-
-    profile = BigramProfile(b"\xc3\xa9\xc3\xa4")  # some high-byte bigrams
+    profile = models_mod.BigramProfile(b"\xc3\xa9\xc3\xa4")  # some high-byte bigrams
     # Build a model with a few non-zero entries
     model = bytearray(65536)
     model[(0xC3 << 8) | 0xA9] = 100
     model[(0xC3 << 8) | 0xA4] = 80
-    score = score_with_profile(profile, model, model_key="")
+    score = models_mod.score_with_profile(profile, model, model_key="")
     assert isinstance(score, float)
     assert score > 0.0
 
 
 def test_score_with_profile_all_zeros_model():
     """All-zeros model should return 0.0 (model_norm == 0)."""
-    from chardet.models import BigramProfile, score_with_profile  # noqa: PLC0415
-
-    profile = BigramProfile(b"\xc3\xa9\xc3\xa4")
+    profile = models_mod.BigramProfile(b"\xc3\xa9\xc3\xa4")
     model = bytearray(65536)  # all zeros
-    score = score_with_profile(profile, model, model_key="")
+    score = models_mod.score_with_profile(profile, model, model_key="")
     assert score == 0.0
 
 
@@ -525,15 +512,13 @@ def test_enc_index_alias_resolution() -> None:
     The index should contain both the original key and the canonical name
     pointing to the same entries.
     """
-    from chardet.models import _build_enc_index  # noqa: PLC0415
-
     # Create a fake model dict with a non-canonical encoding name.
     # "utf8" is a non-canonical alias for "utf-8".
     fake_model = bytearray(65536)
     fake_model[(0xC3 << 8) | 0xA9] = 100
     fake_models = {"French/utf8": fake_model}
 
-    index = _build_enc_index(fake_models)
+    index = models_mod._build_enc_index(fake_models)
 
     # The non-canonical key "utf8" should be in the index
     assert "utf8" in index
