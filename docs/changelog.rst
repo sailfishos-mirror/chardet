@@ -8,6 +8,23 @@ Changelog
    Dan directed the design, reviewed all output, and takes responsibility for
    the result. Unmarked entries by Dan were written without AI assistance.
 
+7.4.1 (2026-04-07)
+-------------------
+
+**Bug Fixes:**
+
+- BOM-prefixed UTF-16 and UTF-32 input now reports ``utf-16`` and
+  ``utf-32`` instead of the endian-specific variants. Python's
+  ``utf-16-le``/``utf-16-be``/``utf-32-le``/``utf-32-be`` codecs keep
+  the BOM as a U+FEFF in the decoded string, while ``utf-16``/``utf-32``
+  strip it, so callers passing the detection result directly to
+  ``.decode()`` were getting a stray BOM at the start of their text.
+  BOM-less UTF-16/32 detection (via null-byte patterns) is unchanged
+  and still returns the endian-specific name.
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude,
+  `#364 <https://github.com/chardet/chardet/issues/364>`_,
+  `#365 <https://github.com/chardet/chardet/pull/365>`_)
+
 7.4.0 (2026-03-26)
 -------------------
 
