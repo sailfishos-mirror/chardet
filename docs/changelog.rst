@@ -19,7 +19,7 @@ Changelog
   ``ValueError`` on embedded nulls, and ``lookup_encoding()`` was only
   catching ``LookupError``. Also added defensive ``ValueError`` catches
   in ``_validate_bytes()`` and ``_to_utf8()`` for completeness.
-  (`David R. MacIver <https://github.com/DRMacIver>`_ via Claude,
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude,
   `#369 <https://github.com/chardet/chardet/issues/369>`_)
 
 7.4.2 (2026-04-12)
