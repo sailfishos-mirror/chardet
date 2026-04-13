@@ -45,10 +45,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest,      name: linux-x86_64,  cibw_archs_linux: x86_64  }
-          - { os: ubuntu-24.04-arm,   name: linux-aarch64, cibw_archs_linux: aarch64 }
-          - { os: ubuntu-24.04-riscv, name: linux-riscv64, cibw_archs_linux: riscv64 }
-          - { os: macos-latest,       name: macos,         cibw_archs_linux: auto    }
+          - { os: ubuntu-latest,      name: linux-x86_64,       cibw_archs_linux: x86_64  }
+          - { os: ubuntu-24.04-arm,   name: linux-aarch64,      cibw_archs_linux: aarch64 }
+          # riscv64 is split per Python version so each gets its own RISE
+          # runner and they build in parallel (~3 min each vs ~15 min serial).
+          - { os: ubuntu-24.04-riscv, name: linux-riscv64-310,  cibw_archs_linux: riscv64, cibw_build: "cp310-*" }
+          - { os: ubuntu-24.04-riscv, name: linux-riscv64-311,  cibw_archs_linux: riscv64, cibw_build: "cp311-*" }
+          - { os: ubuntu-24.04-riscv, name: linux-riscv64-312,  cibw_archs_linux: riscv64, cibw_build: "cp312-*" }
+          - { os: ubuntu-24.04-riscv, name: linux-riscv64-313,  cibw_archs_linux: riscv64, cibw_build: "cp313-*" }
+          - { os: ubuntu-24.04-riscv, name: linux-riscv64-314,  cibw_archs_linux: riscv64, cibw_build: "cp314-*" }
+          - { os: macos-latest,       name: macos,              cibw_archs_linux: auto    }
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,18 +63,20 @@ jobs:
       # The pypa/cibuildwheel action internally calls actions/setup-python,
       # which has no riscv64 binaries. On native riscv64 runners, invoke
       # cibuildwheel directly with the system Python instead.
-      - if: matrix.name != 'linux-riscv64'
+      - if: "!startsWith(matrix.name, 'linux-riscv64')"
         uses: pypa/cibuildwheel@v3.3
         env:
           CIBW_ARCHS_LINUX: ${{ matrix.cibw_archs_linux }}
+          CIBW_BUILD: ${{ matrix.cibw_build || '*' }}
           CIBW_ENVIRONMENT_PASS_LINUX: HATCH_BUILD_HOOK_ENABLE_MYPYC
           HATCH_BUILD_HOOK_ENABLE_MYPYC: "true"
-      - if: matrix.name == 'linux-riscv64'
+      - if: startsWith(matrix.name, 'linux-riscv64')
         run: |
           python3 -m pip install cibuildwheel
           python3 -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ARCHS_LINUX: riscv64
+          CIBW_BUILD: ${{ matrix.cibw_build }}
           CIBW_ENVIRONMENT_PASS_LINUX: HATCH_BUILD_HOOK_ENABLE_MYPYC
           HATCH_BUILD_HOOK_ENABLE_MYPYC: "true"
       - uses: actions/upload-artifact@v4
