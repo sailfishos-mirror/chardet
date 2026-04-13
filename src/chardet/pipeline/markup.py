@@ -102,6 +102,6 @@ def _validate_bytes(data: bytes, encoding: str) -> bool:
     """
     try:
         data[:_SCAN_LIMIT].decode(encoding)
-    except (UnicodeDecodeError, LookupError):
+    except (UnicodeDecodeError, LookupError, ValueError):
         return False
     return True

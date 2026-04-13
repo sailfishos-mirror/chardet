@@ -993,7 +993,7 @@ def lookup_encoding(name: str) -> EncodingName | None:
     # Fallback: resolve through Python's codec registry
     try:
         codec_name = codecs.lookup(name).name
-    except LookupError:
+    except (LookupError, ValueError):
         return None
     if codec_name != lowered:
         return lookup_encoding(codec_name)

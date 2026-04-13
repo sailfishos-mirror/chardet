@@ -108,6 +108,17 @@ def test_non_ascii_charset_name_ignored():
     assert result is None
 
 
+def test_null_byte_in_charset_name():
+    """A null byte in the charset value must not crash.
+
+    Regression test for https://github.com/chardet/chardet/issues/369:
+    codecs.lookup() raises ValueError on embedded null characters.
+    """
+    data = b'<meta charset="\x00utf-8">'
+    result = detect_markup_charset(data)
+    assert result is None
+
+
 def test_pep263_non_ascii_coding_name():
     """PEP 263 coding name with non-ASCII bytes should return None."""
     # The default PEP263 regex only captures ASCII via \\w on bytes, so

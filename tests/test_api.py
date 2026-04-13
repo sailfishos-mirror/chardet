@@ -303,6 +303,16 @@ def test_detect_all_bytearray_input():
     assert len(results) >= 1
 
 
+def test_detect_null_in_markup_charset():
+    """detect() must not crash on null bytes in a charset declaration.
+
+    Regression test for https://github.com/chardet/chardet/issues/369.
+    """
+    result = chardet.detect(b'<meta charset="\x00utf-8">')
+    assert isinstance(result, dict)
+    assert "encoding" in result
+
+
 # --- New encoding tests ---
 
 

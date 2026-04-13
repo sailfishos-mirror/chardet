@@ -343,6 +343,17 @@ def test_lookup_encoding_unknown_codec():
     assert lookup_encoding("no_such_codec_xyz") is None
 
 
+def test_lookup_encoding_embedded_null():
+    """lookup_encoding returns None for names with embedded null bytes.
+
+    Regression test for https://github.com/chardet/chardet/issues/369:
+    codecs.lookup() raises ValueError on embedded null characters.
+    """
+    assert lookup_encoding("\x00utf-8") is None
+    assert lookup_encoding("utf-8\x00") is None
+    assert lookup_encoding("\x00") is None
+
+
 def test_lookup_encoding_python_only_codec():
     """Names Python knows but chardet doesn't resolve to None.
 
