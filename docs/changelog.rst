@@ -8,6 +8,20 @@ Changelog
    Dan directed the design, reviewed all output, and takes responsibility for
    the result. Unmarked entries by Dan were written without AI assistance.
 
+7.4.3 (unreleased)
+-------------------
+
+**Bug Fixes:**
+
+- Fixed ``ValueError: embedded null character`` crash when input contained
+  a ``<meta charset>`` declaration with a null byte in the encoding name
+  (e.g. ``b'<meta charset="\x00utf-8">'``). ``codecs.lookup()`` raises
+  ``ValueError`` on embedded nulls, and ``lookup_encoding()`` was only
+  catching ``LookupError``. Also added defensive ``ValueError`` catches
+  in ``_validate_bytes()`` and ``_to_utf8()`` for completeness.
+  (`David R. MacIver <https://github.com/DRMacIver>`_ via Claude,
+  `#369 <https://github.com/chardet/chardet/issues/369>`_)
+
 7.4.2 (2026-04-12)
 -------------------
 
