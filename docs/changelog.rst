@@ -8,6 +8,39 @@ Changelog
    Dan directed the design, reviewed all output, and takes responsibility for
    the result. Unmarked entries by Dan were written without AI assistance.
 
+7.4.2 (2026-04-12)
+-------------------
+
+**Bug Fixes:**
+
+- Fixed ``RuntimeError: pipeline must always return at least one result``
+  on ~2% of all possible two-byte inputs (e.g. ``b"\xf9\x92"``).
+  Multi-byte encodings like CP932 and Johab could score above the
+  structural confidence threshold on very short inputs, but then
+  statistical scoring would return nothing, leaving the pipeline with an
+  empty result list instead of falling through to the ``no_match_encoding``
+  fallback.
+  (`Jason Barnett <https://github.com/jasonwbarnett>`_ via Claude,
+  `#367 <https://github.com/chardet/chardet/issues/367>`_,
+  `#368 <https://github.com/chardet/chardet/pull/368>`_)
+
+**Improvements:**
+
+- Added ~90 encoding aliases from the WHATWG Encoding Standard and IANA
+  Character Sets registry so that ``<meta charset>`` labels like
+  ``x-cp1252``, ``x-sjis``, ``dos-874``, ``csUTF8``, and the
+  ``cswindows*`` family all resolve correctly through the markup detection
+  stage. Every alias was driven by a failing spec-compliance test.
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude,
+  `#366 <https://github.com/chardet/chardet/pull/366>`_)
+- Added a spec-compliance test suite covering Python decode round-trips
+  for all 86 registry encodings, WHATWG web-platform label resolution,
+  IANA preferred MIME names, and Unicode/RFC conformance (BOM sniffing,
+  UTF-8 boundary cases, UTF-16 surrogate pairs). This is the test suite
+  that would have caught the 7.4.1 BOM bug before release.
+  (`Dan Blanchard <https://github.com/dan-blanchard>`_ via Claude,
+  `#366 <https://github.com/chardet/chardet/pull/366>`_)
+
 7.4.1 (2026-04-07)
 -------------------
 
