@@ -65,8 +65,8 @@ jobs:
           HATCH_BUILD_HOOK_ENABLE_MYPYC: "true"
       - if: matrix.name == 'linux-riscv64'
         run: |
-          pip install cibuildwheel
-          cibuildwheel --output-dir wheelhouse
+          python3 -m pip install cibuildwheel
+          python3 -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ARCHS_LINUX: riscv64
           CIBW_ENVIRONMENT_PASS_LINUX: HATCH_BUILD_HOOK_ENABLE_MYPYC
