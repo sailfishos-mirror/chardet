@@ -54,9 +54,21 @@ jobs:
         with:
           fetch-depth: 0
       - uses: astral-sh/setup-uv@v7
-      - uses: pypa/cibuildwheel@v3.3
+      # The pypa/cibuildwheel action internally calls actions/setup-python,
+      # which has no riscv64 binaries. On native riscv64 runners, invoke
+      # cibuildwheel directly with the system Python instead.
+      - if: matrix.name != 'linux-riscv64'
+        uses: pypa/cibuildwheel@v3.3
         env:
           CIBW_ARCHS_LINUX: ${{ matrix.cibw_archs_linux }}
+          CIBW_ENVIRONMENT_PASS_LINUX: HATCH_BUILD_HOOK_ENABLE_MYPYC
+          HATCH_BUILD_HOOK_ENABLE_MYPYC: "true"
+      - if: matrix.name == 'linux-riscv64'
+        run: |
+          pip install cibuildwheel
+          cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_ARCHS_LINUX: riscv64
           CIBW_ENVIRONMENT_PASS_LINUX: HATCH_BUILD_HOOK_ENABLE_MYPYC
           HATCH_BUILD_HOOK_ENABLE_MYPYC: "true"
       - uses: actions/upload-artifact@v4
